@@ -11,7 +11,7 @@ def request(path, data=None, method=None):
 for _ in range(40):
     try: request('/status'); break
     except Exception: time.sleep(.25)
-session=request('/session',{'capabilities':{'alwaysMatch':{'browserName':'firefox','moz:firefoxOptions':{'binary':'/tmp/Zen.app/Contents/MacOS/zen','args':['--allow-system-access'],'prefs':{'zen.welcome-screen.seen':True,'browser.shell.checkDefaultBrowser':False,'browser.startup.homepage_override.mstone':'ignore','zen.view.use-single-toolbar':True,'zen.view.sidebar-expanded':True,'zen.view.compact.enable-at-startup':False,'layout.css.prefers-color-scheme.content-override':1}}}}})
+session=request('/session',{'capabilities':{'alwaysMatch':{'browserName':'firefox','moz:firefoxOptions':{'binary':'/tmp/Zen.app/Contents/MacOS/zen','args':['-remote-allow-system-access'],'prefs':{'zen.welcome-screen.seen':True,'browser.shell.checkDefaultBrowser':False,'browser.startup.homepage_override.mstone':'ignore','zen.view.use-single-toolbar':True,'zen.view.sidebar-expanded':True,'zen.view.compact.enable-at-startup':False,'layout.css.prefers-color-scheme.content-override':1}}}}})
 sid=session['sessionId']; prefix='/session/'+sid
 def js(code): return request(prefix+'/execute/sync',{'script':code,'args':[]})
 def snap(name,code=''):
