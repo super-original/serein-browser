@@ -16,8 +16,12 @@ import SwiftUI
         NSApp.activate(ignoringOtherApps: true)
     }
 }
-let app = NSApplication.shared
-app.setActivationPolicy(.regular)
-let delegate = Probe()
-app.delegate = delegate
-app.run()
+@main struct Main {
+    @MainActor static func main() {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.regular)
+        let delegate = Probe()
+        app.delegate = delegate
+        app.run()
+    }
+}

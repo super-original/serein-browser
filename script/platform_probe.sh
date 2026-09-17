@@ -18,9 +18,9 @@ mkdir -p evidence/platform/headers
 cp "$SDK"/System/Library/Frameworks/WebKit.framework/Headers/WKWebExtension*.h evidence/platform/headers/
 cp "$SDK"/System/Library/Frameworks/AppKit.framework/Headers/NSWindow.h evidence/platform/headers/
 cp "$SDK"/System/Library/Frameworks/AppKit.framework/Headers/NSGlassEffect*.h evidence/platform/headers/ || true
-rg -n -B 3 -A 8 'windowToolbar|windowChrome|window.*[Rr]eveal|titlebar|Titlebar|bordered|TabsPickerStyle' "$SDK"/System/Library/Frameworks/SwiftUI.framework/Modules/SwiftUI.swiftmodule/arm64e-apple-macos.swiftinterface > evidence/platform/swiftui-interfaces.txt || true
+grep -n -B 3 -A 8 -E 'windowToolbar|windowChrome|window.*[Rr]eveal|titlebar|Titlebar|bordered|TabsPickerStyle' "$SDK"/System/Library/Frameworks/SwiftUI.framework/Modules/SwiftUI.swiftmodule/arm64e-apple-macos.swiftinterface > evidence/platform/swiftui-interfaces.txt || true
 mkdir -p /tmp/SereinProbe.app/Contents/MacOS
-xcrun swiftc -target arm64-apple-macos27.0 script/PlatformProbe.swift -o /tmp/SereinProbe.app/Contents/MacOS/SereinProbe
+xcrun swiftc -parse-as-library -swift-version 6 -target arm64-apple-macos27.0 script/PlatformProbe.swift -o /tmp/SereinProbe.app/Contents/MacOS/SereinProbe
 cat > /tmp/SereinProbe.app/Contents/Info.plist <<'PLIST'
 <?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>dev.serein.probe</string><key>CFBundleExecutable</key><string>SereinProbe</string><key>CFBundlePackageType</key><string>APPL</string><key>LSMinimumSystemVersion</key><string>27.0</string><key>NSPrincipalClass</key><string>NSApplication</string></dict></plist>
 codesign --force --sign - /tmp/SereinProbe.app
