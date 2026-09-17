@@ -1,0 +1,39 @@
+name: Build and exercise Serein on macOS 27
+on:
+  workflow_dispatch:
+  push:
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/verify_runtime.sh', '.github/workflows/build.yml']
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: browser-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    runs-on: xcode-27
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+      MACOSX_DEPLOYMENT_TARGET: '27.0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean build, unit tests, and package
+        run: bash script/build.sh
+      - name: Run actual macOS 27 application and integration scenarios
+        run: bash script/verify_runtime.sh
+      - name: Export screenshots for inspection
+        if: always()
+        run: python3 script/emit_evidence.py evidence/runtime
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Serein-macOS27-arm64
+          path: dist/Serein-macOS27-arm64.zip
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-evidence
+          path: evidence
+          retention-days: 7
