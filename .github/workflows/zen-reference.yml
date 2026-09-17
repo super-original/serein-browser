@@ -1,0 +1,25 @@
+name: Pinned Zen visual references
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/zen-reference.yml', 'script/zen_reference.py', 'script/zen_reference.sh']
+permissions:
+  contents: read
+concurrency:
+  group: zen-reference
+  cancel-in-progress: true
+jobs:
+  reference:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash script/zen_reference.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zen-1.22.2b-reference
+          path: evidence/zen
+          retention-days: 7

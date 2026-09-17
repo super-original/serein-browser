@@ -30,3 +30,11 @@ pgrep -x SereinProbe
 screencapture -x evidence/platform/desktop.png
 test -s evidence/platform/desktop.png
 killall SereinProbe
+
+python3 - <<'PYEOF'
+import base64,pathlib
+p=pathlib.Path('evidence/platform/desktop.png')
+print('SEREIN_FILE_BEGIN desktop.png')
+print(base64.b64encode(p.read_bytes()).decode())
+print('SEREIN_FILE_END')
+PYEOF
