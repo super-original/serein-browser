@@ -15,6 +15,7 @@ struct InstalledExtension: Identifiable, Codable {
     let controller=WKWebExtensionController()
     var records: [InstalledExtension] = []
     var error: String?
+    var actionRevision=0
     @ObservationIgnored var contexts: [UUID:WKWebExtensionContext] = [:]
     @ObservationIgnored weak var manager: BrowserManager?
     let root: URL

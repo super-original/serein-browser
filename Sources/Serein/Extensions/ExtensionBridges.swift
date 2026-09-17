@@ -18,6 +18,17 @@ import SereinCore
     func focus(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.window?.makeKeyAndOrderFront(nil);completionHandler(nil)}
     func close(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.window?.performClose(nil);completionHandler(nil)}
     func setFrame(_ frame: CGRect,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.window?.setFrame(frame,display:true);completionHandler(nil)}
+    func setWindowState(_ state:WKWebExtension.WindowState,for context:WKWebExtensionContext,completionHandler:@escaping ((any Error)?)->Void) {
+        guard let window=session?.window else{completionHandler(ExtensionValidationError.invalid("Window no longer exists."));return}
+        switch state {
+        case .minimized:window.miniaturize(nil)
+        case .fullscreen:if !window.styleMask.contains(.fullScreen){window.toggleFullScreen(nil)}
+        case .maximized:if window.isMiniaturized{window.deminiaturize(nil)};if !window.isZoomed{window.zoom(nil)}
+        case .normal:if window.isMiniaturized{window.deminiaturize(nil)};if window.styleMask.contains(.fullScreen){window.toggleFullScreen(nil)};if window.isZoomed{window.zoom(nil)}
+        @unknown default:completionHandler(ExtensionValidationError.invalid("Unsupported window state."));return
+        }
+        completionHandler(nil)
+    }
 }
 @MainActor final class ExtensionTab: NSObject, WKWebExtensionTab {
     let id: UUID

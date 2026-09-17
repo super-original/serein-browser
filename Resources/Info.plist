@@ -13,5 +13,6 @@
 <key>NSHighResolutionCapable</key><true/>
 <key>NSCameraUsageDescription</key><string>Websites can request camera access. Serein asks for your consent for each request.</string>
 <key>NSMicrophoneUsageDescription</key><string>Websites can request microphone access. Serein asks for your consent for each request.</string>
+<key>NSLocationUsageDescription</key><string>Websites can request your location. Serein asks for consent for each request.</string>
 <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>Web address</string><key>CFBundleTypeRole</key><string>Viewer</string><key>CFBundleURLSchemes</key><array><string>http</string><string>https</string></array></dict></array>
 </dict></plist>

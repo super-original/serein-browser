@@ -12,11 +12,11 @@ struct SidebarView: View {
         VStack(spacing:6) {
             if !collapsed {
                 HStack(spacing:4) {
-                    Spacer().frame(width:76)
+                    Spacer().frame(width:70)
                     Button("Collapse Sidebar",systemImage:"sidebar.left"){session.state.sidebar = .collapsed}.labelStyle(.iconOnly).help("Collapse Sidebar (⇧⌘S)")
                     Spacer(minLength:0)
                     NavigationButtons(session:session)
-                }.buttonStyle(.plain).frame(height:36)
+                }.buttonStyle(.plain).frame(height:42)
                 AddressField(session:session)
             } else {Color.clear.frame(height:54)}
             if !session.state.visibleTabs.filter({$0.kind == .essential}).isEmpty {
@@ -29,17 +29,22 @@ struct SidebarView: View {
                     Text(session.state.workspaces.first{$0.id==session.state.activeWorkspaceID}?.name ?? "Workspace").font(.system(size:12,weight:.semibold)).foregroundStyle(.secondary)
                     Spacer()
                     if session.state.isPrivate {Image(systemName:"hand.raised").help("Private Browsing")}
-                }.padding(.horizontal,8).padding(.top,8).padding(.bottom,4)
+                }.padding(.horizontal,8).padding(.top,8).padding(.bottom,12)
             }
             ScrollView {
                 LazyVStack(spacing:4) {
                     ForEach(session.state.visibleTabs.filter{$0.kind == .pinned}){tab in tabRow(tab)}
-                    if session.state.visibleTabs.contains(where:{$0.kind == .pinned}) {Divider().padding(.vertical,8)}
+                    Divider().padding(.vertical,8)
                     Button {session.newTab()} label:{HStack(spacing:10){Image(systemName:"plus");if !collapsed {Text("New Tab");Spacer()}}.frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,10).frame(height:36)}
                         .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityIdentifier("new-tab")
                     ForEach(session.state.visibleTabs.filter{$0.kind == .regular}){tab in tabRow(tab)}
                 }
             }.scrollIndicators(.hidden)
+            if let host=session.extensions,!host.records.filter({$0.enabled}).isEmpty {
+                ScrollView(.horizontal) {
+                    HStack(spacing:6) {ForEach(host.records.filter{$0.enabled}){record in ExtensionActionButton(record:record,session:session,revision:host.actionRevision).frame(width:28,height:28)}}
+                }.scrollIndicators(.hidden).frame(height:32)
+            }
             HStack(spacing:6) {
                 Menu {
                     Button("Bookmarks"){session.libraryPanel = .bookmarks}

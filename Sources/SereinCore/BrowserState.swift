@@ -32,6 +32,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     public var sidebar: SidebarMode = .expanded
     public var sidebarWidth: Double = 230
     public var closedTabs: [BrowserTab] = []
+    public var windowFrame:[Double]?
     public init(isPrivate: Bool = false) {
         self.isPrivate=isPrivate
         let space=Workspace();workspaces=[space];activeWorkspaceID=space.id

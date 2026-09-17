@@ -33,4 +33,14 @@ extension TabRuntime: WKUIDelegate {
         let requested=type == .camera ? "camera" : type == .microphone ? "microphone" : "camera and microphone"
         session.confirm("Allow \(origin.host) to use your \(requested)?",detail:"Origin: \(origin.protocol)://\(origin.host):\(origin.port). This request applies to this page only.",yes:"Allow") {allowed in decisionHandler(allowed ? .grant : .deny)}
     }
+    // New public permission delegate in macOS 27. No Core Location proxy or
+    // private WebKit selector is needed to mediate the website's request.
+    func webView(_ webView:WKWebView,requestGeolocationPermissionFor origin:WKSecurityOrigin,initiatedByFrame frame:WKFrameInfo,decisionHandler:@escaping @MainActor @Sendable (WKPermissionDecision)->Void) {
+        guard let session else{decisionHandler(.deny);return}
+        session.confirm("Share your location with \(origin.host)?",detail:"Origin: \(origin.protocol)://\(origin.host):\(origin.port). This request applies to this page only.",yes:"Allow") {allowed in decisionHandler(allowed ? .grant : .deny)}
+    }
+    func webView(_ webView:WKWebView,requestDeviceOrientationAndMotionPermissionFor origin:WKSecurityOrigin,initiatedByFrame frame:WKFrameInfo,decisionHandler:@escaping @MainActor @Sendable (WKPermissionDecision)->Void) {
+        guard let session else{decisionHandler(.deny);return}
+        session.confirm("Allow motion data for \(origin.host)?",detail:"This request applies to this page only.",yes:"Allow") {allowed in decisionHandler(allowed ? .grant : .deny)}
+    }
 }

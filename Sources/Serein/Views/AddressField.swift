@@ -19,7 +19,7 @@ struct AddressField: View {
     @FocusState private var focused: Bool
     var body: some View {
         TextField("Search or enter address",text:$session.address)
-            .textFieldStyle(.bordered).font(.system(size:12)).frame(height:34)
+            .textFieldStyle(.bordered).controlSize(.large).font(.system(size:13)).frame(height:36)
             .focused($focused).accessibilityIdentifier("address-field")
             .onSubmit{session.navigate(session.address);focused=false}
             .onChange(of:session.addressFocused){_,value in focused=value}

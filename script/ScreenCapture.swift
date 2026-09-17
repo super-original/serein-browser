@@ -1,8 +1,10 @@
 import AppKit
 import ScreenCaptureKit
+import Metal
 
 @main enum ScreenCapture {
     static func main() async throws {
+        print("METAL_DEVICES \(MTLCopyAllDevices().map(\.name))")
         let content=try await SCShareableContent.excludingDesktopWindows(false,onScreenWindowsOnly:true)
         guard let display=content.displays.first else{throw NSError(domain:"SereinCapture",code:1)}
         let filter=SCContentFilter(display:display,excludingWindows:[])

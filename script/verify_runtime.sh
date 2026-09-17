@@ -15,13 +15,14 @@ for i in $(seq 1 2400); do
   if test -s "$ROOT/results.json"; then break; fi
   if test -f "$ROOT/capture-request"; then
     CAPTURE_NAME=$(cat "$ROOT/capture-request")
+    rm "$ROOT/capture-request"
     if [[ "$CAPTURE_NAME" =~ ^[a-z0-9-]+$ ]]; then
       screencapture -x "$ROOT/$CAPTURE_NAME.png"
       if [[ "$CAPTURE_NAME" == '01-light-expanded' || "$CAPTURE_NAME" == 'diagnostic-direct-appkit' ]]; then
         /tmp/serein-capture "$ROOT/$CAPTURE_NAME-screen-capture-kit.png" || true
       fi
     fi
-    rm "$ROOT/capture-request"
+    touch "$ROOT/$CAPTURE_NAME.capture-finished"
   fi
   if (( i % 20 == 0 )); then ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-$i.txt"; fi
   sleep 0.1
@@ -30,6 +31,7 @@ cat "$ROOT/application.log"
 cat "$ROOT/application-error.log"
 log show --last 3m --style compact --predicate '(process CONTAINS "WebKit" OR subsystem BEGINSWITH "com.apple.WebKit") AND (messageType == error OR messageType == fault)' > "$ROOT/webkit-system.log" 2>&1 || true
 tail -80 "$ROOT/webkit-system.log"
+head -80 "$ROOT/webkit-system.log"
 cat "$ROOT/display.txt"
 python3 - <<'PY'
 import json,pathlib

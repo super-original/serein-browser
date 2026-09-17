@@ -20,12 +20,16 @@ import SereinCore
             // external harness; the application itself does not need that permission.
             do {
                 try name.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
-                let succeeded=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".png").path)}
+                var succeeded=false
+                for _ in 0..<400 {
+                    if FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".capture-finished").path){succeeded=FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".png").path);break}
+                    await pause(100)
+                }
                 check("capture-"+name,succeeded)
             } catch {check("capture-"+name,false,error.localizedDescription)}
         }
         guard let session=manager.active else{return}
-        session.window?.setFrame(NSRect(x:10,y:51,width:1000,height:677),display:true)
+        session.window?.setFrame(NSRect(x:10,y:61,width:1000,height:677),display:true)
         let fixture="http://127.0.0.1:8765/index.html"
         let start=ContinuousClock.now
         session.navigate(fixture)

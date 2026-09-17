@@ -18,6 +18,7 @@ import SereinCore
     @ObservationIgnored var runtimes: [UUID:TabRuntime] = [:]
     @ObservationIgnored var extensionWindow: ExtensionWindow?
     @ObservationIgnored var extensionTabs: [UUID:ExtensionTab] = [:]
+    @ObservationIgnored var actionAnchors:[UUID:WeakActionAnchor]=[:]
     @ObservationIgnored let dataStore: WKWebsiteDataStore
     init(state: BrowserWindowState, manager: BrowserManager) {
         self.state=state;self.manager=manager
