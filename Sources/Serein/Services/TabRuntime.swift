@@ -28,6 +28,7 @@ import SereinCore
         config.userContentController.add(bridge,contentWorld:.world(name:"SereinPageState"),name:"edited")
         config.userContentController.addUserScript(WKUserScript(source:"document.addEventListener('input',()=>window.webkit.messageHandlers.edited.postMessage(true),{capture:true,once:true});",injectionTime:.atDocumentStart,forMainFrameOnly:false,in:.world(name:"SereinPageState")))
         let view=WKWebView(frame:.zero,configuration:config);storedView=view
+        view.wantsLayer=true
         view.navigationDelegate=self;view.uiDelegate=self;view.allowsBackForwardNavigationGestures=true
         observations=[view.observe(\.title,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.url,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.isLoading,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.estimatedProgress,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}}]
         if let tab=session?.state.tabs.first(where:{$0.id==id}),let url=URL(string:tab.url),tab.url != "about:blank" {view.load(URLRequest(url:url))}

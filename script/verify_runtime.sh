@@ -8,6 +8,7 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory Fixtures > "$ROOT/serve
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
 python3 script/fetch_extension_fixtures.py /tmp/serein-extension-audit
+ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-baseline.txt"
 open -n dist/Serein.app --stdout "$ROOT/application.log" --stderr "$ROOT/application-error.log" --args --test-root "$ROOT" --integration-test --real-extension-catalog /tmp/serein-extension-audit/catalog.json
 sleep 2
 osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' || true
@@ -33,6 +34,7 @@ log show --last 3m --style compact --predicate '(process CONTAINS "WebKit" OR su
 tail -80 "$ROOT/webkit-system.log"
 head -80 "$ROOT/webkit-system.log"
 cat "$ROOT/display.txt"
+python3 script/summarize_performance.py "$ROOT"
 python3 - <<'PY'
 import json,pathlib
 p=pathlib.Path('evidence/runtime/results.json')

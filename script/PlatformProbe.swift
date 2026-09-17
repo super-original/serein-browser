@@ -21,6 +21,7 @@ import Metal
         webWindow=NSWindow(contentRect:NSRect(x:80,y:100,width:800,height:550),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
         webWindow.title="System WebKit rendering witness — no hardened runtime"
         let web=WKWebView(frame:NSRect(x:0,y:0,width:800,height:550))
+        web.wantsLayer=true
         webWindow.contentView=web;webWindow.makeKeyAndOrderFront(nil)
         web.loadHTMLString("<html><body style='font:32px system-ui;background:#dcefed;color:#173c38'><h1>WebKit rendering witness</h1><p>This is live HTML in a plain WKWebView.</p><div style='background:#b44735;width:300px;height:160px'></div></body></html>",baseURL:nil)
         fflush(stdout)

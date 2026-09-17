@@ -30,7 +30,7 @@ extension ExtensionHost: WKWebExtensionControllerDelegate {
         for tab in configuration.tabs {if let bridge=tab as? ExtensionTab,let source=bridge.session,!source.state.isPrivate {manager.moveTab(bridge.id,from:source,to:session)}}
         if session.state.tabs.count>1,let blank {session.close(blank,ask:false)}
         let frame=configuration.frame
-        if frame.width.isFinite,frame.height.isFinite,frame.width>=640,frame.height>=400 {session.window?.setFrame(frame,display:true)}
+        if frame.origin.x.isFinite,frame.origin.y.isFinite,frame.width.isFinite,frame.height.isFinite,frame.width>=640,frame.height>=400 {session.window?.setFrame(frame,display:true)}
         if !configuration.shouldBeFocused {previous?.window?.makeKeyAndOrderFront(nil)}
         session.extensionWindow?.setWindowState(configuration.windowState,for:context){_ in}
         completionHandler(session.extensionWindow,nil)

@@ -45,7 +45,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     @discardableResult public mutating func newTab(url: String = "about:blank", select: Bool = true) -> UUID {
         let tab=BrowserTab(workspaceID:activeWorkspaceID,url:url);tabs.append(tab)
-        if select { selectedTabID=tab.id }
+        if select { selectedTabID=tab.id;secondaryTabID=nil;primarySplitTabID=nil }
         return tab.id
     }
     public mutating func select(_ id: UUID) {

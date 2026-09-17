@@ -97,6 +97,13 @@ import SereinCore
             privateSession.window?.performClose(nil)
         } catch {check("private-cookie-isolation",false,error.localizedDescription)}
         session.window?.makeKeyAndOrderFront(nil)
+        let downloadVerifier=DownloadVerification(destination:root.appendingPathComponent("download-result.txt"))
+        let download:WKDownload=await withCheckedContinuation{continuation in
+            session.current!.webView.startDownload(using:URLRequest(url:URL(string:"http://127.0.0.1:8765/download.txt")!)){continuation.resume(returning:$0)}
+        }
+        download.delegate=downloadVerifier
+        check("download-completes",await wait{downloadVerifier.completed},downloadVerifier.error ?? "")
+        check("download-content",(try? String(contentsOf:downloadVerifier.destination,encoding:.utf8))=="Serein deterministic download fixture v1.\n")
         let count=session.state.tabs.count;session.close(third,ask:false);session.reopen()
         check("close-reopen",session.state.tabs.count==count && session.state.selectedTab?.url==fixture)
         var switchSamples:[Double]=[]

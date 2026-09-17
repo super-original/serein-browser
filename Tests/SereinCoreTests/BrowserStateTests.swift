@@ -17,6 +17,11 @@ final class BrowserStateTests: XCTestCase {
         XCTAssertEqual(s.secondaryTabID,a);s.close(a);XCTAssertNil(s.secondaryTabID)
         s.split(with:b);XCTAssertNil(s.secondaryTabID)
     }
+    func testSplitFocusKeepsPaneOrderAndNewTabExitsSplit() {
+        var s=BrowserWindowState();let a=s.selectedTabID!;let b=s.newTab();s.select(a);s.split(with:b)
+        s.select(b);XCTAssertEqual(s.primarySplitTabID,a);XCTAssertEqual(s.secondaryTabID,b);XCTAssertEqual(s.selectedTabID,b)
+        s.newTab();XCTAssertNil(s.secondaryTabID);XCTAssertNil(s.primarySplitTabID)
+    }
     func testPrivateWindowsNeverEncodeEvenIfInjectedAfterInitialization() throws {
         let normal=BrowserWindowState();var privateWindow=BrowserWindowState(isPrivate:true);privateWindow.newTab(url:"https://private.example/secret")
         var session=SavedSession(windows:[normal]);session.windows.append(privateWindow)

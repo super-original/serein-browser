@@ -13,11 +13,11 @@ import SereinCore
     func windowType(for context: WKWebExtensionContext) -> WKWebExtension.WindowType {.normal}
     func windowState(for context: WKWebExtensionContext) -> WKWebExtension.WindowState {
         guard let window=session?.window else{return .normal}
-        return window.isMiniaturized ? .minimized : window.styleMask.contains(.fullScreen) ? .fullscreen : .normal
+        return window.isMiniaturized ? .minimized : window.styleMask.contains(.fullScreen) ? .fullscreen : window.isZoomed ? .maximized : .normal
     }
     func focus(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.window?.makeKeyAndOrderFront(nil);completionHandler(nil)}
     func close(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.window?.performClose(nil);completionHandler(nil)}
-    func setFrame(_ frame: CGRect,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.window?.setFrame(frame,display:true);completionHandler(nil)}
+    func setFrame(_ frame: CGRect,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {guard let window=session?.window,frame.origin.x.isFinite,frame.origin.y.isFinite,frame.width.isFinite,frame.height.isFinite,frame.width>=640,frame.height>=400 else{completionHandler(ExtensionValidationError.invalid("A finite window frame of at least 640 by 400 is required."));return};window.setFrame(frame,display:true);completionHandler(nil)}
     func setWindowState(_ state:WKWebExtension.WindowState,for context:WKWebExtensionContext,completionHandler:@escaping ((any Error)?)->Void) {
         guard let window=session?.window else{completionHandler(ExtensionValidationError.invalid("Window no longer exists."));return}
         switch state {
