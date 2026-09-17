@@ -1,0 +1,24 @@
+name: macOS 27 platform evidence
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/platform-probe.yml', 'script/platform_probe.sh', 'script/PlatformProbe.swift']
+permissions:
+  contents: read
+concurrency:
+  group: platform-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  probe:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect SDK and prove macOS 27 graphical execution
+        run: bash script/platform_probe.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: platform-evidence
+          path: evidence/platform
+          retention-days: 7

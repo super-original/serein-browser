@@ -1,0 +1,7 @@
+.build/
+dist/
+DerivedData/
+*.xcresult/
+.DS_Store
+evidence/platform/
+evidence/runtime/
