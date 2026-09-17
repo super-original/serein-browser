@@ -59,5 +59,5 @@ import AppKit
     @objc func hide(){NSApp.hide(nil)}
     @objc func quit(){NSApp.terminate(nil)}
     @objc func about(){NSApp.orderFrontStandardAboutPanel(options:[.applicationName:"Serein",.applicationVersion:"0.1.0",.credits:NSAttributedString(string:"Native WebKit browser for macOS 27. Development build. Extension compatibility is incomplete.")])}
-    @objc func openFile(){guard let s=manager?.active,let w=s.window else{return};let panel=NSOpenPanel();panel.beginSheetModal(for:w){result in if result == .OK,let url=panel.url{let id=s.newTab();s.runtime(id).webView.loadFileURL(url,allowingReadAccessTo:url.deletingLastPathComponent())}}}
+    @objc func openFile(){guard let s=manager?.active,let w=s.window else{return};let panel=NSOpenPanel();panel.beginSheetModal(for:w){result in if result == .OK,let url=panel.url{let id=s.newTab();s.runtime(id).openFile(url)}}}
 }

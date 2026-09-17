@@ -9,7 +9,7 @@ struct ExtensionActionButton:NSViewRepresentable {
     let revision:Int
     func makeCoordinator()->Coordinator {Coordinator(id:record.id,session:session)}
     func makeNSView(context:Context)->NSButton {
-        let button=NSButton(image:NSImage(systemSymbolName:"puzzlepiece.extension",accessibilityDescription:record.name)!,target:context.coordinator,action:#selector(Coordinator.perform))
+        let button=NSButton(image:NSImage(systemSymbolName:"puzzlepiece.extension",accessibilityDescription:record.name)!,target:context.coordinator,action:#selector(Coordinator.performExtensionAction))
         button.bezelStyle = .glass;button.imagePosition = .imageOnly
         session.actionAnchors[record.id]=WeakActionAnchor(button)
         return button
@@ -25,6 +25,6 @@ struct ExtensionActionButton:NSViewRepresentable {
     @MainActor final class Coordinator:NSObject {
         let id:UUID;weak var session:BrowserSession?
         init(id:UUID,session:BrowserSession){self.id=id;self.session=session}
-        @objc func perform(){guard let session else{return};session.extensions?.perform(id,in:session)}
+        @objc func performExtensionAction(){guard let session else{return};session.extensions?.perform(id,in:session)}
     }
 }

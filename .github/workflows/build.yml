@@ -2,7 +2,7 @@ name: Build and exercise Serein on macOS 27
 on:
   workflow_dispatch:
   push:
-    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/verify_runtime.sh', '.github/workflows/build.yml']
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/verify_runtime.sh', 'script/VisualGate.swift', 'script/ScreenCapture.swift', '.github/workflows/build.yml']
   pull_request:
 permissions:
   contents: read
@@ -22,6 +22,10 @@ jobs:
         run: bash script/build.sh
       - name: Run actual macOS 27 application and integration scenarios
         run: bash script/verify_runtime.sh
+      - name: Gate actual desktop rendering
+        if: always()
+        run: |
+          xcrun swift script/VisualGate.swift evidence/runtime/01-light-expanded.png evidence/runtime/visual-gate.json
       - name: Export screenshots for inspection
         if: always()
         run: python3 script/emit_evidence.py evidence/runtime

@@ -18,6 +18,7 @@ import SereinCore
     @ObservationIgnored private let initialConfiguration: WKWebViewConfiguration?
     @ObservationIgnored private var storedView: WKWebView?
     @ObservationIgnored private var editBridge: EditBridge?
+    @ObservationIgnored private var permittedFileRoot: URL?
     var webView: WKWebView {
         if let storedView {return storedView}
         let config=initialConfiguration ?? WKWebViewConfiguration()
@@ -36,6 +37,11 @@ import SereinCore
     }
     init(id: UUID, session: BrowserSession, configuration: WKWebViewConfiguration? = nil) {self.id=id;self.session=session;initialConfiguration=configuration;super.init()}
     func load(_ url: URL) {failure=nil;crashed=false;webView.load(URLRequest(url:url))}
+    func openFile(_ url:URL) {
+        let root=url.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
+        permittedFileRoot=root;failure=nil;crashed=false
+        webView.loadFileURL(url,allowingReadAccessTo:root)
+    }
     func synchronize() {
         guard let view=storedView else{return}
         title=view.title ?? "New Tab";isLoading=view.isLoading;progress=view.estimatedProgress;canGoBack=view.canGoBack;canGoForward=view.canGoForward
@@ -69,7 +75,10 @@ extension TabRuntime: WKNavigationDelegate {
         if ["http","https","about","blob","data"].contains(url.scheme?.lowercased() ?? "") {
             decisionHandler(action.shouldPerformDownload ? .download : .allow);return
         }
-        if url.scheme=="file",webView.url?.isFileURL==true {decisionHandler(.allow);return}
+        if url.isFileURL,let root=permittedFileRoot {
+            let path=url.resolvingSymlinksInPath().standardizedFileURL.path
+            if path.hasPrefix(root.path+"/") {decisionHandler(.allow);return}
+        }
         decisionHandler(.cancel)
         guard action.navigationType == .linkActivated else{return}
         session?.confirm("Open another application?",detail:url.absoluteString,yes:"Open") {allow in if allow {NSWorkspace.shared.open(url)}}
