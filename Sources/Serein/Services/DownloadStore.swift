@@ -12,7 +12,7 @@ import Observation
     @ObservationIgnored let download: WKDownload
     @ObservationIgnored weak var window: NSWindow?
     init(download: WKDownload, privateMode: Bool, window: NSWindow?) {self.download=download;self.privateMode=privateMode;self.window=window;super.init();download.delegate=self}
-    func download(_ download: WKDownload,decideDestinationUsing response: URLResponse,suggestedFilename: String,completionHandler: @escaping (URL?)->Void) {
+    func download(_ download: WKDownload,decideDestinationUsing response: URLResponse,suggestedFilename: String,completionHandler: @escaping @MainActor @Sendable (URL?)->Void) {
         name=(suggestedFilename as NSString).lastPathComponent
         let panel=NSSavePanel();panel.nameFieldStringValue=name;panel.canCreateDirectories=true
         let complete: (NSApplication.ModalResponse)->Void = {[weak self] response in

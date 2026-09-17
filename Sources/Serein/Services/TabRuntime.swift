@@ -62,7 +62,7 @@ extension TabRuntime: WKNavigationDelegate {
     func webView(_ webView: WKWebView,didFail navigation: WKNavigation!,withError error: Error) {failed(error)}
     private func failed(_ error: Error) {if (error as NSError).code != NSURLErrorCancelled {failure=error.localizedDescription};synchronize()}
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {crashed=true;failure="The web content process stopped. Reload to recover this tab.";isLoading=false}
-    func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping (WKNavigationActionPolicy)->Void) {
+    func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy)->Void) {
         guard let url=action.request.url else {decisionHandler(.cancel);return}
         if session?.extensions?.controller.extensionContext(for:url) != nil {decisionHandler(.allow);return}
         if ["http","https","about","blob","data"].contains(url.scheme?.lowercased() ?? "") {
@@ -73,7 +73,7 @@ extension TabRuntime: WKNavigationDelegate {
         guard action.navigationType == .linkActivated else{return}
         session?.confirm("Open another application?",detail:url.absoluteString,yes:"Open") {allow in if allow {NSWorkspace.shared.open(url)}}
     }
-    func webView(_ webView: WKWebView,decidePolicyFor response: WKNavigationResponse,decisionHandler: @escaping (WKNavigationResponsePolicy)->Void) {decisionHandler(response.canShowMIMEType ? .allow : .download)}
+    func webView(_ webView: WKWebView,decidePolicyFor response: WKNavigationResponse,decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy)->Void) {decisionHandler(response.canShowMIMEType ? .allow : .download)}
     func webView(_ webView: WKWebView,navigationAction: WKNavigationAction,didBecome download: WKDownload) {session?.manager?.downloads.add(download,privateMode:session?.state.isPrivate ?? true,window:session?.window)}
     func webView(_ webView: WKWebView,navigationResponse: WKNavigationResponse,didBecome download: WKDownload) {session?.manager?.downloads.add(download,privateMode:session?.state.isPrivate ?? true,window:session?.window)}
 }

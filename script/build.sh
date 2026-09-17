@@ -16,8 +16,8 @@ mkdir -p evidence/build dist
 } | tee evidence/build/toolchain.txt
 test "$(sw_vers -productVersion | cut -d. -f1)" = 27
 test "$(xcrun --sdk macosx --show-sdk-version | cut -d. -f1)" = 27
-xcrun swift test --parallel 2>&1 | tee evidence/build/tests.log
-xcrun swift build -c release --arch arm64 2>&1 | tee evidence/build/build.log
+xcrun swift test --build-system native --parallel 2>&1 | tee evidence/build/tests.log
+xcrun swift build --build-system native -c release --arch arm64 2>&1 | tee evidence/build/build.log
 APP=dist/Serein.app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/arm64-apple-macosx/release/Serein "$APP/Contents/MacOS/Serein"
