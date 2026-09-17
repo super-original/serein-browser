@@ -28,6 +28,16 @@ import SereinCore
                 check("capture-"+name,succeeded)
             } catch {check("capture-"+name,false,error.localizedDescription)}
         }
+        func keyboard(_ name:String) async -> Bool {
+            do {
+                try name.write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+                for _ in 0..<100 {
+                    if FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".keyboard-finished").path){await pause(300);return true}
+                    await pause(100)
+                }
+            } catch {print(error)}
+            return false
+        }
         guard let session=manager.active else{return}
         session.window?.setFrame(NSRect(x:10,y:61,width:1000,height:677),display:true)
         let fixture="http://127.0.0.1:8765/index.html"
@@ -50,6 +60,16 @@ import SereinCore
         } catch {check("document-content",false,error.localizedDescription)}
         let elapsed=start.duration(to:.now)
         check("startup-fixture-timing",true,String(describing:elapsed))
+        let originalTab=session.state.selectedTabID
+        let initialTabCount=session.state.tabs.count
+        let focused=await keyboard("address")
+        check("keyboard-command-l",focused && session.window?.firstResponder is NSTextView)
+        let created=await keyboard("new-tab")
+        check("keyboard-command-t",created && session.state.tabs.count==initialTabCount+1)
+        let closed=await keyboard("close-tab")
+        check("keyboard-command-w",closed && session.state.tabs.count==initialTabCount)
+        if let originalTab {session.select(originalTab)}
+        session.addressFocused=false;session.window?.makeFirstResponder(session.current?.webView)
         UserDefaults.standard.set("light",forKey:"appearance");await capture("01-light-expanded")
         let diagnosticWindow=NSWindow(contentRect:NSRect(x:80,y:90,width:800,height:580),styleMask:[.titled,.closable],backing:.buffered,defer:false)
         diagnosticWindow.title="WebKit direct AppKit diagnostic"
@@ -99,10 +119,14 @@ import SereinCore
         session.window?.makeKeyAndOrderFront(nil)
         let downloadVerifier=DownloadVerification(destination:root.appendingPathComponent("download-result.txt"))
         let download:WKDownload=await withCheckedContinuation{continuation in
-            session.current!.webView.startDownload(using:URLRequest(url:URL(string:"http://127.0.0.1:8765/download.txt")!)){continuation.resume(returning:$0)}
+            session.current!.webView.startDownload(using:URLRequest(url:URL(string:"http://127.0.0.1:8765/download.txt")!)){download in
+                download.delegate=downloadVerifier
+                continuation.resume(returning:download)
+            }
         }
-        download.delegate=downloadVerifier
-        check("download-completes",await wait{downloadVerifier.completed},downloadVerifier.error ?? "")
+        _=download
+        let downloadFinished=await wait{downloadVerifier.completed}
+        check("download-completes",downloadFinished && downloadVerifier.error==nil,downloadVerifier.error ?? "")
         check("download-content",(try? String(contentsOf:downloadVerifier.destination,encoding:.utf8))=="Serein deterministic download fixture v1.\n")
         let count=session.state.tabs.count;session.close(third,ask:false);session.reopen()
         check("close-reopen",session.state.tabs.count==count && session.state.selectedTab?.url==fixture)
@@ -114,6 +138,11 @@ import SereinCore
         check("tab-switch-samples",true,"Two switches including two 16ms yields, milliseconds: \(switchSamples)")
         session.select(first);session.state.sidebar = .expanded
         await capture("14-restored")
+        let idleMetadata:[String:Any] = ["tabs":session.state.tabs.count,"visibleTabs":session.state.visibleTabs.count,"secondsRequested":12,"page":fixture,"note":"Warm idle after integration scenarios; renderer failure prevents normal visual-workload claims."]
+        try? JSONSerialization.data(withJSONObject:idleMetadata,options:.prettyPrinted).write(to:root.appendingPathComponent("idle-workload.json"))
+        try? Data().write(to:root.appendingPathComponent("idle-start"))
+        await pause(12_000)
+        try? Data().write(to:root.appendingPathComponent("idle-end"))
         results += await ExtensionVerification.run(manager:manager,session:session)
         await RealExtensionAudit.run(manager:manager,root:root)
         do {try JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)} catch {print(error)}

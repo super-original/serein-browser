@@ -14,6 +14,17 @@ sleep 2
 osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' || true
 for i in $(seq 1 2400); do
   if test -s "$ROOT/results.json"; then break; fi
+  if test -f "$ROOT/keyboard-request"; then
+    KEYBOARD_NAME=$(cat "$ROOT/keyboard-request")
+    rm "$ROOT/keyboard-request"
+    case "$KEYBOARD_NAME" in
+      address) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "l" using command down' ;;
+      new-tab) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "t" using command down' ;;
+      close-tab) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "w" using command down' ;;
+      *) exit 2 ;;
+    esac
+    touch "$ROOT/$KEYBOARD_NAME.keyboard-finished"
+  fi
   if test -f "$ROOT/capture-request"; then
     CAPTURE_NAME=$(cat "$ROOT/capture-request")
     rm "$ROOT/capture-request"
@@ -25,7 +36,12 @@ for i in $(seq 1 2400); do
     fi
     touch "$ROOT/$CAPTURE_NAME.capture-finished"
   fi
-  if (( i % 20 == 0 )); then ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-$i.txt"; fi
+  if (( i % 20 == 0 )); then
+    ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-$i.txt"
+    if test -f "$ROOT/idle-start" && ! test -f "$ROOT/idle-end"; then
+      ps -axo pid,ppid,rss,time,comm > "$ROOT/idle-$(date +%s).txt"
+    fi
+  fi
   sleep 0.1
 done
 cat "$ROOT/application.log"
