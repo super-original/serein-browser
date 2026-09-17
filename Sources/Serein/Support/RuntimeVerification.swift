@@ -36,7 +36,12 @@ import SereinCore
             check("document-content",(value as? String)?.contains("A little room to think.")==true,String(describing:value))
             let view=session.current!.webView
             print("WEBVIEW frame=\(view.frame) bounds=\(view.bounds) window=\(String(describing:view.window)) hidden=\(view.isHidden) alpha=\(view.alphaValue)")
-            let snapshot=try await view.takeSnapshot(with:nil)
+            let snapshot=try await withCheckedThrowingContinuation { (continuation:CheckedContinuation<NSImage,Error>) in
+                view.takeSnapshot(with:nil) { image,error in
+                    if let image {continuation.resume(returning:image)}
+                    else {continuation.resume(throwing:error ?? NSError(domain:"Snapshot",code:1))}
+                }
+            }
             if let data=snapshot.tiffRepresentation,let rep=NSBitmapImageRep(data:data),let png=rep.representation(using:.png,properties:[:]) {try png.write(to:root.appendingPathComponent("diagnostic-webkit-snapshot.png"))}
         } catch {check("document-content",false,error.localizedDescription)}
         let elapsed=start.duration(to:.now)
