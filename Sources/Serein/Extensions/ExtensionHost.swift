@@ -43,7 +43,7 @@ struct InstalledExtension: Identifiable, Codable {
         for pattern in ext.requestedPermissionMatchPatterns where record.hosts.contains(pattern.string) {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
         try controller.load(context);contexts[record.id]=context
         for window in manager?.windows ?? [] where !window.session.state.isPrivate {
-            if let bridge=window.session.extensionWindow {controller.didOpenWindow(bridge)}
+            if let bridge=window.session.extensionWindow {context.didOpenWindow(bridge)}
         }
     }
     func chooseInstall(in session: BrowserSession) {

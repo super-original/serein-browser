@@ -69,7 +69,8 @@ import SereinCore
     }
     func reopen() {if let id=state.reopen() {extensions?.controller.didOpenTab(bridge(id));select(id)}}
     func duplicate(_ id: UUID) {if let new=state.duplicate(id) {extensions?.controller.didOpenTab(bridge(new));select(new)}}
-    func navigate(_ input: String) {
+    func navigate(_ input: String,ask:Bool = true) {
+        if ask,current?.hasUserEdits==true {confirm("Leave this page?",detail:"Unsaved changes may be lost.",yes:"Leave"){[weak self] allowed in if allowed{self?.navigate(input,ask:false)}};return}
         guard let url=AddressResolver.resolve(input),let runtime=current else{return}
         address=url.absoluteString;addressFocused=false;runtime.load(url)
     }

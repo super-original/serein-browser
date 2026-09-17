@@ -28,6 +28,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     public var tabs: [BrowserTab]
     public var selectedTabID: UUID?
     public var secondaryTabID: UUID?
+    public var primarySplitTabID: UUID?
     public var sidebar: SidebarMode = .expanded
     public var sidebarWidth: Double = 230
     public var closedTabs: [BrowserTab] = []
@@ -49,7 +50,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     public mutating func select(_ id: UUID) {
         guard let tab=tabs.first(where:{$0.id==id}) else {return}
         if tab.kind != .essential && tab.workspaceID != activeWorkspaceID {activeWorkspaceID=tab.workspaceID;secondaryTabID=nil}
-        if secondaryTabID == id {secondaryTabID=selectedTabID}
+        if secondaryTabID != nil,id != secondaryTabID,id != primarySplitTabID {secondaryTabID=nil;primarySplitTabID=nil}
         selectedTabID=id
     }
     public mutating func close(_ id: UUID, remember: Bool = true) {
@@ -57,7 +58,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         let oldOrder=visibleTabs.map(\.id);let selectedIndex=oldOrder.firstIndex(of:id) ?? 0
         let removed=tabs.remove(at:index)
         if remember {closedTabs.append(removed);closedTabs=Array(closedTabs.suffix(25))}
-        if secondaryTabID==id {secondaryTabID=nil}
+        if secondaryTabID==id || primarySplitTabID==id {secondaryTabID=nil;primarySplitTabID=nil}
         if selectedTabID==id {
             let candidates=visibleTabs
             selectedTabID=candidates.isEmpty ? nil : candidates[min(selectedIndex,candidates.count-1)].id
@@ -90,7 +91,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         guard workspaces.contains(where:{$0.id==space}),let i=tabs.firstIndex(where:{$0.id==id}) else{return}
         tabs[i].workspaceID=space
         if tabs[i].kind == .essential {tabs[i].kind = .pinned}
-        if secondaryTabID==id {secondaryTabID=nil}
+        if secondaryTabID==id || primarySplitTabID==id {secondaryTabID=nil;primarySplitTabID=nil}
         if selectedTabID==id {selectedTabID=visibleTabs.first?.id}
         if visibleTabs.isEmpty {newTab()}
     }
@@ -112,7 +113,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public mutating func split(with id: UUID) {
         guard id != selectedTabID,visibleTabs.contains(where:{$0.id==id}) else{return}
-        secondaryTabID=id
+        primarySplitTabID=selectedTabID;secondaryTabID=id
     }
     public mutating func repair() {
         if workspaces.isEmpty {workspaces=[Workspace()]}
@@ -125,6 +126,6 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         sidebarWidth=min(500,max(180,sidebarWidth.isFinite ? sidebarWidth : 240))
         if !visibleTabs.contains(where:{$0.id==selectedTabID}) {selectedTabID=visibleTabs.first?.id}
         if selectedTabID==nil {newTab()}
-        if secondaryTabID==selectedTabID || !visibleTabs.contains(where:{$0.id==secondaryTabID}) {secondaryTabID=nil}
+        if !visibleTabs.contains(where:{$0.id==secondaryTabID}) || !visibleTabs.contains(where:{$0.id==primarySplitTabID}) || secondaryTabID==primarySplitTabID {secondaryTabID=nil;primarySplitTabID=nil}
     }
 }

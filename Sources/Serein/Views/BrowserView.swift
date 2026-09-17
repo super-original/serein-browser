@@ -24,7 +24,7 @@ struct BrowserView: View {
                 VStack(spacing:6) {
                     if session.state.sidebar == .collapsed {NavigationBar(session:session).padding(.leading,48).frame(height:38)}
                     if session.findVisible {FindBar(session:session)}
-                    if let second=session.state.secondaryTabID,let selected=session.state.selectedTabID {
+                    if let second=session.state.secondaryTabID,let selected=session.state.primarySplitTabID {
                         HSplitView {PagePane(session:session,id:selected).frame(minWidth:230);PagePane(session:session,id:second).frame(minWidth:230)}
                     } else if let selected=session.state.selectedTabID {PagePane(session:session,id:selected)}
                 }
@@ -79,8 +79,26 @@ private struct PagePane: View {
 }
 struct WebContentView: NSViewRepresentable {
     let runtime: TabRuntime
-    func makeNSView(context: Context) -> WKWebView {runtime.webView}
-    func updateNSView(_ view: WKWebView,context: Context) {}
+    func makeNSView(context: Context) -> NSView {
+        let view=runtime.webView
+        let gesture=NSClickGestureRecognizer(target:context.coordinator,action:#selector(Coordinator.focus))
+        gesture.delaysPrimaryMouseButtonEvents=false;gesture.delegate=context.coordinator
+        view.addGestureRecognizer(gesture);context.coordinator.gesture=gesture
+        let container=NSView(frame:NSRect(x:0,y:0,width:800,height:600))
+        view.frame=container.bounds;view.autoresizingMask=[.width,.height]
+        container.addSubview(view)
+        return container
+    }
+    func makeCoordinator() -> Coordinator {Coordinator(runtime:runtime)}
+    static func dismantleNSView(_ view:NSView,coordinator:Coordinator) {if let gesture=coordinator.gesture {coordinator.runtime.webView.removeGestureRecognizer(gesture)}}
+    @MainActor final class Coordinator:NSObject,NSGestureRecognizerDelegate {
+        let runtime:TabRuntime
+        var gesture:NSClickGestureRecognizer?
+        init(runtime:TabRuntime){self.runtime=runtime}
+        @objc func focus(){if runtime.session?.state.secondaryTabID != nil,runtime.session?.state.selectedTabID != runtime.id{runtime.session?.select(runtime.id)}}
+        func gestureRecognizer(_ gestureRecognizer:NSGestureRecognizer,shouldRecognizeSimultaneouslyWith other:NSGestureRecognizer)->Bool{true}
+    }
+    func updateNSView(_ view: NSView,context: Context) {}
 }
 private struct FindBar: View {
     @Bindable var session: BrowserSession

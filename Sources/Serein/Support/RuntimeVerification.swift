@@ -31,6 +31,14 @@ import SereinCore
         session.navigate(fixture)
         check("navigation",await wait{session.current?.webView.title=="Field Notes"},session.current?.webView.url?.absoluteString ?? "no URL")
         check("load-finished",await wait{session.current?.isLoading==false})
+        do {
+            let value=try await session.current!.webView.evaluateJavaScript("JSON.stringify({body:document.body.innerText,rect:document.body.getBoundingClientRect().toJSON(),width:innerWidth,height:innerHeight,scrollY:scrollY,color:getComputedStyle(document.body).color,visibility:document.visibilityState})")
+            check("document-content",(value as? String)?.contains("A little room to think.")==true,String(describing:value))
+            let view=session.current!.webView
+            print("WEBVIEW frame=\(view.frame) bounds=\(view.bounds) window=\(String(describing:view.window)) hidden=\(view.isHidden) alpha=\(view.alphaValue)")
+            let snapshot=try await view.takeSnapshot(with:nil)
+            if let data=snapshot.tiffRepresentation,let rep=NSBitmapImageRep(data:data),let png=rep.representation(using:.png,properties:[:]) {try png.write(to:root.appendingPathComponent("diagnostic-webkit-snapshot.png"))}
+        } catch {check("document-content",false,error.localizedDescription)}
         let elapsed=start.duration(to:.now)
         check("startup-fixture-timing",true,String(describing:elapsed))
         UserDefaults.standard.set("light",forKey:"appearance");await capture("01-light-expanded")

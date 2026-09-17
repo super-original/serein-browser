@@ -23,6 +23,13 @@ import SwiftUI
         if args.contains("--integration-test") {Task {await RuntimeVerification.run(manager:manager,root:root)}}
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if let session=manager?.windows.map(\.session).first(where:{$0.runtimes.values.contains{$0.hasUserEdits}}) {
+            session.confirm("Quit Serein?",detail:"Open pages have edits. Unsaved changes may be lost.",yes:"Quit") {allowed in
+                if allowed {self.manager.saveNow()}
+                sender.reply(toApplicationShouldTerminate:allowed)
+            }
+            return .terminateLater
+        }
         manager?.saveNow();return .terminateNow
     }
     func applicationShouldHandleReopen(_ sender: NSApplication,hasVisibleWindows flag: Bool) -> Bool {
