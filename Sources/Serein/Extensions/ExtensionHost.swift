@@ -74,7 +74,7 @@ struct InstalledExtension: Identifiable, Codable {
             catch {try? FileManager.default.removeItem(at:final);throw error}
         } catch {try? FileManager.default.removeItem(at:destination);self.error=error.localizedDescription}
     }
-    private func prepare(_ source: URL,at destination: URL) throws {
+    func prepare(_ source: URL,at destination: URL) throws {
         let values=try source.resourceValues(forKeys:[.isDirectoryKey,.isSymbolicLinkKey])
         guard values.isSymbolicLink != true else{throw ExtensionValidationError.invalid("Symbolic-link packages are not accepted.")}
         if values.isDirectory==true {

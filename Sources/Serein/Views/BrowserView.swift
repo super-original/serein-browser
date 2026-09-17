@@ -71,7 +71,6 @@ private struct PagePane: View {
                 .frame(maxWidth:.infinity,maxHeight:.infinity).background(Color(nsColor:.textBackgroundColor))
             }
         }
-        .clipShape(.rect(cornerRadius:8))
         .overlay(alignment:.top){if runtime.isLoading {ProgressView(value:runtime.progress).progressViewStyle(.linear).tint(.accentColor).frame(height:2)}}
         .overlay(RoundedRectangle(cornerRadius:8).strokeBorder(.primary.opacity(0.08),lineWidth:1))
         .accessibilityIdentifier("page-\(id)")

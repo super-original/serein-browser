@@ -1,0 +1,65 @@
+[
+  {
+    "name": "uBlock-uBlock0_1.75.0.chromium.zip",
+    "version": "1.75.0",
+    "url": "https://github.com/gorhill/uBlock/releases/download/1.75.0/uBlock0_1.75.0.chromium.zip",
+    "source": "https://github.com/gorhill/uBlock/releases/tag/1.75.0",
+    "sha256": "393cf95709d1074d4022970e9014e434395c53a822387f1e25f43be97cf4b582",
+    "bytes": 4644480,
+    "manifest_version": 2
+  },
+  {
+    "name": "uBlock-uBlock0_1.75.0.firefox.signed.xpi",
+    "version": "1.75.0",
+    "url": "https://github.com/gorhill/uBlock/releases/download/1.75.0/uBlock0_1.75.0.firefox.signed.xpi",
+    "source": "https://github.com/gorhill/uBlock/releases/tag/1.75.0",
+    "sha256": "5b74415860456370644bd80f16125e865b0e6c356bb5dfcfb84069967eaa5287",
+    "bytes": 4650100,
+    "manifest_version": 2
+  },
+  {
+    "name": "stylus-stylus-chrome-mv3-v2.4.13-id.zip",
+    "version": "v2.4.13",
+    "url": "https://github.com/openstyles/stylus/releases/download/v2.4.13/stylus-chrome-mv3-v2.4.13-id.zip",
+    "source": "https://github.com/openstyles/stylus/releases/tag/v2.4.13",
+    "sha256": "61ce154443d2ac6c557f7911740b2e670768d05521faa157a807cc3e718fcfa4",
+    "bytes": 1222110,
+    "manifest_version": 3
+  },
+  {
+    "name": "violentmonkey-Violentmonkey-webext-v2.49.0.zip",
+    "version": "v2.49.0",
+    "url": "https://github.com/violentmonkey/violentmonkey/releases/download/v2.49.0/Violentmonkey-webext-v2.49.0.zip",
+    "source": "https://github.com/violentmonkey/violentmonkey/releases/tag/v2.49.0",
+    "sha256": "847c86a20e214d3515a9dfabe5357875af20e305bbcc1692d6e109a4edd6a7f3",
+    "bytes": 681057,
+    "manifest_version": 2
+  },
+  {
+    "name": "clients-dist-chrome-2026.9.0.zip",
+    "version": "browser-v2026.9.0",
+    "url": "https://github.com/bitwarden/clients/releases/download/browser-v2026.9.0/dist-chrome-2026.9.0.zip",
+    "source": "https://github.com/bitwarden/clients/releases/tag/browser-v2026.9.0",
+    "sha256": "b0d2492a40a9e578bb260d2bc559774cd413aa9aafedf574ebdc0859b3e4a112",
+    "bytes": 24182163,
+    "manifest_version": 3
+  },
+  {
+    "name": "downthemall",
+    "version": "4.15.1",
+    "url": "https://addons.mozilla.org/firefox/downloads/file/4825019/downthemall-4.15.1.xpi",
+    "source": "https://addons.mozilla.org/firefox/addon/downthemall/",
+    "sha256": "a6f53822b708b4cb595195f25818fb0eeb690e1244ca2d7fc0d0b645c4dc5de9",
+    "bytes": 976834,
+    "manifest_version": 2
+  },
+  {
+    "name": "tab-session-manager",
+    "version": "7.4.0",
+    "url": "https://addons.mozilla.org/firefox/downloads/file/4905104/tab_session_manager-7.4.0.xpi",
+    "source": "https://addons.mozilla.org/firefox/addon/tab-session-manager/",
+    "sha256": "10ddc3bc27179cb32962fa8629e87d9d2c3897a604ba347666ebe16a1488751b",
+    "bytes": 768735,
+    "manifest_version": 3
+  }
+]

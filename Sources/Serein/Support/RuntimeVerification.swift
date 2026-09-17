@@ -47,6 +47,14 @@ import SereinCore
         let elapsed=start.duration(to:.now)
         check("startup-fixture-timing",true,String(describing:elapsed))
         UserDefaults.standard.set("light",forKey:"appearance");await capture("01-light-expanded")
+        let diagnosticWindow=NSWindow(contentRect:NSRect(x:80,y:90,width:800,height:580),styleMask:[.titled,.closable],backing:.buffered,defer:false)
+        diagnosticWindow.title="WebKit direct AppKit diagnostic"
+        let diagnosticView=WKWebView(frame:NSRect(x:0,y:0,width:800,height:580))
+        diagnosticWindow.contentView=diagnosticView;diagnosticWindow.makeKeyAndOrderFront(nil)
+        diagnosticView.load(URLRequest(url:URL(string:fixture)!))
+        _=await wait{diagnosticView.title=="Field Notes"}
+        await capture("diagnostic-direct-appkit")
+        diagnosticWindow.orderOut(nil);session.window?.makeKeyAndOrderFront(nil)
         UserDefaults.standard.set("dark",forKey:"appearance");await capture("02-dark-expanded")
         UserDefaults.standard.set("light",forKey:"appearance")
         let first=session.state.selectedTabID!
@@ -96,6 +104,7 @@ import SereinCore
         session.select(first);session.state.sidebar = .expanded
         await capture("14-restored")
         results += await ExtensionVerification.run(manager:manager,session:session)
+        await RealExtensionAudit.run(manager:manager,root:root)
         do {try JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)} catch {print(error)}
         manager.saveNow()
         print("VERIFICATION_COMPLETE \(results.filter{!$0.passed}.count) failures")
