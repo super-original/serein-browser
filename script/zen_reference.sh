@@ -10,5 +10,5 @@ hdiutil attach /tmp/zen.dmg -nobrowse -mountpoint /tmp/zen-mount
 ditto /tmp/zen-mount/Zen.app /tmp/Zen.app
 hdiutil detach /tmp/zen-mount
 python3 -m http.server 8765 --directory Fixtures > /tmp/fixture-server.log 2>&1 &
-geckodriver --port 4444 > evidence/zen/geckodriver.log 2>&1 &
+geckodriver --allow-system-access --port 4444 > evidence/zen/geckodriver.log 2>&1 &
 python3 script/zen_reference.py
