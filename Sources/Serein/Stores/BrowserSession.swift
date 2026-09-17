@@ -90,7 +90,7 @@ import SereinCore
         if let url {state.tabs[i].url=url}
         if let title,!title.isEmpty {state.tabs[i].title=title}
         if state.selectedTabID==id,!addressFocused {address=state.tabs[i].url=="about:blank" ? "" : state.tabs[i].url}
-        extensions?.controller.didChangeTabProperties([.url,.title,.loading],for:bridge(id))
+        extensions?.controller.didChangeTabProperties([.URL,.title,.loading],for:bridge(id))
     }
     func bookmark() {
         guard let tab=state.selectedTab else{return}

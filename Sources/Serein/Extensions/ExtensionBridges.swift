@@ -35,7 +35,7 @@ import SereinCore
     func shouldBypassPermissions(for context: WKWebExtensionContext) -> Bool {false}
     func shouldGrantPermissionsOnUserGesture(for context: WKWebExtensionContext) -> Bool {true}
     func size(for context: WKWebExtensionContext) -> CGSize {session?.runtimes[id]?.webView.bounds.size ?? .zero}
-    func zoomFactor(for context: WKWebExtensionContext) -> Double {session?.runtime(id).webView.pageZoom ?? 1}
+    func zoomFactor(for context: WKWebExtensionContext) -> Double {Double(session?.runtime(id).webView.pageZoom ?? 1)}
     func setZoomFactor(_ value: Double,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).webView.pageZoom=min(5,max(0.25,value));completionHandler(nil)}
     func activate(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.select(id);completionHandler(nil)}
     func setSelected(_ selected: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {

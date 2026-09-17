@@ -106,7 +106,7 @@ struct InstalledExtension: Identifiable, Codable {
         do {
             if let context=contexts[id] {
                 try controller.unload(context)
-                let records=await controller.fetchDataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
+                let records=await controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
                 let matching=records.filter{$0.uniqueIdentifier==context.uniqueIdentifier}
                 await controller.removeData(ofTypes:WKWebExtensionController.allExtensionDataTypes,from:matching)
             }

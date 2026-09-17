@@ -9,6 +9,7 @@ mkdir -p evidence/build dist
   xcodebuild -version
   xcrun swift --version
   xcrun --sdk macosx --show-sdk-version
+  ls -d /Applications/Xcode*.app
   readlink /Applications/Xcode_27.0.app || true
   df -h .
   sysctl hw.memsize
@@ -16,11 +17,12 @@ mkdir -p evidence/build dist
 } | tee evidence/build/toolchain.txt
 test "$(sw_vers -productVersion | cut -d. -f1)" = 27
 test "$(xcrun --sdk macosx --show-sdk-version | cut -d. -f1)" = 27
-xcrun swift test --build-system native --parallel 2>&1 | tee evidence/build/tests.log
-xcrun swift build --build-system native -c release --arch arm64 2>&1 | tee evidence/build/build.log
+xcrun swift test --parallel 2>&1 | tee evidence/build/tests.log
+xcrun swift build -c release --arch arm64 2>&1 | tee evidence/build/build.log
 APP=dist/Serein.app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build/arm64-apple-macosx/release/Serein "$APP/Contents/MacOS/Serein"
+BIN=$(xcrun swift build -c release --arch arm64 --show-bin-path)
+cp "$BIN/Serein" "$APP/Contents/MacOS/Serein"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp -R Fixtures "$APP/Contents/Resources/Fixtures"
 codesign --force --sign - --options runtime "$APP"
