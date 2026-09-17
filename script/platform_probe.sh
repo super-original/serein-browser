@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -xeuo pipefail
 mkdir -p evidence/platform
 exec > >(tee evidence/platform/probe.log) 2>&1
 export DEVELOPER_DIR=/Applications/Xcode_27.0.app/Contents/Developer

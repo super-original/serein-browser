@@ -27,6 +27,9 @@ try:
     request(prefix+'/url',{'url':'http://127.0.0.1:8765/index.html'})
     request(prefix+'/moz/context',{'context':'chrome'})
     time.sleep(3)
+    subprocess.run(['osascript','-e','tell application "Zen" to activate'],check=True)
+    js('gBrowser.selectedTab=gBrowser.addTab("http://127.0.0.1:8765/index.html",{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});')
+    time.sleep(2)
     snap('01-light-expanded','Services.prefs.setIntPref("ui.systemUsesDarkTheme",0);')
     snap('02-dark-expanded','Services.prefs.setIntPref("ui.systemUsesDarkTheme",1);')
     snap('03-essentials','Services.prefs.setIntPref("ui.systemUsesDarkTheme",0);gZenPinnedTabManager.addToEssentials(gBrowser.selectedTab);gBrowser.selectedTab=gBrowser.addTab("http://127.0.0.1:8765/second.html",{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});')
@@ -45,9 +48,5 @@ try:
 finally:
     (out/'manifest.json').write_text(json.dumps({'zen':'1.22.2b','theme':'Built-in default, no mods','requestedWindow':[1000,700],'results':results},indent=2))
     request(prefix,method='DELETE')
-for f in sorted(out.glob('*.png')):
-    print('SEREIN_FILE_BEGIN '+f.name,flush=True)
-    print(base64.b64encode(f.read_bytes()).decode(),flush=True)
-    print('SEREIN_FILE_END',flush=True)
 print(json.dumps(results,indent=2))
 if sum(x['status']=='captured' for x in results)<12: raise SystemExit('Fewer than twelve successful captures')
