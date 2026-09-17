@@ -92,6 +92,13 @@ struct InstalledExtension: Identifiable, Codable {
             let process=Process();process.executableURL=URL(fileURLWithPath:"/usr/bin/ditto");process.arguments=["-x","-k",source.path,destination.path]
             try process.run();process.waitUntilExit()
             guard process.terminationStatus==0 else{throw ExtensionValidationError.invalid("The system could not extract the extension.")}
+            if !FileManager.default.fileExists(atPath:destination.appendingPathComponent("manifest.json").path) {
+                let children=try FileManager.default.contentsOfDirectory(at:destination,includingPropertiesForKeys:[.isDirectoryKey]).filter{!$0.lastPathComponent.hasPrefix(".") && $0.lastPathComponent != "__MACOSX"}
+                if children.count==1,let wrapper=children.first,FileManager.default.fileExists(atPath:wrapper.appendingPathComponent("manifest.json").path) {
+                    for child in try FileManager.default.contentsOfDirectory(at:wrapper,includingPropertiesForKeys:nil) {try FileManager.default.moveItem(at:child,to:destination.appendingPathComponent(child.lastPathComponent))}
+                    try FileManager.default.removeItem(at:wrapper)
+                }
+            }
         }
     }
     func setEnabled(_ id: UUID,_ enabled: Bool) async {

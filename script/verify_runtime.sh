@@ -2,6 +2,8 @@
 set -euo pipefail
 ROOT="$PWD/evidence/runtime"
 mkdir -p "$ROOT"
+xcrun swiftc -parse-as-library -target arm64-apple-macos27.0 script/ScreenCapture.swift -o /tmp/serein-capture
+system_profiler SPDisplaysDataType > "$ROOT/display.txt"
 python3 -m http.server 8765 --bind 127.0.0.1 --directory Fixtures > "$ROOT/server.log" 2>&1 &
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
@@ -15,6 +17,9 @@ for i in $(seq 1 2400); do
     CAPTURE_NAME=$(cat "$ROOT/capture-request")
     if [[ "$CAPTURE_NAME" =~ ^[a-z0-9-]+$ ]]; then
       screencapture -x "$ROOT/$CAPTURE_NAME.png"
+      if [[ "$CAPTURE_NAME" == '01-light-expanded' || "$CAPTURE_NAME" == 'diagnostic-direct-appkit' ]]; then
+        /tmp/serein-capture "$ROOT/$CAPTURE_NAME-screen-capture-kit.png" || true
+      fi
     fi
     rm "$ROOT/capture-request"
   fi
@@ -23,6 +28,9 @@ for i in $(seq 1 2400); do
 done
 cat "$ROOT/application.log"
 cat "$ROOT/application-error.log"
+log show --last 3m --style compact --predicate '(process CONTAINS "WebKit" OR subsystem BEGINSWITH "com.apple.WebKit") AND (messageType == error OR messageType == fault)' > "$ROOT/webkit-system.log" 2>&1 || true
+tail -80 "$ROOT/webkit-system.log"
+cat "$ROOT/display.txt"
 python3 - <<'PY'
 import json,pathlib
 p=pathlib.Path('evidence/runtime/results.json')
