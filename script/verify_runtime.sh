@@ -8,10 +8,17 @@ trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
 open -n dist/Serein.app --stdout "$ROOT/application.log" --stderr "$ROOT/application-error.log" --args --test-root "$ROOT" --integration-test
 sleep 2
 osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' || true
-for i in $(seq 1 100); do
+for i in $(seq 1 2400); do
   if test -s "$ROOT/results.json"; then break; fi
-  ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-$i.txt"
-  sleep 2
+  if test -f "$ROOT/capture-request"; then
+    CAPTURE_NAME=$(cat "$ROOT/capture-request")
+    if [[ "$CAPTURE_NAME" =~ ^[a-z0-9-]+$ ]]; then
+      screencapture -x "$ROOT/$CAPTURE_NAME.png"
+    fi
+    rm "$ROOT/capture-request"
+  fi
+  if (( i % 20 == 0 )); then ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-$i.txt"; fi
+  sleep 0.1
 done
 cat "$ROOT/application.log"
 cat "$ROOT/application-error.log"

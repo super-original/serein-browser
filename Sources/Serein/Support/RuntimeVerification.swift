@@ -16,8 +16,13 @@ import SereinCore
         }
         func capture(_ name:String) async {
             await pause(500)
-            let process=Process();process.executableURL=URL(fileURLWithPath:"/usr/sbin/screencapture");process.arguments=["-x",root.appendingPathComponent(name+".png").path]
-            do {try process.run();process.waitUntilExit();check("capture-"+name,process.terminationStatus==0)} catch {check("capture-"+name,false,error.localizedDescription)}
+            // The runner owns screen-capture permission. Request capture from the
+            // external harness; the application itself does not need that permission.
+            do {
+                try name.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                let succeeded=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".png").path)}
+                check("capture-"+name,succeeded)
+            } catch {check("capture-"+name,false,error.localizedDescription)}
         }
         guard let session=manager.active else{return}
         session.window?.setFrame(NSRect(x:10,y:51,width:1000,height:677),display:true)
@@ -77,6 +82,7 @@ import SereinCore
         check("tab-switch-samples",true,"Two switches including two 16ms yields, milliseconds: \(switchSamples)")
         session.select(first);session.state.sidebar = .expanded
         await capture("14-restored")
+        results += await ExtensionVerification.run(manager:manager,session:session)
         do {try JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)} catch {print(error)}
         manager.saveNow()
         print("VERIFICATION_COMPLETE \(results.filter{!$0.passed}.count) failures")
