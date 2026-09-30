@@ -10,7 +10,7 @@ import AppKit
         let bar=NSMenu()
         func submenu(_ name: String,_ items:[NSMenuItem]) {let parent=NSMenuItem();let menu=NSMenu(title:name);items.forEach{menu.addItem($0)};parent.submenu=menu;bar.addItem(parent)}
         submenu("Serein",[item("About Serein",action:#selector(about)),item("Settings…",",",action:#selector(settings)),.separator(),item("Hide Serein","h",action:#selector(hide)),item("Quit Serein","q",action:#selector(quit))])
-        submenu("File",[item("New Tab","t",action:#selector(newTab)),item("New Window","n",action:#selector(newWindow)),item("New Private Window","n",mods:[.command,.shift],action:#selector(privateWindow)),item("Open File…","o",action:#selector(openFile)),.separator(),item("Close Tab","w",action:#selector(closeTab)),item("Reopen Closed Tab","t",mods:[.command,.shift],action:#selector(reopen))])
+        submenu("File",[item("New Tab","t",action:#selector(newTab)),item("New Folder…",action:#selector(newFolder)),item("New Window","n",action:#selector(newWindow)),item("New Private Window","n",mods:[.command,.shift],action:#selector(privateWindow)),item("Open File…","o",action:#selector(openFile)),.separator(),item("Close Tab","w",action:#selector(closeTab)),item("Reopen Closed Tab","t",mods:[.command,.shift],action:#selector(reopen))])
         let edit=NSMenu(title:"Edit")
         for (name,key,selector) in [("Undo","z",Selector(("undo:"))),("Redo","Z",Selector(("redo:"))),("Cut","x",#selector(NSText.cut(_:))),("Copy","c",#selector(NSText.copy(_:))),("Paste","v",#selector(NSText.paste(_:))),("Select All","a",#selector(NSText.selectAll(_:)))] {edit.addItem(NSMenuItem(title:name,action:selector,keyEquivalent:key))}
         edit.addItem(.separator());edit.addItem(item("Find in Page…","f",action:#selector(find)));let editParent=NSMenuItem();editParent.submenu=edit;bar.addItem(editParent)
@@ -22,6 +22,7 @@ import AppKit
         NSApp.mainMenu=bar;NSApp.windowsMenu=bar.items.last?.submenu
     }
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == #selector(newFolder) {return manager != nil && manager?.active?.window?.attachedSheet==nil}
         if item.action == #selector(closeGlance) {return manager?.active?.state.activeGlance != nil && manager?.active?.window?.attachedSheet == nil && manager?.active?.findVisible == false && manager?.active?.addressFocused == false && manager?.active?.current?.loadedWebView?.fullscreenState == .notInFullscreen}
         if item.action == #selector(back) {return manager?.active?.current?.canGoBack ?? false}
         if item.action == #selector(forward) {return manager?.active?.current?.canGoForward ?? false}
@@ -34,6 +35,12 @@ import AppKit
         return true
     }
     @objc func newTab(){if let session=manager?.active{session.newTab()}else{manager?.newWindow()}}
+    @objc func newFolder(){
+        guard let manager else{return}
+        let session=manager.active ?? manager.newWindow()
+        guard session.window?.attachedSheet==nil else{return}
+        session.folderEditor = .init()
+    }
     @objc func closeGlance(){manager?.active?.closeGlance()}
     @objc func newWindow(){manager?.newWindow()}
     @objc func privateWindow(){manager?.newWindow(isPrivate:true)}

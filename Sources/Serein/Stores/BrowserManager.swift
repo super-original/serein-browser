@@ -19,7 +19,15 @@ import SereinCore
         self.root=root;sitePermissions=SitePermissionStore(file:root.appendingPathComponent("site-permissions.json"));library=LibraryStore(root:root);downloads=DownloadStore(root:root);extensions=ExtensionHost(root:root.appendingPathComponent("Extensions"));extensions.manager=self
         restorationError=storageError
     }
-    var active: BrowserSession? {windows.first{$0.window?.isKeyWindow==true}?.session ?? windows.last?.session}
+    var active: BrowserSession? {
+        var candidate=NSApp.keyWindow,seen=Set<ObjectIdentifier>()
+        while let window=candidate,seen.insert(ObjectIdentifier(window)).inserted {
+            if let session=windows.first(where:{$0.window===window})?.session {return session}
+            candidate=window.sheetParent
+        }
+        if let main=NSApp.mainWindow,let session=windows.first(where:{$0.window===main})?.session {return session}
+        return windows.last?.session
+    }
     func restore() {
         let file=root.appendingPathComponent("session.json")
         if FileManager.default.fileExists(atPath:file.path) {

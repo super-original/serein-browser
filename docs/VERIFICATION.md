@@ -2,6 +2,14 @@
 
 Full original-spec completion remains the goal and is not achieved. [Draft PR #1](https://github.com/super-original/serein-browser/pull/1) remains unmerged. [Historical checkpoints](VERIFICATION_HISTORY.md) preserve earlier results and failed experiments.
 
+## Folder implementation checkpoint
+
+`de3df8af6e8a8617c33c5cccdab5be6a68c69bc6`: [run 36784268919](https://github.com/super-original/serein-browser/actions/runs/36784268919) passes **101 unit tests, 386/406 browser checks, 9/9 quit, 12/12 download restart, and 12/12 isolated bridge checks**. Fresh fullscreen remains 8/12; desktop rendering still fails. [Download this development app](https://github.com/super-original/serein-browser/actions/runs/36784268919/artifacts/11128744715) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36784268919/artifacts/11128809511).
+
+Folder creation through native text entry, live-page retention, nesting, session persistence, unpacking, cancellation, and document/membership-bound deletion pass. Captures 44–46 were retrieved and inspected at 1000×677: nesting and 14-point indentation are visible, while the attempted collapsed capture remains expanded. Three collapse checks and four native-host checks fail because their AppleScript input scripts use reserved `control` as a variable and do not compile. The following revision renames that variable and compiles embedded scripts before app launch. These failures are retained, not treated as passing. The other 13 failures match the earlier fullscreen/extension failures below.
+
+The pinned Zen 1.22.2b [reference run 36781892358](https://github.com/super-original/serein-browser/actions/runs/36781892358) supplies four additional inspected folder captures (expanded, collapsed with active child retained, nested, context menu). Native folder icons deliberately use SF Symbols. Live folder providers, custom icons, sharing, conversion to workspaces and drag insertion remain unfinished; native folders do not implement the WebExtensions `tabGroups` API.
+
 ## Latest verified source
 
 `029feec7e9fa9a81fb15f61602387ffc9d7352cc`: [run 36780698616](https://github.com/super-original/serein-browser/actions/runs/36780698616) passes **92 unit tests, 412/425 browser checks, 12/12 independent download-restart checks, 9/9 independent quit checks and 12/12 isolated bridge checks**. Fresh-process fullscreen is **8/12**. Environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.

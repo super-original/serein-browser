@@ -2,6 +2,20 @@
 set -euo pipefail
 ROOT="$PWD/evidence/runtime"
 mkdir -p "$ROOT"
+# Compile embedded UI automation before launching the app. Shell syntax checks do
+# not detect AppleScript reserved words or grammar errors.
+python3 - <<'PYTHON'
+from pathlib import Path
+import re, subprocess, tempfile
+source = Path("script/verify_runtime.sh").read_text()
+blocks = re.findall(r"<<'APPLESCRIPT'[^\n]*\n(.*?)^APPLESCRIPT$", source, re.M | re.S)
+with tempfile.TemporaryDirectory(prefix="serein-applescript-") as temporary:
+    for index, block in enumerate(blocks):
+        script = Path(temporary) / f"input-{index}.applescript"
+        script.write_text(block)
+        subprocess.run(["osacompile", "-o", str(script.with_suffix(".scpt")), str(script)], check=True)
+print(f"Compiled {len(blocks)} embedded AppleScript input scenarios")
+PYTHON
 xcrun swiftc -parse-as-library -target arm64-apple-macos27.0 script/ScreenCapture.swift -o /tmp/serein-capture
 xcrun swiftc -target arm64-apple-macos27.0 script/PointerInput.swift -o /tmp/serein-pointer
 system_profiler SPDisplaysDataType > "$ROOT/display.txt"
@@ -58,21 +72,41 @@ APPLESCRIPT
       folder-name)
         osascript -e 'tell application "System Events" to tell process "Serein"' -e 'delay 0.3' -e 'keystroke "a" using command down' -e 'keystroke "Research notes"' -e 'key code 36' -e 'end tell'
         ;;
-      folder-toggle)
-        osascript > "$ROOT/folder-toggle-input.log" 2>&1 <<'APPLESCRIPT' || touch "$ROOT/folder-toggle.keyboard-failed"
-tell application "System Events" to tell process "Serein"
-  set controls to entire contents of window 1
-  repeat with control in controls
-    try
-      if role of control is "AXButton" and name of control is "Research notes" then
-        perform action "AXPress" of control
-        return
-      end if
-    end try
-  end repeat
-  error "Research notes folder button was not found"
-end tell
+      folder-toggle|folder-context)
+        if osascript - "$KEYBOARD_NAME" > "$ROOT/$KEYBOARD_NAME-point" 2> "$ROOT/$KEYBOARD_NAME-input.log" <<'APPLESCRIPT'
+on run arguments
+  tell application "System Events" to tell process "Serein"
+    set controls to entire contents of window 1
+    repeat with uiElement in controls
+      try
+        if role of uiElement is "AXButton" and name of uiElement is "Research notes" then
+          if item 1 of arguments is "folder-context" then
+            set origin to position of uiElement
+            set extent to size of uiElement
+            set centerX to (item 1 of origin) + (item 1 of extent) / 2
+            set centerY to (item 2 of origin) + (item 2 of extent) / 2
+            return (centerX as text) & " " & (centerY as text)
+          end if
+          perform action "AXPress" of uiElement
+          return
+        end if
+      end try
+    end repeat
+    error "Research notes folder button was not found"
+  end tell
+end run
 APPLESCRIPT
+        then
+          if [[ "$KEYBOARD_NAME" == 'folder-context' ]]; then
+            read -r FOLDER_X FOLDER_Y < "$ROOT/folder-context-point"
+            /tmp/serein-pointer "$FOLDER_X" "$FOLDER_Y" right > "$ROOT/folder-context-pointer.log" 2>&1
+            sleep 0.5
+            screencapture -x "$ROOT/47-folder-context.png"
+            osascript -e 'tell application "System Events" to tell process "Serein" to key code 53'
+          fi
+        else
+          touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        fi
         ;;
       native-host-registration-file)
         NATIVE_MANIFEST=$(cat "$ROOT/native-host-manifest-path")
@@ -88,15 +122,15 @@ on run arguments
     repeat 15 times
       repeat with candidateWindow in windows
         set controls to entire contents of candidateWindow
-        repeat with control in controls
+        repeat with uiElement in controls
           try
-            if role of control is "AXButton" and enabled of control then
-              if name of control is "Open" then
-                perform action "AXPress" of control
+            if role of uiElement is "AXButton" and enabled of uiElement then
+              if name of uiElement is "Open" then
+                perform action "AXPress" of uiElement
                 log "Activated native Open button"
                 return
               end if
-              if name of control is "Allow" then
+              if name of uiElement is "Allow" then
                 log "Native consent already visible"
                 return
               end if

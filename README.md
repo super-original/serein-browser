@@ -48,3 +48,7 @@ Select two to four tabs with Command-click or Shift-click, then use **Split Sele
 Experimental native messaging is available for signed CRX3 packages. Install the native application separately, then open Browser Menu → Extensions → **Register Native Application…** for that extension. Select the application's Chrome-format JSON host manifest and review the executable path before choosing Allow. The manifest must explicitly allow the extension's verified Chrome identity. Registration does not grant a missing extension permission. Use the host's menu → **Revoke Access** to stop its connections and remove access. Disabling or removing the extension stops its native connections.
 
 Firefox host registrations, unsigned package identities, automatic discovery of other browsers' registrations and Safari App Extensions are not supported. See the [compatibility matrix](docs/EXTENSIONS.md) for protocol/resource limits and actual verification status. Full extension compatibility remains unfinished.
+
+## Tab folders
+
+Use File → New Folder, or a tab's context menu → New Folder with Tab. Folders pin their contents and belong to one workspace. Drag a tab onto a folder to move it inside; drag a folder onto another to nest it, up to five levels. Collapsing keeps the active tab visible. Folder menus offer rename, new subfolder, ordering, workspace moves, Unpack Folder (keep pages) and Delete Folder (confirm closing its pages). Live folders, sharing and custom folder icons remain unfinished; current verification is recorded in the [parity checklist](docs/ZEN_PARITY.md).

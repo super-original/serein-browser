@@ -30,8 +30,12 @@ import SereinCore
         session.close(empty,ask:false)
         let first=session.runtime(a),second=session.runtime(b);_=second.webView
         await wait{first.webView.title=="Field Notes" && second.webView.title=="Second Field Note"}
+        let other=manager.newWindow();other.window?.orderOut(nil)
+        defer{other.window?.close()}
+        session.window?.makeKeyAndOrderFront(nil)
         session.folderEditor = .init(tabIDs:[a,b],name:"")
         await wait{session.window?.attachedSheet != nil}
+        check("sheet-keeps-owning-window-active",manager.active===session,"keyIsSheet=\(NSApp.keyWindow===session.window?.attachedSheet) lastIsOther=\(manager.windows.last?.session===other)")
         let created=await keyboard("folder-name")
         await wait{session.folderEditor==nil}
         guard let folder=session.state.folders?.first(where:{$0.name=="Research notes"}) else {check("native-editor-creates-folder",false,"Actual name entry did not create folder");return results}
@@ -52,6 +56,8 @@ import SereinCore
         session.select(a)
         check("nested-folder",child.flatMap{session.state.folder($0)?.parentID}==folder.id)
         await capture("46-folder-nested")
+        let menu=await keyboard("folder-context")
+        check("capture-native-context-menu",menu && FileManager.default.fileExists(atPath:root.appendingPathComponent("47-folder-context.png").path))
         session.state.renameFolder(folder.id,to:"Research archive")
         manager.saveNow()
         do {
@@ -61,6 +67,7 @@ import SereinCore
         } catch {check("session-persists-membership-and-name",false,error.localizedDescription)}
         session.deleteFolder(folder.id)
         await wait{session.window?.attachedSheet != nil}
+        await capture("48-folder-delete-confirmation")
         if let sheet=session.window?.attachedSheet {session.window?.endSheet(sheet,returnCode:.alertSecondButtonReturn)}
         await wait{session.window?.attachedSheet==nil}
         check("delete-cancel-keeps-pages",session.state.folder(folder.id) != nil && session.state.folderTabIDs(folder.id)==[a,b] && session.runtime(a)===first)

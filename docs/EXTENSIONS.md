@@ -215,3 +215,5 @@ The current continuation wires public WebKit native-message delegates to explici
 
 
 At `029feec`, [run 36780698616](https://github.com/super-original/serein-browser/actions/runs/36780698616) passes all 40 actual production native-host scenarios across options pages, MV2 backgrounds and MV3 workers, plus the independent live-port quit/child-reaping scenario. Consent and management captures were inspected ([images](evidence/2026-09-30/native-hosts/README.md)). Permission/registration revocation, regrant, disable/removal and scoped identity checks are exercised. These results supersede earlier pending integration notes for this limited CRX3/Chrome-format path. No Firefox host, native Safari format, arbitrary real native application, native-initiated reconnect or universal compatibility result is implied. All seven pinned real extensions still reject their separate missing API requirements.
+
+Native tab folders do not implement the missing `browser.tabGroups` namespace. Folder hierarchy and controls are a browser feature; extension group APIs and exhaustive ordering/event semantics remain separate unfinished work.
