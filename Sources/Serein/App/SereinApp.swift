@@ -15,6 +15,15 @@ import SwiftUI
         let args=ProcessInfo.processInfo.arguments
         let testRoot=args.firstIndex(of:"--test-root").flatMap{args.indices.contains($0+1) ? URL(fileURLWithPath:args[$0+1]) : nil}
         let root=testRoot ?? FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask)[0].appendingPathComponent("Serein",isDirectory:true)
+        if args.contains("--native-bridge-test"),testRoot != nil {
+            try? FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+            Task {
+                let results=await NativeBridgeVerification.run(root:root)
+                try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)
+                NSApp.terminate(nil)
+            }
+            return
+        }
         manager=BrowserManager(root:root)
         manager.menu.install()
         manager.restore()

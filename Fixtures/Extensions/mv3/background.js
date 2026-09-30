@@ -9,7 +9,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
     const onRemoved = id => removedEvents.push(id);
     browser.tabs.onCreated.addListener(onCreated);
     browser.tabs.onRemoved.addListener(onRemoved);
-    let created, duplicate, tabLifecycle;
+    let created, duplicate, tabLifecycle, selectionDiagnostics;
     let highlightedEvent = false;
     const onHighlighted = info => {if (created && duplicate && info.tabIds.includes(created.id) && info.tabIds.includes(duplicate.id)) highlightedEvent = true;};
     browser.tabs.onHighlighted.addListener(onHighlighted);
@@ -27,6 +27,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       await browser.tabs.update(duplicate.id, {highlighted:true,active:false});
       const highlighted = await browser.tabs.query({windowId:queried.windowId,highlighted:true});
       const active = await browser.tabs.query({windowId:queried.windowId,active:true});
+      selectionDiagnostics = {highlighted:highlighted.map(t=>({id:t.id,highlighted:t.highlighted,active:t.active})),created:created.id,duplicate:duplicate.id};
       const multiSelected = highlighted.length === 2 && highlighted.some(t=>t.id===created.id) && highlighted.some(t=>t.id===duplicate.id);
       const firstHighlightActive = active.length === 1 && active[0].id === created.id;
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -49,7 +50,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       }
     }
     const tabs = await browser.tabs.query({});
-    reply({ok:true,count,tabsHighlightAvailable:typeof browser.tabs.highlight === "function",tabLifecycle,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
+    reply({ok:true,count,tabsHighlightAvailable:typeof browser.tabs.highlight === "function",tabLifecycle,selectionDiagnostics,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
   })().catch(error => reply({ok:false,error:String(error)}));
   return true;
 });

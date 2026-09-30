@@ -33,8 +33,10 @@ import SereinCore
                 stage(prefix+"-creating-controller")
                 let controller=WKWebExtensionController(configuration:WKWebExtensionController.Configuration(identifier:UUID())),delegate=NativeBridgeProbeDelegate()
                 controller.delegate=delegate
-                let source=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/NativeBridge/mv\(version)")
-                stage(prefix+"-reading-fixture")
+                let bundled=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/NativeBridge/mv\(version)")
+                let source=root.appendingPathComponent("fixture-mv\(version)")
+                try FileManager.default.copyItem(at:bundled,to:source)
+                stage(prefix+"-reading-copied-fixture")
                 let ext=try await WKWebExtension(resourceBaseURL:source)
                 stage(prefix+"-fixture-loaded")
                 guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"; "))}

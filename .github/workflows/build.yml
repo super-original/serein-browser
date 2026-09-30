@@ -23,13 +23,18 @@ jobs:
         run: bash script/build.sh
       - name: Run actual macOS 27 application and integration scenarios
         run: bash script/verify_runtime.sh
+      - name: Probe isolated extension native messaging
+        if: always()
+        run: bash script/verify_native_bridge.sh
       - name: Gate actual desktop rendering
         if: always()
         run: |
           xcrun swift script/VisualGate.swift evidence/runtime/01-light-expanded.png evidence/runtime/visual-gate.json
       - name: Export screenshots for inspection
         if: always()
-        run: python3 script/emit_evidence.py evidence/runtime
+        run: |
+          python3 script/emit_evidence.py evidence/runtime
+          python3 script/emit_evidence.py evidence/native-bridge
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
