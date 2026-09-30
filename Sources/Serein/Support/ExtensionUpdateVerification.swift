@@ -75,12 +75,12 @@ import SereinCore
             guard let options = originalContext.optionsPageURL else { throw ExtensionValidationError.invalid("Fixture options page unavailable") }
             let optionsTab = session.newTab(url: options.absoluteString, select: false)
             let optionsRuntime = session.runtime(optionsTab)
-            let optionsView = optionsRuntime.webView
+            _=optionsRuntime.webView
             for _ in 0..<50 {
-                if optionsView.title == "Signed extension options" { break }
+                if optionsRuntime.webView.title == "Signed extension options" { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
-            let initialOptions = try? await optionsView.evaluateJavaScript("document.body.innerText") as? String
+            let initialOptions = try? await optionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
             check("initial-options-document", initialOptions == "Version 1.0", initialOptions ?? "no document")
             let updated = try await apply("signed-update.crx", accept: true, capture: "23-signed-update-consent")
             check("new-version-loaded", updated && host.records.first(where: { $0.id == id })?.version == "1.1" && host.contexts[id] != nil, host.error ?? "")

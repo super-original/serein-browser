@@ -30,6 +30,8 @@ import SereinCore
         }
         func keyboard(_ name:String) async -> Bool {
             do {
+                let finished=root.appendingPathComponent(name+".keyboard-finished")
+                if FileManager.default.fileExists(atPath:finished.path){try FileManager.default.removeItem(at:finished)}
                 try name.write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
                 for _ in 0..<100 {
                     if FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".keyboard-finished").path){await pause(300);return true}
@@ -74,6 +76,12 @@ import SereinCore
         let typedSuggestion=await keyboard("suggestion-query")
         let selectedSuggestion=await keyboard("suggestion-down")
         await capture("24-address-keyboard-suggestion")
+        let movedUp=await keyboard("suggestion-up")
+        check("keyboard-suggestion-keeps-typed-query",movedUp && session.address=="serein keyboard suggestion" && session.window?.firstResponder is NSTextView)
+        _=await keyboard("suggestion-down")
+        let escapedSuggestion=await keyboard("suggestion-escape")
+        check("keyboard-suggestion-escape-keeps-editor",escapedSuggestion && session.address=="serein keyboard suggestion" && session.window?.firstResponder is NSTextView)
+        _=await keyboard("suggestion-down")
         let submittedSuggestion=await keyboard("suggestion-return")
         let suggestionArrived=await wait{session.current?.webView.url?.absoluteString==suggestionURL}
         check("keyboard-address-suggestion",typedSuggestion && selectedSuggestion && submittedSuggestion && suggestionArrived,session.address)

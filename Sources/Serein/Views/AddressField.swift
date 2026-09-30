@@ -44,7 +44,7 @@ struct AddressField: View {
             .onChange(of:session.addressFocused){_,value in focused=value}
             .onChange(of:focused){_,value in session.addressFocused=value;selectedSuggestion=nil;suggestionsDismissed=false}
             .onExitCommand{
-                if !suggestionsDismissed,!suggestions.isEmpty {suggestionsDismissed=true;selectedSuggestion=nil}
+                if !suggestionsDismissed,!session.address.isEmpty,!suggestions.isEmpty {suggestionsDismissed=true;selectedSuggestion=nil}
                 else {focused=false;session.addressFocused=false}
             }
             .popover(isPresented:Binding(get:{focused && !suggestionsDismissed && !session.address.isEmpty && !suggestions.isEmpty},set:{if !$0 {suggestionsDismissed=true;selectedSuggestion=nil}}),arrowEdge:.trailing) {

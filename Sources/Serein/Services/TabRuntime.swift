@@ -125,6 +125,9 @@ extension TabRuntime: WKNavigationDelegate {
     func webView(_ webView: WKWebView,didFail navigation: WKNavigation!,withError error: Error) {if webView === storedView {failed(error)}}
     private func failed(_ error: Error) {
         let error=error as NSError
+        if ProcessInfo.processInfo.arguments.contains("--integration-test"),configurationContext != nil {
+            ExtensionNavigationTrace.record("EXTENSION_NAV_ERROR tab=\(id) revision=\(viewRevision) domain=\(error.domain) code=\(error.code) url=\(String(describing:storedView?.url)) intended=\(String(describing:provisionalURL))")
+        }
         if error.domain != NSURLErrorDomain || error.code != NSURLErrorCancelled {
             failedURL=(error.userInfo[NSURLErrorFailingURLErrorKey] as? URL) ?? provisionalURL ?? storedView?.url
             provisionalURL=nil;failure=error.localizedDescription
@@ -135,6 +138,9 @@ extension TabRuntime: WKNavigationDelegate {
     func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy)->Void) {
         guard webView === storedView,let url=action.request.url else {decisionHandler(.cancel);return}
         let destinationContext=session?.extensions?.controller.extensionContext(for:url)
+        if ProcessInfo.processInfo.arguments.contains("--integration-test"),url.scheme=="webkit-extension" || configurationContext != nil {
+            ExtensionNavigationTrace.record("EXTENSION_NAV tab=\(id) revision=\(viewRevision) type=\(action.navigationType.rawValue) target=\(url) configured=\(String(describing:configurationContext?.baseURL)) registered=\(String(describing:destinationContext?.baseURL)) sameContext=\(configurationContext === destinationContext) source=\(action.sourceFrame.securityOrigin.protocol)://\(action.sourceFrame.securityOrigin.host)")
+        }
         if action.targetFrame?.isMainFrame==true,!action.shouldPerformDownload,
            configurationContext !== destinationContext,
            destinationContext != nil || ["http","https","about"].contains(url.scheme?.lowercased() ?? "") {

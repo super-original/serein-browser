@@ -1,5 +1,9 @@
 # Verification and continuation backlog
 
+## Resource boundaries and recovery diagnostics
+
+`7e881c6968b4962650ed8fe62b913d9894a69c2b`, [run 36736623545](https://github.com/super-original/serein-browser/actions/runs/36736623545), passes **51 unit tests, 190/192 browser checks and all 12 bridge checks**. Actual MV2/MV3 public resource navigation, MV3 unmatched-origin denial and website-to-private-options denial pass. Native keyboard suggestion selection passes again, and the selected-suggestion screenshot was retrieved and inspected. Both re-enable recovery checks still fail with `Frame load interrupted`; their saved destination is intact, so destination loss alone does not explain the failure. Bounded policy/error tracing and removal of an obsolete test-held view reference are the next diagnostic changes. [Candidate app](https://github.com/super-original/serein-browser/actions/runs/36736623545/artifacts/11107343322), [evidence](https://github.com/super-original/serein-browser/actions/runs/36736623545/artifacts/11107103393). The desktop content gate still fails.
+
 ## Address keyboard verification and recovery regression
 
 Source `9f92de0696b5afd64a9006304b6930af7066ec85`, [run 36735423590](https://github.com/super-original/serein-browser/actions/runs/36735423590), passes 47 unit tests and **183/185 browser checks**. Actual Command-L/type/Down/Return input selects and loads the local suggestion. The retrieved `24-address-keyboard-suggestion.png` visibly shows the selected suggestion and retained text-field focus. The two failures are options recovery after re-enable and recovery of a tab opened before context availability; these passed on the preceding source, so their reliability remains unresolved. Follow-up preserves intended destinations during restoration and adds diagnostic state; it must pass its own runtime checks. The independent desktop gate still fails. [Candidate app](https://github.com/super-original/serein-browser/actions/runs/36735423590/artifacts/11105984816), [evidence](https://github.com/super-original/serein-browser/actions/runs/36735423590/artifacts/11106673493).
@@ -19,7 +23,7 @@ Source `b854f846c3b6c8198a6103845ed930e9c7dd49f3`: [run 36723768551](https://git
 
 This browser is not complete. A passing build is not a production or extension-compatibility claim.
 
-## Current verified source
+## Earlier verified source
 
 Exact source `8245e2a985ea5e270538df7f7227523b0b294668`: [run 36719782728](https://github.com/super-original/serein-browser/actions/runs/36719782728) passed **33 unit tests, all 140 browser runtime checks, and all 8 isolated native-message checks**. The overall workflow fails solely at the unchanged actual-desktop gate: 0 dark content pixels, required >1000. [Download this ARM64 application](https://github.com/super-original/serein-browser/actions/runs/36719782728/artifacts/11097717919), macOS 27 minimum, ad-hoc signed/hardened, not notarized; artifact expires October 14. [Raw evidence](https://github.com/super-original/serein-browser/actions/runs/36719782728/artifacts/11097702508) expires October 7.
 
