@@ -223,6 +223,22 @@ struct InstalledExtension: Identifiable, Codable {
         }
         error="Close the current dialog before opening the extension action."
     }
+    func performCommandFromLibrary(_ id:UUID,commandID:String,in session:BrowserSession) async -> Bool {
+        guard !session.state.isPrivate,let context=contexts[id] else{return false}
+        let tab=session.state.selectedTabID
+        session.libraryPanel=nil
+        for _ in 0..<40 {
+            guard let window=session.window,contexts[id]===context,session.state.selectedTabID==tab else{return false}
+            if window.attachedSheet==nil {
+                guard window.isKeyWindow,let command=context.commands.first(where:{$0.id==commandID}) else{return false}
+                context.performCommand(command)
+                return true
+            }
+            try? await Task.sleep(for:.milliseconds(50))
+        }
+        error="Close the current dialog before running the extension command."
+        return false
+    }
     func perform(_ id: UUID,in session: BrowserSession) {
         guard let context=contexts[id],let tab=session.state.selectedTabID else{return}
         context.userGesturePerformed(in:session.bridge(tab));context.performAction(for:session.bridge(tab))

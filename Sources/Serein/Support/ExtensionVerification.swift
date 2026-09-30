@@ -32,6 +32,7 @@ import SereinCore
                     if let value=try? await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null"),let text=value as? String,let data=text.data(using:.utf8) {payload=(try? JSONSerialization.jsonObject(with:data)) as? [String:Any];break}
                 }
                 check("\(name)-background-message-storage-tabs",payload?["ok"] as? Bool==true && payload?["senderTab"] as? Bool==true && (payload?["tabCount"] as? Int ?? 0)>0,String(describing:payload))
+                results += await ExtensionCommandVerification.run(manager:manager,session:session,context:context,name:name,root:root)
                 check("\(name)-tabs-query-keeps-unloaded-tab-asleep",session.runtimes[sleeping]==nil)
                 session.close(sleeping,ask:false)
                 let lifecycle=payload?["tabLifecycle"] as? [String:Bool]

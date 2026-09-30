@@ -1,5 +1,14 @@
 # Verification and continuation backlog
 
+## Repeated extension recovery and grids pass
+
+`d4c80d1f865468b9d1e4f17b2f30bdd47d04df3a`, [run 36753951103](https://github.com/super-original/serein-browser/actions/runs/36753951103), passes **58 unit tests, 263/265 browser checks**, four independent quit checks and 12 bridge checks. All five initial/repeated extension recovery checks pass; each repeat preserves back-list count (2→2). Full URL-list/forward-position and zoom assertions are added next rather than assuming count equality proves complete restoration. Both remaining browser failures are the missing MV2/MV3 zoom events. Desktop rendering still fails independently. [App](https://github.com/super-original/serein-browser/actions/runs/36753951103/artifacts/11115558377), [evidence](https://github.com/super-original/serein-browser/actions/runs/36753951103/artifacts/11115813049).
+
+Three/four-pane state, actual document ownership, focus, unload protection and pane closure pass. Both screenshots were inspected. Their rows are uneven (342/310 points), and columns have a one-point gap, unlike Zen. The follow-up uses a narrow public NSSplitView bridge for equal initial sizes/eight-point dividers and disables redundant safe-area insets in hosted page panes. Balanced/minimum-size regressions are pending. The fresh Zen grid in [run 36753946618](https://github.com/super-original/serein-browser/actions/runs/36753946618) was inspected: two equal columns, each with two 326-point-high panes.
+
+Also pending: native keyboard command delivery, private-window exclusion, and a discoverable Commands menu in extension management.
+
+
 ## Find and extension window consent verified
 
 `3556d1ec3d64b59427d36c5168f5bd1e485c21ba`, [run 36752879083](https://github.com/super-original/serein-browser/actions/runs/36752879083), passes 52 unit tests, **252/257 browser checks**, four independent quit checks and 12 bridge checks. All seven Find checks and eight MV2/MV3 window-close delegate checks pass; the latter test native delegate completion, not JavaScript promise semantics. Exact Find/error screenshots were retrieved and inspected. Initial extension options recovery passes this run, but all three repeated recoveries still fail, alongside two missing zoom events. Raw and customized views restore the failing host's exact opaque history successfully after a fresh resource load; this does not establish an engine history limitation. The follow-up preloads a recreated extension document before replacing its transient list with saved history, retaining count/recovery assertions. [App](https://github.com/super-original/serein-browser/actions/runs/36752879083/artifacts/11116075493), [evidence](https://github.com/super-original/serein-browser/actions/runs/36752879083/artifacts/11116285149). Desktop rendering remains failed.

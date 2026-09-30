@@ -144,6 +144,12 @@ import SereinCore
             context.setPermissionStatus(.unknown, for: WKWebExtension.Permission(rawValue: "tabs"))
             context.setPermissionStatus(.deniedExplicitly, for: site)
             host.rememberPermissions(context)
+            func historyEntries()->[String] {
+                let list=optionsRuntime.webView.backForwardList
+                return list.backList.map{ $0.url.absoluteString }+["CURRENT",list.currentItem?.url.absoluteString ?? "nil","FORWARD"]+list.forwardList.map{ $0.url.absoluteString }
+            }
+            let expectedHistory=historyEntries()
+            optionsRuntime.setZoom(1.25)
             await host.setEnabled(id, false)
             let restoredOptionsTab=session.newTab(url:options.absoluteString,select:false)
             let restoredOptionsRuntime=session.runtime(restoredOptionsTab)
@@ -160,6 +166,7 @@ import SereinCore
                 "url=\(String(describing:runtime.loadedWebView?.url)) saved=\(session.state.tabs.first{$0.id==runtime.id}?.url ?? "missing") title=\(runtime.title) failure=\(runtime.failure ?? "none") loading=\(runtime.isLoading) revision=\(runtime.viewRevision)"
             }
             check("open-options-refresh-after-reenable",refreshed,diagnostic(optionsRuntime))
+            check("reenable-preserves-entire-history",historyEntries()==expectedHistory,"before=\(expectedHistory) after=\(historyEntries())")
             func captureRecoveryError(_ capture:String) async throws {
                 let selected=session.state.selectedTabID
                 session.select(optionsTab)
@@ -190,6 +197,8 @@ import SereinCore
                 lastRecoveryFailed = !recovered
                 check("repeat-options-recovery-\(cycle)",recovered,diagnostic(optionsRuntime))
                 check("repeat-options-history-count-\(cycle)",optionsRuntime.webView.backForwardList.backList.count==historyCount,"before=\(historyCount) after=\(optionsRuntime.webView.backForwardList.backList.count)")
+                check("repeat-options-history-entries-\(cycle)",historyEntries()==expectedHistory,"before=\(expectedHistory) after=\(historyEntries())")
+                check("repeat-options-zoom-\(cycle)",optionsRuntime.webView.pageZoom==1.25)
             }
             if lastRecoveryFailed {try await captureRecoveryError("28-final-extension-recovery-error")}
             results += await ExtensionReloadProbe.inspectHost(context:restored,dataStore:session.dataStore,version:"1.2",history:optionsRuntime.webView.interactionState)

@@ -1,3 +1,8 @@
+browser.commands?.onCommand?.addListener(async command => {
+  if (command !== 'record-fixture-command') return;
+  const previous = await browser.storage.local.get('commandCount');
+  await browser.storage.local.set({commandCount:(previous.commandCount || 0)+1});
+});
 // Permission changes/reloads can overlap content-script probes.
 // Serialize this fixture's destructive lifecycle scenario, not browser events.
 let probeQueue = Promise.resolve();

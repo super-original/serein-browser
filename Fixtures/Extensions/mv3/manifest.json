@@ -38,7 +38,13 @@
   },
   "description": "Controlled Serein integration fixture for extension lifecycle, permissions, storage and messaging.",
   "commands": {
-    "_execute_action": {}
+    "_execute_action": {},
+    "record-fixture-command": {
+      "suggested_key": {
+        "mac": "Alt+Shift+Y"
+      },
+      "description": "Record the Serein keyboard conformance fixture"
+    }
   },
   "web_accessible_resources": [
     {

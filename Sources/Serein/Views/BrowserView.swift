@@ -52,27 +52,7 @@ struct BrowserView: View {
         .alert("Serein",isPresented:Binding(get:{session.error != nil},set:{if !$0{session.error=nil}})){Button("OK"){session.error=nil}} message:{Text(session.error ?? "")}
     }
 }
-private struct SplitPages:View {
-    let session:BrowserSession
-    let ids:[UUID]
-    private func pane(_ id:UUID)->some View {
-        PagePane(session:session,id:id).frame(minWidth:160,minHeight:120)
-            .padding(.top,8).ignoresSafeArea(.container,edges:.top)
-    }
-    var body:some View {
-        HSplitView {
-            if ids.count>2 {
-                VSplitView {pane(ids[0]);pane(ids[1])}
-                    .ignoresSafeArea(.container,edges:.top)
-                if ids.count==4 {
-                    VSplitView {pane(ids[2]);pane(ids[3])}
-                        .ignoresSafeArea(.container,edges:.top)
-                } else {pane(ids[2])}
-            } else {pane(ids[0]);pane(ids[1])}
-        }
-    }
-}
-private struct PagePane: View {
+struct PagePane: View {
     let session: BrowserSession
     let id: UUID
     var body: some View {

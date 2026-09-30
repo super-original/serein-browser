@@ -35,6 +35,8 @@ import SereinCore
         let frames=ids.compactMap{session.runtimes[$0]?.loadedWebView}.map{$0.convert($0.bounds,to:nil)}
         let grid=frames.count==4 && abs(frames[0].minX-frames[1].minX)<2 && abs(frames[2].minX-frames[3].minX)<2 && frames[0].maxX<frames[2].minX && frames[0].minY>frames[1].minY && frames[2].minY>frames[3].minY
         check("four-pane-native-grid-geometry",grid,frames.map{NSStringFromRect($0)}.joined(separator:"; "))
+        let balanced=frames.count==4 && abs(frames[0].height-frames[1].height)<=1 && abs(frames[2].height-frames[3].height)<=1 && abs(frames[0].width-frames[2].width)<=1 && abs(frames[2].minX-frames[0].maxX-8)<=1
+        check("four-pane-balanced-rows-and-reference-gap",balanced,frames.map{NSStringFromRect($0)}.joined(separator:"; "))
         var focus=true
         for id in ids {
             session.select(id);session.focusContent(ifSelected:id)
@@ -43,6 +45,15 @@ import SereinCore
         check("four-pane-focus-preserves-composition",focus && session.state.splitTabIDs==ids)
         check("all-visible-grid-panes-protected-from-unload",ids.allSatisfy{!session.canUnload($0)})
         await capture("30-four-pane-grid")
+        if let window=session.window {
+            let original=window.frame
+            window.setFrame(NSRect(x:original.minX,y:original.minY,width:640,height:400),display:true)
+            try? await Task.sleep(for:.milliseconds(300))
+            let small=ids.compactMap{session.runtimes[$0]?.loadedWebView}.map{$0.convert($0.bounds,to:nil)}
+            check("four-pane-minimum-window-size",small.count==4 && small.allSatisfy{$0.width>=119 && $0.height>=99 && $0.minX>=0 && $0.maxX<=640 && $0.minY>=0 && $0.maxY<=400},small.map{NSStringFromRect($0)}.joined(separator:"; "))
+            await capture("31-four-pane-minimum-window")
+            window.setFrame(original,display:true)
+        }
         session.close(ids[3],ask:false)
         check("closing-grid-pane-retains-other-three",session.state.splitTabIDs==Array(ids.prefix(3)))
         return results

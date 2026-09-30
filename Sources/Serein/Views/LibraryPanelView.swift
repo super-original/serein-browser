@@ -70,6 +70,15 @@ private struct ExtensionListView: View {
                     HStack {
                         Button("Open Action"){Task{await host.performFromLibrary(record.id,in:session)}}.disabled(!record.enabled || !host.actionEnabled(record.id,in:session))
                         if let context=host.contexts[record.id],let url=context.optionsPageURL {Button("Options"){session.newTab(url:url.absoluteString);session.libraryPanel=nil}}
+                        if let context=host.contexts[record.id],!context.commands.isEmpty {
+                            Menu("Commands") {
+                                ForEach(context.commands,id:\.id) {command in
+                                    Button(command.title.isEmpty ? command.id : command.title) {
+                                        Task{_ = await host.performCommandFromLibrary(record.id,commandID:command.id,in:session)}
+                                    }
+                                }
+                            }
+                        }
                         Menu("Current Site") {Button("Allow on This Site"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny on This Site"){host.setCurrentSite(record.id,in:session,allow:false)}}.disabled(!record.enabled || host.contexts[record.id] == nil || !["http","https"].contains(session.current?.webView.url?.scheme?.lowercased() ?? ""))
                         Spacer()
                         if record.packageIdentity != nil { Button("Update Signed Package…") { host.chooseUpdate(record.id, in: session) } }
