@@ -125,6 +125,10 @@ private struct TabRow: View {
             if let home=tab.homeURL {Button("Reset Pinned Tab"){if let url=URL(string:home){session.runtime(tab.id).load(url)}}}
             Menu("Move to Workspace") {ForEach(session.state.workspaces){space in Button(space.name){session.moveTabToWorkspace(tab.id,space.id)}}}
             if !session.state.isPrivate {Button("Move to New Window"){session.manager?.moveTab(tab.id,from:session)}}
+            if session.tabSelection.ids.contains(tab.id),(2...4).contains(session.tabSelection.ids.count) {
+                Button("Split Selected Tabs"){session.splitHighlighted()}
+            }
+            if !session.state.splitTabIDs.isEmpty,session.state.splitTabIDs.contains(tab.id) {Button("Exit Split View"){session.state.clearSplit()}}
             if tab.id != session.state.selectedTabID {Button("Split with Current Tab"){session.state.split(with:tab.id)};Button("Unload Tab…"){session.unload(tab.id)}.disabled(!session.canUnload(tab.id))}
             Divider()
             if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {Button("Close \(session.tabSelection.ids.count) Selected Tabs"){session.closeHighlighted()}}

@@ -24,11 +24,8 @@ struct BrowserView: View {
                 VStack(spacing:6) {
                     if session.state.sidebar == .collapsed {NavigationBar(session:session).padding(.leading,48).frame(height:38)}
                     if session.findVisible {FindBar(session:session)}
-                    if let second=session.state.secondaryTabID,let selected=session.state.primarySplitTabID {
-                        HSplitView {
-                            PagePane(session:session,id:selected).frame(minWidth:230).padding(.top,8).ignoresSafeArea(.container,edges:.top)
-                            PagePane(session:session,id:second).frame(minWidth:230).padding(.top,8).ignoresSafeArea(.container,edges:.top)
-                        }
+                    if session.state.splitTabIDs.count>=2 {
+                        SplitPages(session:session,ids:session.state.splitTabIDs)
                     } else if let selected=session.state.selectedTabID {PagePane(session:session,id:selected)}
                 }
                 .padding(.vertical,8).padding(.trailing,8)
@@ -53,6 +50,26 @@ struct BrowserView: View {
         .preferredColorScheme(appearance=="dark" ? .dark : appearance=="light" ? .light : nil)
         .sheet(item:$session.libraryPanel){panel in LibraryPanelView(session:session,panel:panel)}
         .alert("Serein",isPresented:Binding(get:{session.error != nil},set:{if !$0{session.error=nil}})){Button("OK"){session.error=nil}} message:{Text(session.error ?? "")}
+    }
+}
+private struct SplitPages:View {
+    let session:BrowserSession
+    let ids:[UUID]
+    private func pane(_ id:UUID)->some View {
+        PagePane(session:session,id:id).frame(minWidth:160,minHeight:120)
+            .padding(.top,8).ignoresSafeArea(.container,edges:.top)
+    }
+    var body:some View {
+        HSplitView {
+            if ids.count>2 {
+                VSplitView {pane(ids[0]);pane(ids[1])}
+                    .ignoresSafeArea(.container,edges:.top)
+                if ids.count==4 {
+                    VSplitView {pane(ids[2]);pane(ids[3])}
+                        .ignoresSafeArea(.container,edges:.top)
+                } else {pane(ids[2])}
+            } else {pane(ids[0]);pane(ids[1])}
+        }
     }
 }
 private struct PagePane: View {

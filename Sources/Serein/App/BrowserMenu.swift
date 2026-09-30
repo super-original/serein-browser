@@ -24,6 +24,11 @@ import AppKit
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         if item.action == #selector(back) {return manager?.active?.current?.canGoBack ?? false}
         if item.action == #selector(forward) {return manager?.active?.current?.canGoForward ?? false}
+        if item.action == #selector(unsplit) {return !(manager?.active?.state.splitTabIDs.isEmpty ?? true)}
+        if item.action == #selector(split) {
+            guard let state=manager?.active?.state else{return false}
+            return state.visibleTabs.contains{$0.id != state.selectedTabID}
+        }
         if item.action == #selector(reopen) {return !(manager?.active?.state.closedTabs.isEmpty ?? true)}
         return true
     }
@@ -47,7 +52,7 @@ import AppKit
     @objc func sidebar(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .collapsed ? .expanded : .collapsed}
     @objc func compact(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .compact ? .expanded : .compact;s.compactRevealed=false}
     @objc func split(){guard let s=manager?.active,let other=s.state.visibleTabs.first(where:{$0.id != s.state.selectedTabID}) else{return};s.state.split(with:other.id)}
-    @objc func unsplit(){manager?.active?.state.secondaryTabID=nil;manager?.active?.state.primarySplitTabID=nil}
+    @objc func unsplit(){manager?.active?.state.clearSplit()}
     @objc func zoomIn(){if let runtime=manager?.active?.current{runtime.setZoom(min(5,runtime.webView.pageZoom+0.1))}}
     @objc func zoomOut(){if let runtime=manager?.active?.current{runtime.setZoom(max(0.25,runtime.webView.pageZoom-0.1))}}
     @objc func actualSize(){manager?.active?.current?.setZoom(0)}

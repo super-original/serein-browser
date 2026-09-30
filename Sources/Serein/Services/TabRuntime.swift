@@ -28,6 +28,7 @@ import SereinCore
     @ObservationIgnored private var extensionReloadState:Any?
     @ObservationIgnored private var extensionReloadZoom:CGFloat=1
     @ObservationIgnored private var awaitingExtensionReload=false
+    @ObservationIgnored private var extensionHistoryAfterPreload:Any?
     var hasPendingExtensionReload:Bool {awaitingExtensionReload}
     @ObservationIgnored private var configurationContext: WKWebExtensionContext?
     var loadedWebView:WKWebView? {storedView}
@@ -42,7 +43,8 @@ import SereinCore
                     awaitingExtensionReload=false
                     let state=extensionReloadState;extensionReloadState=nil
                     view.pageZoom=extensionReloadZoom
-                    if let state {view.interactionState=state} else {view.load(url)}
+                    if let state {extensionHistoryAfterPreload=state}
+                    view.load(url)
                 } else {
                     failedURL=url;failure="This extension is disabled. Re-enable it to reload this page."
                 }
@@ -77,7 +79,7 @@ import SereinCore
     init(id: UUID, session: BrowserSession, configuration: WKWebViewConfiguration? = nil) {self.id=id;self.session=session;initialConfiguration=configuration;super.init()}
     func captureExtensionReloadState(for context:WKWebExtensionContext) -> Bool {
         guard configurationContext === context else{return false}
-        extensionReloadState=storedView?.interactionState
+        extensionReloadState=extensionHistoryAfterPreload ?? storedView?.interactionState
         extensionReloadZoom=storedView?.pageZoom ?? 1
         awaitingExtensionReload=true
         if let current=storedView,let responder=current.window?.firstResponder as? NSView {
@@ -104,15 +106,21 @@ import SereinCore
         if let responder {replacedResponder=responder}
         let replacement=makeView(for:url)
         if saved || current.backForwardList.currentItem != nil,let state {
-            replacement.interactionState=state
-            // Restore the list, then let the caller request its destination.
-            if !restoringCurrentPage {replacement.stopLoading()}
+            if saved,restoringCurrentPage,context != nil {
+                extensionHistoryAfterPreload=state
+                replacement.load(url)
+            } else {
+                replacement.interactionState=state
+                // Restore the list, then let the caller request its destination.
+                if !restoringCurrentPage {replacement.stopLoading()}
+            }
         }
         replacement.pageZoom=zoom
         viewRevision += 1
         return replacement
     }
     func load(_ url: URL) {
+        extensionHistoryAfterPreload=nil
         let view=view(for:url)
         documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false;view.load(url)
     }
@@ -167,6 +175,7 @@ import SereinCore
     }
     func dispose() {
         documentID=UUID()
+        extensionHistoryAfterPreload=nil
         observations=[];storedView?.stopLoading();storedView?.navigationDelegate=nil;storedView?.uiDelegate=nil
         storedView?.configuration.userContentController.removeScriptMessageHandler(forName:"edited",contentWorld:.world(name:"SereinPageState"))
         storedView?.removeFromSuperview();storedView=nil;editBridge=nil
@@ -182,6 +191,14 @@ extension TabRuntime: WKNavigationDelegate {
     func webView(_ webView: WKWebView,didCommit navigation: WKNavigation!) {guard webView === storedView else{return};provisionalURL=nil;failedURL=nil;hasUserEdits=false;synchronize()}
     func webView(_ webView: WKWebView,didFinish navigation: WKNavigation!) {
         guard webView === storedView else{return}
+        if let state=extensionHistoryAfterPreload {
+            extensionHistoryAfterPreload=nil
+            // Establish the recreated context's document first, then replace the
+            // transient preload list with the saved opaque history. Never append
+            // a recovery request after restoring that history.
+            webView.interactionState=state
+            return
+        }
         synchronize()
         if let session,let url=webView.url {session.manager?.library.visit(title:title,url:url.absoluteString,isPrivate:session.state.isPrivate)}
     }

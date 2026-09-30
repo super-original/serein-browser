@@ -38,3 +38,5 @@ Downloads show progress and support pause/resume when WebKit supplies resume dat
 Camera, microphone and location choices are available under Browser Menu → Settings → Site Permissions. Choices are scoped to the exact requesting and top-level sites; private-window choices are discarded with that window. Settings changes apply to future requests; reload a page to end an existing grant.
 
 Serein has original branding and source code. Zen's name and reference captures identify the comparison target; no affiliation or endorsement is claimed. See [licenses](docs/LICENSES.md).
+
+Select two to four tabs with Command-click or Shift-click, then use **Split Selected Tabs** in a selected tab’s context menu. This creates a grid; **Exit Split View** returns to one page. Incremental Zen split layout preservation is still incomplete.

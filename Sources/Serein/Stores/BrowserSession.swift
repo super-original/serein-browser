@@ -83,6 +83,11 @@ import SereinCore
     var closeConsentSnapshot:[UUID:UUID?] {
         Dictionary(uniqueKeysWithValues:state.tabs.map{($0.id,runtimes[$0.id]?.documentID)})
     }
+    func splitHighlighted() {
+        let ids=state.visibleTabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        if state.setSplitTabs(ids) {publishSelection(previousActive:previous,previousHighlighted:highlighted)}
+    }
     func closeHighlighted() {
         let ids=state.tabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
         guard !ids.isEmpty else{return}
@@ -209,7 +214,7 @@ import SereinCore
         else {completion(false)}
     }
     func canUnload(_ id: UUID) -> Bool {
-        state.tabs.contains{$0.id==id} && runtimes[id]?.loadedWebView != nil && id != state.selectedTabID && id != state.primarySplitTabID && id != state.secondaryTabID
+        state.tabs.contains{$0.id==id} && runtimes[id]?.loadedWebView != nil && id != state.selectedTabID && !state.splitTabIDs.contains(id)
     }
     func unload(_ id: UUID) {
         guard canUnload(id),let runtime=runtimes[id] else{return}

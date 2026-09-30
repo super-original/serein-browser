@@ -61,7 +61,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Multiple workspaces | P | Create, rename, remove, switch; no containers or per-workspace cookie stores |
 | Expanded/collapsed sidebar | I | Visual inspection required across resizing and focus |
 | Compact mode | P | Edge reveal/hide; Zen's complete toolbar variants absent |
-| Split views | P | Two horizontal panes; no four-pane grid, split-group tabs or drag composition |
+| Split views | P | Explicit selected-tab grids up to four panes implemented, runtime verification pending; split-group tabs, incremental layout preservation and drag composition remain absent |
 | Multiple windows / moving tabs | P | Normal live-tab transfer; isolated private transfer deliberately rejected |
 | Persistent sessions | P | Tab/workspace/sidebar restoration; not full history-stack/window restoration |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
@@ -94,4 +94,4 @@ The measured sidebar remains 230 points and regular tab layout boxes 224×40. Fu
 
 ### Additional grid baseline under capture
 
-The pinned [ZenViewSplitter source](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/split-view/ZenViewSplitter.mjs) caps split groups at four tabs. Its `calculateLayoutTree` places two tabs side by side, three as two stacked left panes plus one full-height right pane, and four as two stacked columns. The reference workflow now requests three/four-pane captures and records each browser rectangle; runtime evidence is pending. Serein still implements only two panes at this point.
+The pinned [ZenViewSplitter source](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/split-view/ZenViewSplitter.mjs) caps split groups at four tabs. Its `calculateLayoutTree` places two tabs side by side, three as two stacked left panes plus one full-height right pane, and four as two stacked columns. [Run 36752869953](https://github.com/super-original/serein-browser/actions/runs/36752869953) captures three panes and then adds a fourth; both screenshots were inspected. The fourth addition preserves the existing left stack and appends another full-height column, rather than rebuilding a two-by-two grid. A separate fresh four-pane grid capture is now requested. Serein's new explicit “Split Selected Tabs” builds the initial grid, pending runtime verification. Incrementally adding panes and retaining arbitrary prior divider trees remains unsupported; the existing “Split with Current Tab” still creates a new pair.

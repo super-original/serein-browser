@@ -20,7 +20,7 @@ def snap(name,code=''):
         time.sleep(1.2)
         subprocess.run(['screencapture','-x',str(out/(name+'.png'))],check=True)
         geometry=js('return {width:outerWidth,height:outerHeight,scale:devicePixelRatio,sidebar:document.getElementById("navigator-toolbox").getBoundingClientRect().toJSON(),tabs:[...gBrowser.tabs].map(t=>({label:t.label,pinned:t.pinned,multiselected:!!t.multiselected,selected:!!t.selected,essential:t.hasAttribute("zen-essential"),rect:t.getBoundingClientRect().toJSON()}))};')
-        if name in ['16-three-pane-grid','17-four-pane-grid']:
+        if name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid']:
             geometry['splitPanes']=js('return window.referenceGridTabs.filter(t=>t.splitView).map(t=>({label:t.label,rect:t.linkedBrowser.getBoundingClientRect().toJSON()}));')
             expected=3 if name=='16-three-pane-grid' else 4
             if len(geometry['splitPanes'])!=expected or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['splitPanes']): raise RuntimeError('Incorrect visible split pane count or geometry')
@@ -62,7 +62,8 @@ try:
     js('window.referenceGridTabs=[0,1,2,3].map(i=>gBrowser.addTab("http://127.0.0.1:8765/"+(i%2 ? "second.html" : "index.html")+"?grid="+i,{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()}));gBrowser.selectedTab=window.referenceGridTabs[0];')
     time.sleep(2)
     snap('16-three-pane-grid','gZenViewSplitter.splitTabs(window.referenceGridTabs.slice(0,3),"grid");')
-    snap('17-four-pane-grid','gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
+    snap('17-four-pane-addition','gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
+    snap('18-four-pane-grid','gZenViewSplitter.unsplitCurrentView();gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
 finally:
     (out/'manifest.json').write_text(json.dumps({'zen':'1.22.2b','theme':'Built-in default, no mods','requestedWindow':[1000,700],'results':results},indent=2))
     request(prefix,method='DELETE')
@@ -70,4 +71,4 @@ print(json.dumps(results,indent=2))
 if not any(x['name']=='15-tab-multiselection' and x['status']=='captured' for x in results): raise SystemExit('Multiselection reference did not capture')
 if sum(x['status']=='captured' for x in results)<12: raise SystemExit('Fewer than twelve successful captures')
 
-if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['16-three-pane-grid','17-four-pane-grid']): raise SystemExit('Grid reference capture failed')
+if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid']): raise SystemExit('Grid reference capture failed')
