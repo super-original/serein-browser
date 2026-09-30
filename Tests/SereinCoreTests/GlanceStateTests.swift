@@ -24,6 +24,9 @@ final class GlanceStateTests:XCTestCase {
     func testExpandAndSplitKeepTheSameTabIdentity() throws {
         var state=BrowserWindowState();let owner=try XCTUnwrap(state.selectedTabID)
         let preview=try XCTUnwrap(state.openGlance(url:"https://example.com",from:owner))
+        let beforeInvalidSplit=state
+        state.split(with:UUID())
+        XCTAssertEqual(state,beforeInvalidSplit)
         state.splitGlance(preview)
         XCTAssertEqual(state.splitTabIDs,[owner,preview]);XCTAssertNil(state.activeGlance)
         XCTAssertEqual(state.selectedTabID,preview);XCTAssertEqual(state.visibleTabs.count,2)

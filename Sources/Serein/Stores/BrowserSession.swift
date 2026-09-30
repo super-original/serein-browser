@@ -70,8 +70,8 @@ import SereinCore
         return true
     }
     func clickTab(_ id:UUID,modifiers:NSEvent.ModifierFlags) {
-        if !modifiers.intersection([.command,.shift]).isEmpty,let preview=state.activeGlance {state.expandGlance(preview.id)}
         guard state.visibleTabs.contains(where:{$0.id==id}) else{return}
+        if !modifiers.intersection([.command,.shift]).isEmpty,let preview=state.activeGlance {state.expandGlance(preview.id)}
         if modifiers.contains(.shift) {
             let previous=state.selectedTabID,highlighted=tabSelection.ids
             tabSelection.range(to:id,in:state.visibleTabs.map(\.id),additive:modifiers.contains(.command))

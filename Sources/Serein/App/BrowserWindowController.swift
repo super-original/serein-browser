@@ -58,6 +58,10 @@ import SwiftUI
 @MainActor final class SereinWindow:NSWindow {
     weak var session:BrowserSession?
     override func sendEvent(_ event:NSEvent) {
+        if ProcessInfo.processInfo.arguments.contains("--integration-test"),[NSEvent.EventType.leftMouseDown,.keyDown].contains(event.type),
+           let session,session.state.activeGlance != nil || event.modifierFlags.contains(.option) {
+            print("GLANCE_INPUT window=\(session.state.id) type=\(event.type.rawValue) modifiers=\(event.modifierFlags.rawValue) key=\(event.type == .keyDown ? Int(event.keyCode) : -1) selected=\(String(describing:session.state.selectedTabID)) point=\(event.locationInWindow)")
+        }
         if let session,event.type == .keyDown,attachedSheet==nil {
             let modifiers=event.modifierFlags.intersection([.command,.option,.control,.shift])
             if event.keyCode==48,(modifiers == .control || modifiers == [.control,.shift]),
@@ -66,10 +70,6 @@ import SwiftUI
             }
             if event.keyCode==53,modifiers.isEmpty,session.state.activeGlance != nil,
                !session.findVisible,!session.addressFocused {session.closeGlance();return}
-        }
-        if ProcessInfo.processInfo.arguments.contains("--integration-test"),[NSEvent.EventType.leftMouseDown,.keyDown].contains(event.type),
-           let session,session.state.activeGlance != nil || event.modifierFlags.contains(.option) {
-            print("GLANCE_INPUT window=\(session.state.id) type=\(event.type.rawValue) modifiers=\(event.modifierFlags.rawValue) point=\(event.locationInWindow)")
         }
         super.sendEvent(event)
     }

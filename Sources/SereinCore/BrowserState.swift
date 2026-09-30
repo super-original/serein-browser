@@ -152,8 +152,8 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         if remaining.count<2 {clearSplit()} else {_=setSplitTabs(remaining)}
     }
     public mutating func split(with id: UUID) {
-        if let preview=activeGlance {expandGlance(preview.id)}
         guard let selectedTabID,id != selectedTabID,visibleTabs.contains(where:{$0.id==id}) else{return}
+        if let preview=activeGlance {expandGlance(preview.id)}
         _=setSplitTabs([selectedTabID,id])
     }
     public mutating func repair() {

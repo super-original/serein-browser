@@ -55,10 +55,14 @@ import WebKit
         window.setFrame(originalFrame,display:true)
         let neighbor=session.newTab(select:false)
         let advanced=await keyboard("glance-next-tab")
+        await wait{session.state.selectedTabID==neighbor}
         check("native-cycle-leaves-preview",advanced && session.state.selectedTabID==neighbor,"selected=\(String(describing:session.state.selectedTabID)) expected=\(neighbor) keyWindow=\(window.isKeyWindow)")
         let returned=await keyboard("glance-previous-tab")
+        await wait{session.state.activeGlance?.id==preview.id}
         check("native-cycle-returns-preview",returned && session.state.activeGlance?.id==preview.id && runtime.loadedWebView === view,"selected=\(String(describing:session.state.selectedTabID)) expected=\(preview.id)")
         session.close(neighbor,ask:false)
+        // Keep expansion/consent independent of the native cycling assertions.
+        session.select(preview.id)
         runtime.hasUserEdits=true
         session.close(owner)
         check("owner-close-prompts-for-preview-edits",window.attachedSheet != nil,"Native sheet; edit flag injected for consent testing")

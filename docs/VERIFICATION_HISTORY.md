@@ -190,3 +190,22 @@ Grid, minimum-window and extension-management screenshots were inspected. Native
 ### Follow-up at the time
 
 Pending follow-up: real-resource preload with public per-navigation JavaScript suppression, regenerated signed fixtures/counters, Find focus restoration after view removal, and granted-HTTP populated-window coverage while retaining the failing `about:blank` assertion. Cross-launch normal-download resume persistence and a two-process byte-integrity/privacy gate require a fresh exact-head run.
+
+
+## Glance first runtime checkpoint
+
+`71983bc54705b0dbd5b9ecbc7211970123f94f3d`: [run 36762956337](https://github.com/super-original/serein-browser/actions/runs/36762956337) passes **66 unit tests, 318/328 browser checks, ten independent download-restart checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
+
+[Download app](https://github.com/super-original/serein-browser/actions/runs/36762956337/artifacts/11118984772) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36762956337/artifacts/11119483976). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
+
+Normal paused downloads resume in a new app process with full 8 MiB byte integrity. Private resume data/history stay off disk; owner-only file permissions and completion/cancellation cleanup pass. Active downloads without saved resume data still become interrupted. The inspected Downloads screenshot now describes this relaunch behavior correctly.
+
+Extension recovery passes complete back/forward URL-list, current-position and zoom preservation, plus exactly one options-script initialization per page across initial and three repeated cycles. Public navigation preferences suppress scripts during the transient real-resource preload. Find checks including actual Command-F, query entry, Escape and subsequent web-page key delivery, native/extension-window consent, actual quit/session saving, balanced four-pane grids, minimum-window bounds and keyboard/menu extension commands pass. Window lifecycle and populated URLs for granted HTTP pages pass through MV2/MV3 JavaScript APIs.
+
+Six Glance checks fail: actual Option-click, both tab-cycling directions, expand-state preservation, Escape and returned page-key delivery. Geometry, minimum-window control bounds, same-store loading, edit-consent invalidation, live normal-window movement, split conversion and private isolation pass. Both Glance screenshots were retrieved and inspected. The four other browser failures are missing MV2/MV3 `tabs.onZoomChange` and empty `about:blank` URLs in populated-window results. The separate **actual desktop rendering gate fails** with zero content glyph pixels. DOM/internal snapshots are not desktop-rendering evidence. Plain WKWebView and Apple-signed Safari reproduce IOSurface failures on this free runner. No supported second free macOS 27 image has been identified; no private flags, security weakening, lower deployment target or engine substitution is used. [Prepared upstream report](MACOS27_RENDERING_REPORT.md) has not been posted.
+
+Downloads and extension-management screenshots from this exact commit were retrieved and inspected. Earlier inspected native-grid geometry has eight-point column gaps and 327/326-point rows. [Side-by-side original screenshots and measurements](evidence/2026-09-30/grid/README.md) compare the pinned Zen baseline with explicit focus/sidebar differences. WebKit page bodies remain blank.
+
+## Current work under verification
+
+Follow-up routes browser shortcuts before WebKit event handling, uses actual CoreGraphics pointer events, diagnoses the expand-state assertion, and restores a closed owner's preview relationship. The owner underlay now uses the pinned source's 0.97 visual scale and 0.3 opacity rather than resizing its web viewport. These changes await exact-head verification. Full original-spec completion remains the goal.
