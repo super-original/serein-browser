@@ -35,6 +35,7 @@ final class ExtensionUpdateTests: XCTestCase {
         // A prepared but uncommitted candidate leaves the durable old pointer intact.
         XCTAssertEqual(try Data(contentsOf: registry), Data("old-registry".utf8))
         try ExtensionPackageStorage.commitPrepared(candidate, root: root, versionID: versionID, registry: Data("new-registry".utf8))
+        XCTAssertEqual(try FileManager.default.attributesOfItem(atPath:registry.path)[.posixPermissions] as? NSNumber,NSNumber(value:0o600))
         XCTAssertEqual(try Data(contentsOf: registry), Data("new-registry".utf8))
         XCTAssertEqual(try Data(contentsOf: previous.appendingPathComponent("manifest.json")), Data("old".utf8))
         let current = ExtensionPackageStorage.directory(root: root, recordID: recordID, versionID: versionID)

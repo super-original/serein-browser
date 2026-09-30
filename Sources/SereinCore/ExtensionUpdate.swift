@@ -43,7 +43,7 @@ public enum ExtensionPackageStorage {
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let destination = parent.appendingPathComponent(versionID.uuidString)
         try FileManager.default.moveItem(at: candidate, to: destination)
-        do { try registry.write(to: root.appendingPathComponent("extensions.json"), options: .atomic) }
+        do { try PrivateFileStore.write(registry,to:root.appendingPathComponent("extensions.json")) }
         catch { try? FileManager.default.removeItem(at: destination); throw error }
     }
 }

@@ -63,7 +63,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Compact mode | P | Edge reveal/hide; Zen's complete toolbar variants absent |
 | Split views | P | Explicit selected-tab grids up to four panes verified at `d4c80d1`; balanced native dividers and minimum-window bounds verified at `e32960d`; split-group tabs, incremental layout preservation and drag composition remain absent |
 | Multiple windows / moving tabs | P | Normal live-tab transfer; isolated private transfer deliberately rejected |
-| Persistent sessions | P | Tab/workspace/sidebar restoration; not full history-stack/window restoration |
+| Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; full navigation-history restoration across launches remains absent |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
 | Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume passed the separate-process integrity/privacy gate at `29dabbf`; active transfers without resume data remain interrupted |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |
@@ -71,8 +71,8 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |
 | Fullscreen | P | Native window/fullscreen WebKit preference; media runtime coverage incomplete |
 | Loading / errors / process recovery | P | Visible states; real process-crash injection pending |
-| Settings | P | Appearance, sidebar, website data clearing; advanced policies absent |
-| Glance / link preview | P | Native Option-click overlay and parent/child lifecycle implemented; geometry, minimum bounds, actual Option-click/Escape/focus, live movement/split, consent, private isolation and reopened relationships pass at `7ef2e5f`; cycling/expansion now pass at `4449c7a`. Configurable external-host popup routing is implemented; its first pointer scenario failed because the view was not attached when coordinates were measured. Corrected verification is pending. Nested previews and animation parity remain gaps. |
+| Settings | P | Appearance, sidebar, search engine, external essential previews and website data clearing; advanced policies absent |
+| Glance / link preview | P | Native Option-click overlay and parent/child lifecycle implemented; geometry, minimum bounds, actual Option-click/Escape/focus, live movement/split, consent, private isolation and reopened relationships pass at `7ef2e5f`; cycling/expansion now pass at `4449c7a`. Configurable external-host popup routing, restored-owner attachment, independent message-controller ownership and parent edit tracking pass at `c136b59`; its actual essential-preview screenshot was inspected. Nested previews and animation parity remain gaps. |
 | Folders / live folders | U | Not implemented |
 | Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/unpin and workspace moves verified at `e511f58` and later runs; full keyboard selection remains a gap |
 | Tab groups | U | Not implemented |

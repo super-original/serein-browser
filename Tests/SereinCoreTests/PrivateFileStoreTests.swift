@@ -30,6 +30,26 @@ final class PrivateFileStoreTests:XCTestCase {
         XCTAssertThrowsError(try PrivateFileStore.write(Data("new".utf8),to:parentFile.appendingPathComponent("record.json")))
         XCTAssertEqual(try Data(contentsOf:parentFile),original)
     }
+    func testFailedPublicationLeavesNoTemporaryFiles() throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {try? FileManager.default.removeItem(at:root)}
+        let directory=root.appendingPathComponent("record.json")
+        try FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
+        XCTAssertThrowsError(try PrivateFileStore.write(Data("new".utf8),to:directory))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath:root.path),["record.json"])
+    }
+    func testRecordSymlinkIsReplacedWithoutChangingTarget() throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {try? FileManager.default.removeItem(at:root)}
+        try PrivateFileStore.prepareDirectory(root)
+        let target=root.appendingPathComponent("target"),record=root.appendingPathComponent("record.json")
+        try Data("unchanged".utf8).write(to:target)
+        try FileManager.default.createSymbolicLink(at:record,withDestinationURL:target)
+        try PrivateFileStore.write(Data("new".utf8),to:record)
+        XCTAssertEqual(try Data(contentsOf:target),Data("unchanged".utf8))
+        XCTAssertEqual(try Data(contentsOf:record),Data("new".utf8))
+        XCTAssertEqual(try FileManager.default.attributesOfItem(atPath:record.path)[.type] as? FileAttributeType,.typeRegular)
+    }
     private func permissions(_ url:URL) throws -> Int {
         try XCTUnwrap(FileManager.default.attributesOfItem(atPath:url.path)[.posixPermissions] as? NSNumber).intValue
     }
