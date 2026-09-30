@@ -57,6 +57,9 @@ end run
 APPLESCRIPT
         ;;
       save-download) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
+      address-cancel-query)
+        osascript -e 'tell application "System Events" to tell process "Serein"' -e 'keystroke "l" using command down' -e 'keystroke "a" using command down' -e 'keystroke "https://serein-cancel.invalid/"' -e 'end tell'
+        ;;
       suggestion-query)
         osascript -e 'tell application "System Events" to tell process "Serein"' -e 'keystroke "l" using command down' -e 'keystroke "a" using command down' -e 'keystroke "serein keyboard suggestion"' -e 'end tell'
         ;;
@@ -65,8 +68,12 @@ APPLESCRIPT
       suggestion-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
       suggestion-return) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
       split-divider-drag)
-        read -r SPLIT_X SPLIT_Y SPLIT_END_X SPLIT_END_Y < "$ROOT/split-drag-points"
-        /tmp/serein-pointer "$SPLIT_X" "$SPLIT_Y" "$SPLIT_END_X" "$SPLIT_END_Y" > "$ROOT/split-divider-pointer.log" 2>&1
+        if read -r SPLIT_X SPLIT_Y SPLIT_END_X SPLIT_END_Y < "$ROOT/split-drag-points" &&
+           /tmp/serein-pointer "$SPLIT_X" "$SPLIT_Y" "$SPLIT_END_X" "$SPLIT_END_Y" > "$ROOT/split-divider-pointer.log" 2>&1; then
+          :
+        else
+          touch "$ROOT/split-divider-drag.keyboard-failed"
+        fi
         ;;
       glance-option-click)
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
@@ -119,6 +126,7 @@ APPLESCRIPT
         fi
         ;;
       native-host-registration-file)
+        NATIVE_PICKER_ATTEMPT=$(( ${NATIVE_PICKER_ATTEMPT:-0} + 1 ))
         NATIVE_MANIFEST=$(cat "$ROOT/native-host-manifest-path")
         osascript - "$NATIVE_MANIFEST" > "$ROOT/native-host-picker-input.log" 2>&1 <<'APPLESCRIPT' || touch "$ROOT/native-host-registration-file.keyboard-failed"
 on run arguments
@@ -164,6 +172,7 @@ on openFileIfPresent(containerElement)
   return false
 end openFileIfPresent
 APPLESCRIPT
+        cp "$ROOT/native-host-picker-input.log" "$ROOT/native-host-picker-$NATIVE_PICKER_ATTEMPT.log"
         ;;
       fullscreen-enter)
         read -r FULLSCREEN_X FULLSCREEN_Y < "$ROOT/fullscreen-click-point"
@@ -194,6 +203,10 @@ APPLESCRIPT
       fi
     fi
     touch "$ROOT/$CAPTURE_NAME.capture-finished"
+    if [[ "$CAPTURE_NAME" == '01-light-expanded' ]]; then
+      python3 script/inspect_web_processes.py "$APP_PID" "$ROOT" > "$ROOT/web-process-inspection.log" 2>&1 &
+      WEB_INSPECTOR_PID=$!
+    fi
   fi
   if (( i % 20 == 0 )); then
     ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-$i.txt"
@@ -203,6 +216,7 @@ APPLESCRIPT
   fi
   sleep 0.1
 done
+if test -n "${WEB_INSPECTOR_PID:-}"; then wait "$WEB_INSPECTOR_PID" || true; fi
 if ! test -s "$ROOT/results.json"; then
   screencapture -x "$ROOT/diagnostic-timeout.png" || true
   sample "$APP_PID" 3 -file "$ROOT/diagnostic-timeout-stack.txt" || true

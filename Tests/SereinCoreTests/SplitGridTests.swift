@@ -62,9 +62,9 @@ final class SplitGridTests:XCTestCase {
         var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab();state.setSplitTabs([a,b])
         XCTAssertEqual(state.splitFraction(at:0),0.5)
         state.splitFractions=[.nan,-5,5,0.2];state.repair()
-        XCTAssertEqual(state.splitFractions,[0.5,0.1,0.9])
+        XCTAssertEqual(state.splitFractions,[0.5,0,1])
         state.setSplitFraction(.infinity,at:0);state.setSplitFraction(0.2,at:-1)
-        XCTAssertEqual(state.splitFractions,[0.5,0.1,0.9])
+        XCTAssertEqual(state.splitFractions,[0.5,0,1])
     }
 
 }

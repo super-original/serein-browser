@@ -133,3 +133,5 @@ The inspected `c0061e9` capture confirms the essential tile’s 44-point height 
 ### Divider persistence follow-up
 
 The native split grid already allows dragging its eight-point dividers. The follow-up retains root and column proportions in normal sessions, keeps them while resizing the window, and resets them when pane composition changes. Private session state follows existing no-disk persistence rules. Actual pointer drags on both axes and recreated-window geometry are pending CI. Arbitrary divider trees, incremental split additions and split-group sidebar tabs remain unfinished.
+
+Address cancellation now restores the current location and requests page focus after dismissing suggestions. A real Command-L/type/Escape check verifies unchanged navigation and restored location/focus; it is pending CI.

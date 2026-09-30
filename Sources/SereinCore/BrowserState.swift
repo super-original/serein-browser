@@ -176,11 +176,11 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public func splitFraction(at index:Int)->Double {
         guard let values=splitFractions,values.indices.contains(index),values[index].isFinite else{return 0.5}
-        return min(0.9,max(0.1,values[index]))
+        return min(1,max(0,values[index]))
     }
     public mutating func setSplitFraction(_ value:Double,at index:Int) {
         guard (0..<3).contains(index),splitTabIDs.count>=2,value.isFinite else{return}
-        var values=(0..<3).map{splitFraction(at:$0)};values[index]=min(0.9,max(0.1,value));splitFractions=values
+        var values=(0..<3).map{splitFraction(at:$0)};values[index]=min(1,max(0,value));splitFractions=values
     }
     private mutating func removeSplitTab(_ id:UUID) {
         let ids=splitTabIDs

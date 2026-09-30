@@ -91,6 +91,14 @@ import SereinCore
         }
         check("keyboard-address-submit-focuses-content",contentFocused)
         if let bookmark=manager.library.bookmarks.first(where:{$0.url==suggestionURL}) {manager.library.removeBookmark(bookmark.id)}
+        let cancelURL=session.current?.webView.url
+        let editedAddress=await keyboard("address-cancel-query")
+        let abandonedAddress=await keyboard("suggestion-escape")
+        let cancelFocused=await wait {
+            guard let view=session.current?.loadedWebView,let responder=session.window?.firstResponder as? NSView else{return false}
+            return !session.addressFocused && (responder === view || responder.isDescendant(of:view))
+        }
+        check("keyboard-address-cancel-restores-location-and-focus",editedAddress && abandonedAddress && cancelFocused && session.current?.webView.url==cancelURL && session.address==cancelURL?.absoluteString,session.address)
         session.navigate(fixture,ask:false);_=await wait{session.current?.webView.title=="Field Notes"}
         session.addressFocused=false;session.window?.makeFirstResponder(session.current?.webView)
         UserDefaults.standard.set("light",forKey:"appearance");await capture("01-light-expanded")

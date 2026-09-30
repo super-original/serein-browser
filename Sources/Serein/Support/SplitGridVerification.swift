@@ -68,13 +68,14 @@ import SereinCore
             let end=split.isVertical ? NSPoint(x:length*fraction+4,y:start.y) : NSPoint(x:start.x,y:length*fraction+4)
             let from=window.convertPoint(toScreen:split.convert(start,to:nil)),to=window.convertPoint(toScreen:split.convert(end,to:nil))
             let points="\(from.x) \(screen.frame.maxY-from.y) \(to.x) \(screen.frame.maxY-to.y)"
-            try? points.write(to:root.appendingPathComponent("split-drag-points"),atomically:true,encoding:.utf8)
+            try? (points+"\n").write(to:root.appendingPathComponent("split-drag-points"),atomically:true,encoding:.utf8)
             let done=root.appendingPathComponent("split-divider-drag.keyboard-finished")
-            try? FileManager.default.removeItem(at:done)
+            let failed=root.appendingPathComponent("split-divider-drag.keyboard-failed")
+            try? FileManager.default.removeItem(at:done);try? FileManager.default.removeItem(at:failed)
             try? "split-divider-drag".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
             for _ in 0..<100 {if FileManager.default.fileExists(atPath:done.path){break};try? await Task.sleep(for:.milliseconds(100))}
             try? await Task.sleep(for:.milliseconds(250))
-            return FileManager.default.fileExists(atPath:done.path)
+            return FileManager.default.fileExists(atPath:done.path) && !FileManager.default.fileExists(atPath:failed.path)
         }
         if let split=findGrid(in:session.window?.contentView),let left=split.subviews.first as? BrowserGridSplitView {
             let horizontal=await drag(split,to:0.35),vertical=await drag(left,to:0.65)
@@ -94,7 +95,11 @@ import SereinCore
                 try? await Task.sleep(for:.milliseconds(500))
                 let restoredGrid=findGrid(in:reopened.window?.contentView)
                 let restoredLeft=restoredGrid?.subviews.first as? BrowserGridSplitView
-                check("restored-native-dividers-use-saved-fractions",restoredGrid.map{abs(Double($0.subviews[0].frame.width/($0.bounds.width-8))-0.35)<0.02}==true && restoredLeft.map{abs(Double($0.subviews[0].frame.height/($0.bounds.height-8))-0.65)<0.02}==true)
+                let restoredRootRatio=restoredGrid.map{Double($0.subviews[0].frame.width/($0.bounds.width-8))}
+                let restoredLeftRatio=restoredLeft.map{Double($0.subviews[0].frame.height/($0.bounds.height-8))}
+                let rootMatches=restoredRootRatio.map{abs($0-0.35)<0.02} ?? false
+                let leftMatches=restoredLeftRatio.map{abs($0-0.65)<0.02} ?? false
+                check("restored-native-dividers-use-saved-fractions",rootMatches && leftMatches,"root=\(String(describing:restoredRootRatio)) left=\(String(describing:restoredLeftRatio))")
                 reopened.window?.close();session.window?.makeKeyAndOrderFront(nil)
             } catch {check("restored-native-dividers-use-saved-fractions",false,error.localizedDescription)}
         } else {check("actual-divider-drag-persists-both-axes",false,"Native split hierarchy unavailable")}

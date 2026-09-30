@@ -49,7 +49,12 @@ struct AddressField: View {
             }
             .onExitCommand{
                 if !suggestionsDismissed,!session.address.isEmpty,!suggestions.isEmpty {suggestionsDismissed=true;selectedSuggestion=nil}
-                else {focused=false;session.addressFocused=false}
+                else {
+                    // Abandon edits without making the location bar misrepresent the page.
+                    session.address=session.state.selectedTab?.url == "about:blank" ? "" : session.state.selectedTab?.url ?? ""
+                    focusPageAfterSubmit=true;focused=false;session.addressFocused=false
+                    session.contentFocusRequest=session.state.selectedTabID
+                }
             }
             .popover(isPresented:Binding(get:{focused && !suggestionsDismissed && !session.address.isEmpty && !suggestions.isEmpty},set:{if !$0 {suggestionsDismissed=true;selectedSuggestion=nil}}),arrowEdge:.trailing) {
                 VStack(alignment:.leading,spacing:2) {
