@@ -11,6 +11,7 @@ struct InstalledExtension: Identifiable, Codable {
     var permissions: [String]
     var hosts: [String]
     var permissionState: ExtensionPermissionState? = nil
+    var packageIdentity: SignedExtensionIdentity? = nil
 }
 @MainActor @Observable final class ExtensionHost: NSObject {
     let controller=WKWebExtensionController()
@@ -73,7 +74,7 @@ struct InstalledExtension: Identifiable, Codable {
     func chooseInstall(in session: BrowserSession) {
         guard !session.state.isPrivate,let window=session.dialogWindow else{return}
         let panel=NSOpenPanel();panel.canChooseFiles=true;panel.canChooseDirectories=true;panel.allowsMultipleSelection=false
-        panel.message="Choose an unpacked WebExtension folder, ZIP, or XPI. Native Safari App Extensions and CRX signatures are not supported."
+        panel.message="Choose an unpacked WebExtension folder, ZIP, XPI, or signed CRX3. Native Safari App Extensions and legacy CRX2 are not supported."
         panel.beginSheetModal(for:window){[weak self,weak session] response in
             guard response == .OK,let url=panel.url,let self,let session else{return}
             Task {await self.install(url,in:session)}
@@ -83,23 +84,29 @@ struct InstalledExtension: Identifiable, Codable {
         let access=source.startAccessingSecurityScopedResource();defer{if access{source.stopAccessingSecurityScopedResource()}}
         let id=UUID(),destination=root.appendingPathComponent(UUID().uuidString+".staging")
         do {
-            try prepare(source,at:destination)
+            let identity = try prepare(source,at:destination)
+            if let identity, records.contains(where: { $0.packageIdentity?.extensionID == identity.extensionID }) {
+                throw ExtensionValidationError.invalid("This CRX3 developer identity is already installed. Signed updates are not implemented.")
+            }
             let manifestURL=destination.appendingPathComponent("manifest.json")
             let manifest=try ExtensionManifest(data:Data(contentsOf:manifestURL))
             let ext=try await WKWebExtension(resourceBaseURL:destination)
             guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
             try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
             let permissions=ext.requestedPermissions.map(\.rawValue).sorted(),hosts=ext.requestedPermissionMatchPatterns.map(\.string).sorted()
-            let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\n\nEmpty reserved action-command metadata is normalized for WebKit when needed. The original source package is unchanged.\n\nThe package's publisher signature has not been verified. Install only if you trust its source. Private browsing access is disabled."
+            let provenance = identity.map { "Original CRX3 archive signature verified. Developer ID: \($0.extensionID). This is self-signed integrity, not Chrome Web Store approval. Normalized installed files are not the signed archive." } ?? "The package publisher signature has not been verified."
+            let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\n\nEmpty reserved action-command metadata is normalized for WebKit when needed. The original source package is unchanged.\n\n\(provenance) Install only if you trust its source. Private browsing access is disabled."
             let allowed=await withCheckedContinuation{continuation in session.confirm("Install \(ext.displayName ?? "extension")?",detail:details,yes:"Install"){continuation.resume(returning:$0)}}
             guard allowed else {try FileManager.default.removeItem(at:destination);return}
             let final=root.appendingPathComponent(id.uuidString);try FileManager.default.moveItem(at:destination,to:final)
-            let record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts)
+            let record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity)
             do {try await load(record);records.append(record);save()}
             catch {try? FileManager.default.removeItem(at:final);throw error}
         } catch {try? FileManager.default.removeItem(at:destination);self.error=error.localizedDescription}
     }
-    func prepare(_ source: URL,at destination: URL) throws {
+    @discardableResult
+    func prepare(_ source: URL,at destination: URL) throws -> SignedExtensionIdentity? {
+        var identity: SignedExtensionIdentity?
         let values=try source.resourceValues(forKeys:[.isDirectoryKey,.isSymbolicLinkKey])
         guard values.isSymbolicLink != true else{throw ExtensionValidationError.invalid("Symbolic-link packages are not accepted.")}
         if values.isDirectory==true {
@@ -111,10 +118,24 @@ struct InstalledExtension: Identifiable, Codable {
             }
             try FileManager.default.copyItem(at:source,to:destination)
         } else {
-            guard ["zip","xpi"].contains(source.pathExtension.lowercased()) else{throw ExtensionValidationError.invalid("Select a ZIP, XPI, or unpacked manifest folder. Signed CRX and native Safari formats are not implemented.")}
-            try ExtensionArchive.validate(Data(contentsOf:source))
+            guard ["zip","xpi","crx"].contains(source.pathExtension.lowercased()) else{throw ExtensionValidationError.invalid("Select a ZIP, XPI, CRX3, or unpacked manifest folder. Legacy CRX2 and native Safari formats are not implemented.")}
+            let handle = try FileHandle(forReadingFrom: source)
+            defer { try? handle.close() }
+            let input = try handle.read(upToCount: CRXPackage.maximumPackageBytes + 1) ?? Data()
+            guard input.count <= CRXPackage.maximumPackageBytes else { throw ExtensionValidationError.invalid("Package exceeds the size limit.") }
+            let archive: Data
+            if source.pathExtension.lowercased() == "crx" {
+                let package = try CRXPackage.verify(input)
+                archive = package.archive; identity = package.identity
+            } else { try ExtensionArchive.validate(input); archive = input }
+            // Extract the checked bytes, never reopen the user-controlled source path.
+            let snapshotRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try FileManager.default.createDirectory(at: snapshotRoot, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+            defer { try? FileManager.default.removeItem(at: snapshotRoot) }
+            let snapshot = snapshotRoot.appendingPathComponent("verified.zip")
+            try archive.write(to: snapshot, options: .atomic)
             try FileManager.default.createDirectory(at:destination,withIntermediateDirectories:true)
-            let process=Process();process.executableURL=URL(fileURLWithPath:"/usr/bin/ditto");process.arguments=["-x","-k",source.path,destination.path]
+            let process=Process();process.executableURL=URL(fileURLWithPath:"/usr/bin/ditto");process.arguments=["-x","-k",snapshot.path,destination.path]
             try process.run();process.waitUntilExit()
             guard process.terminationStatus==0 else{throw ExtensionValidationError.invalid("The system could not extract the extension.")}
             if !FileManager.default.fileExists(atPath:destination.appendingPathComponent("manifest.json").path) {
@@ -129,6 +150,7 @@ struct InstalledExtension: Identifiable, Codable {
         let original=try Data(contentsOf:manifestURL)
         let normalized=try ExtensionCommandNormalization.normalize(original)
         if normalized != original {try normalized.write(to:manifestURL,options:.atomic)}
+        return identity
     }
     func setEnabled(_ id: UUID,_ enabled: Bool) async {
         guard let i=records.firstIndex(where:{$0.id==id}) else{return}

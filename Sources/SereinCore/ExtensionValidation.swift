@@ -58,7 +58,7 @@ public enum ExtensionArchive {
             guard try u32(cursor)==0x02014b50 else{throw ExtensionValidationError.invalid("Invalid archive directory.")}
             let flags=try u16(cursor+8),method=try u16(cursor+10),packed=try u32(cursor+20),unpacked=try u32(cursor+24)
             let n=try u16(cursor+28),extra=try u16(cursor+30),comment=try u16(cursor+32),mode=(try u32(cursor+38))>>16,local=try u32(cursor+42)
-            guard flags & 1==0,[0,8].contains(method),mode & 0o170000 != 0o120000,cursor+46+n+extra+comment<=e,
+            guard flags & 1==0,[0,8].contains(method),[0,0o100000,0o040000].contains(mode & 0o170000),cursor+46+n+extra+comment<=e,
                   let name=String(bytes:b[(cursor+46)..<(cursor+46+n)],encoding:.utf8) else{throw ExtensionValidationError.invalid("Unsupported or unsafe archive entry.")}
             try ExtensionManifest.validateResourcePath(name)
             guard names.insert(name.lowercased()).inserted else{throw ExtensionValidationError.invalid("Duplicate resource path.")}
@@ -68,6 +68,14 @@ public enum ExtensionArchive {
             let ln=try u16(local+26),le=try u16(local+28)
             guard local+30+ln+le+packed<=e,ln==n,String(bytes:b[(local+30)..<(local+30+ln)],encoding:.utf8)==name,
                   try u16(local+6)==flags,try u16(local+8)==method else{throw ExtensionValidationError.invalid("Inconsistent archive headers.")}
+            let checksum = try u32(cursor+16)
+            if flags & 8 == 0 {
+                guard try u32(local+14) == checksum, try u32(local+18) == packed, try u32(local+22) == unpacked else {
+                    throw ExtensionValidationError.invalid("Inconsistent local payload metadata.")
+                }
+            }
+            let payload = local+30+ln+le
+            try ArchivePayload.validate(b[payload..<(payload+packed)], method: method, size: unpacked, checksum: UInt32(checksum))
             cursor+=46+n+extra+comment
         }
         guard cursor==e else{throw ExtensionValidationError.invalid("Unexpected archive directory content.")}

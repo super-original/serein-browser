@@ -59,7 +59,7 @@ private struct ExtensionListView: View {
     let session: BrowserSession
     var body: some View {
         VStack(alignment:.leading,spacing:12) {
-            Text("WebExtensions · Compatibility varies by API and manifest. Native Safari App Extensions, legacy Safari formats, and CRX packages are not supported.").font(.callout).foregroundStyle(.secondary)
+            Text("WebExtensions · Compatibility varies by API and manifest. Native Safari App Extensions, legacy Safari formats, and CRX2 are not supported. CRX3 signatures verify archive integrity, not store approval.").font(.callout).foregroundStyle(.secondary)
             Text("Site access choices are saved until you change them.").font(.caption).foregroundStyle(.secondary)
             List(host.records) {record in
                 VStack(alignment:.leading,spacing:8) {

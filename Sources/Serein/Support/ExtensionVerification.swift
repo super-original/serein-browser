@@ -165,6 +165,34 @@ import SereinCore
                 await host.remove(id)
             } catch {check("\(name)-lifecycle",false,error.localizedDescription);if let context=manager.extensions.contexts[id]{try? manager.extensions.controller.unload(context);manager.extensions.contexts[id]=nil}}
         }
+        do {
+            let host = manager.extensions
+            let source = Bundle.main.resourceURL!.appendingPathComponent("Fixtures/Packages/signed-fixture.crx")
+            let installation = Task { await host.install(source, in: session) }
+            for _ in 0..<100 {
+                if session.dialogWindow?.attachedSheet != nil { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            let owner = session.dialogWindow
+            let consent = owner?.attachedSheet
+            check("crx3-install-consent-visible", consent != nil)
+            if let consent {
+                let name = "22-crx3-install-consent"
+                try name.write(to: root.appendingPathComponent("capture-request"), atomically: true, encoding: .utf8)
+                for _ in 0..<100 {
+                    if FileManager.default.fileExists(atPath: root.appendingPathComponent(name+".capture-finished").path) { break }
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                check("crx3-install-consent-capture", FileManager.default.fileExists(atPath: root.appendingPathComponent(name+".png").path))
+                owner?.endSheet(consent, returnCode: .alertFirstButtonReturn)
+            }
+            await installation.value
+            let installed = host.records.first { $0.packageIdentity?.format == "CRX3" }
+            check("crx3-installed-and-loaded", installed.map { host.contexts[$0.id] != nil } == true, host.error ?? "")
+            let persisted = try JSONDecoder().decode([InstalledExtension].self, from: Data(contentsOf: host.root.appendingPathComponent("extensions.json")))
+            check("crx3-identity-persists", installed != nil && persisted.first?.packageIdentity == installed?.packageIdentity)
+            if let installed { await host.remove(installed.id) }
+        } catch { check("crx3-installation", false, error.localizedDescription) }
         return results
     }
 }
