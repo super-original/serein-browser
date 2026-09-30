@@ -40,7 +40,7 @@ for name,key,typ in [('rsa',rsa.generate_private_key(public_exponent=65537,key_s
   if variant=='invalidExtraProof':header+=field(typ,field(1,pub)+field(2,bytes(len(sig))))
   fixtures[name+variant]=b'Cr24'+struct.pack('<II',3,len(header))+header+archive
  if name=='rsa':
-  for filename, version, permissions in [('signed-update.crx','1.1',['storage','tabs']),('signed-update-disabled.crx','1.2',['storage','tabs']),('signed-update-unsupported.crx','2.0',['storage','nativeMessaging'])]:
+  for filename, version, permissions in [('signed-update.crx','1.1',['storage','tabs']),('signed-update-disabled.crx','1.2',['storage','tabs']),('signed-update-unsupported.crx','2.0',['storage','downloads'])]:
    payload=build_archive(version,permissions);signed=field(1,ident)
    message=b'CRX3 SignedData\0'+struct.pack('<I',len(signed))+signed+payload
    signature=key.sign(message,padding.PKCS1v15(),hashes.SHA256())

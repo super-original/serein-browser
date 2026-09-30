@@ -53,12 +53,27 @@ import SwiftUI
             session.confirm("Quit Serein?",detail:"Open pages have edits. Unsaved changes may be lost.",yes:"Quit") {allowed in
                 let current=Dictionary(uniqueKeysWithValues:self.manager.windows.map{($0.session.state.id,$0.session.closeConsentSnapshot)})
                 let approved=allowed && current==documents
-                if approved {self.manager.saveNow()}
-                sender.reply(toApplicationShouldTerminate:approved)
+                if approved {
+                    if self.finishTermination(sender) == .terminateNow {sender.reply(toApplicationShouldTerminate:true)}
+                } else {sender.reply(toApplicationShouldTerminate:false)}
             }
             return .terminateLater
         }
-        manager?.saveNow();return .terminateNow
+        return finishTermination(sender)
+    }
+    private func finishTermination(_ sender:NSApplication)->NSApplication.TerminateReply {
+        guard let manager else{return .terminateNow}
+        guard manager.extensions.nativeMessaging.hasConnections else{manager.saveNow();return .terminateNow}
+        let documents=Dictionary(uniqueKeysWithValues:manager.windows.map{($0.session.state.id,$0.session.closeConsentSnapshot)})
+        Task {
+            await manager.extensions.nativeMessaging.shutdown()
+            let current=Dictionary(uniqueKeysWithValues:manager.windows.map{($0.session.state.id,$0.session.closeConsentSnapshot)})
+            let unchanged=current==documents
+            if unchanged {manager.saveNow()}
+            else {manager.extensions.nativeMessaging.resumeAcceptingConnections();manager.active?.error="Open pages changed while native applications were closing. Review your work and quit again."}
+            sender.reply(toApplicationShouldTerminate:unchanged)
+        }
+        return .terminateLater
     }
     func applicationShouldHandleReopen(_ sender: NSApplication,hasVisibleWindows flag: Bool) -> Bool {
         if !flag {manager?.newWindow()};return true

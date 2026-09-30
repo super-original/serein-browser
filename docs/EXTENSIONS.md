@@ -38,7 +38,7 @@
 | Context menus | Partial / untested | Engine and action-menu hooks exist; full native menu integration not complete |
 | Request interception | Blocked or unverified per operation | Safari's documented blocking webRequest differences are material; no equivalent engine-level implementation added |
 | Declarative network rules | Untested | API availability is not evidence of matching Chrome/Firefox rule limits or semantics |
-| Native messaging | Unsupported | Manifest requests fail closed; no arbitrary native process access |
+| Native messaging | Partial implementation, integration pending | Verified CRX3 identity, explicit Chrome host-manifest registration and consent, framed stdio; Firefox host identities and automatic discovery unsupported |
 | External messaging / devtools | Unsupported | Manifest installation fails with a clear error |
 | Commands | Partial | Actual MV2/MV3 keyboard delivery, management-menu dispatch and private exclusion pass at `e32960d`; conflicts, remapping, global and real-extension shortcuts remain unverified |
 | Notifications | Untested | No complete consent/delivery/action semantics suite |
@@ -209,3 +209,6 @@ Port tests follow the [runtime.Port contract](https://developer.mozilla.org/en-U
 At `88483f8`, both port fixtures failed manifest validation because descriptions were missing; no port semantics were established. Corrected manifests are pending. New native-message framing/stdio components are also pending CI. They have no production delegate route or host-registration UI, so nativeMessaging remains blocked at installation.
 
 At `3209fee`, corrected port fixtures pass 11/12 checks; MV2 disable-disconnect remains unobserved. Native-message framing/transport and manifest validation pass unit tests, including actual standard macOS processes, malformed/truncated input, deadlines and cancellation. The new registry/consent manager is not wired to production delegates or UI. Required nativeMessaging still rejects installation; no real native application compatibility is claimed.
+
+
+The current continuation wires public WebKit native-message delegates to explicit host registration. Only verified CRX3 identities can use registered Chrome-format hosts; each invocation rechecks extension enablement, live context, nativeMessaging permission and the registered developer key. Users select an already installed executable's manifest and approve a native consent sheet. Registrations persist with owner-only permissions. Revocation, disable, removal and quit cancel owned processes; cleanup awaits child reaping. Limits are 1 MiB host responses, 64 MiB outbound messages/queue, eight buffered inbound messages, four connections per extension and sixteen overall; one-shot calls have a 30-second deadline. These limits are deliberate resource bounds and not full Chrome/Firefox conformance. Firefox allowed_extensions, unsigned identities, automatic browser-directory discovery, Safari native App Extensions and legacy formats remain unsupported. Actual options-page MV2/MV3 fixture execution and consent screenshots are pending exact-commit CI. Earlier bridge-only evidence is not production host evidence.

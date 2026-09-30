@@ -20,6 +20,7 @@ struct InstalledExtension: Identifiable, Codable {
 }
 @MainActor @Observable final class ExtensionHost: NSObject {
     let controller=WKWebExtensionController()
+    @ObservationIgnored lazy var nativeMessaging=NativeMessagingManager(host:self)
     var records: [InstalledExtension] = []
     var error: String?
     var actionRevision=0
@@ -45,6 +46,7 @@ struct InstalledExtension: Identifiable, Codable {
     @objc private func permissionsChanged(_ notification: Notification) {
         guard let context=notification.object as? WKWebExtensionContext else{return}
         rememberPermissions(context)
+        nativeMessaging.cancelUnauthorized()
     }
     func rememberPermissions(_ context: WKWebExtensionContext) {
         guard let id=contexts.first(where:{$0.value===context})?.key,
@@ -64,6 +66,7 @@ struct InstalledExtension: Identifiable, Codable {
         guard contexts[record.id] == nil else { return }
         let directory=record.directory(in: root)
         let manifest=try ExtensionManifest(data:Data(contentsOf:directory.appendingPathComponent("manifest.json")))
+        try manifest.validateNativeMessagingIdentity(record.packageIdentity)
         let ext=try await WKWebExtension(resourceBaseURL:directory)
         if let current = records.first(where: { $0.id == record.id }), current.packageVersionID != record.packageVersionID {
             throw ExtensionValidationError.invalid("The extension package changed while loading.")
@@ -112,6 +115,7 @@ struct InstalledExtension: Identifiable, Codable {
             }
             let manifestURL=destination.appendingPathComponent("manifest.json")
             let manifest=try ExtensionManifest(data:Data(contentsOf:manifestURL))
+            try manifest.validateNativeMessagingIdentity(identity)
             let ext=try await WKWebExtension(resourceBaseURL:destination)
             guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
             try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
@@ -191,6 +195,7 @@ struct InstalledExtension: Identifiable, Codable {
         busyIDs.insert(id); defer { busyIDs.remove(id) }
         do {
             if let context=contexts[id] {
+                nativeMessaging.stop(context:context)
                 try controller.unload(context)
             }
             contexts[id]=nil
@@ -207,7 +212,7 @@ struct InstalledExtension: Identifiable, Codable {
             guard removalErrors.isEmpty else {
                 throw ExtensionValidationError.invalid("Extension data could not be removed: " + removalErrors.map(\.localizedDescription).joined(separator:"; "))
             }
-            try FileManager.default.removeItem(at:record.directory(in: root));records.removeAll{$0.id==id};save()
+            try FileManager.default.removeItem(at:record.directory(in: root));nativeMessaging.removeRegistrations(for:id);records.removeAll{$0.id==id};save()
         } catch {self.error=error.localizedDescription}
     }
     func actionEnabled(_ id: UUID,in session: BrowserSession) -> Bool {

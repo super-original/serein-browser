@@ -26,6 +26,9 @@ BIN=$(xcrun swift build -c release --arch arm64 --show-bin-path)
 cp "$BIN/Serein" "$APP/Contents/MacOS/Serein"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp -R Fixtures "$APP/Contents/Resources/Fixtures"
+xcrun swiftc -target arm64-apple-macos27.0 script/NativeHostFixture.swift -o "$APP/Contents/Resources/Fixtures/NativeHosts/NativeEcho"
+codesign --force --sign - --options runtime "$APP/Contents/Resources/Fixtures/NativeHosts/NativeEcho"
+xcrun vtool -show-build "$APP/Contents/Resources/Fixtures/NativeHosts/NativeEcho" > evidence/build/native-host-macho.txt
 codesign --force --sign - --options runtime "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
 xcrun vtool -show-build "$APP/Contents/MacOS/Serein" | tee evidence/build/macho.txt
@@ -35,6 +38,8 @@ p=plistlib.loads(pathlib.Path('dist/Serein.app/Contents/Info.plist').read_bytes(
 assert p['LSMinimumSystemVersion']=='27.0'
 s=pathlib.Path('evidence/build/macho.txt').read_text()
 assert 'minos 27.0' in s and 'sdk 27.0' in s
+h=pathlib.Path('evidence/build/native-host-macho.txt').read_text()
+assert 'minos 27.0' in h and 'sdk 27.0' in h
 PY
 ditto -c -k --sequesterRsrc --keepParent "$APP" dist/Serein-macOS27-arm64.zip
 shasum -a 256 dist/Serein-macOS27-arm64.zip > dist/SHA256SUMS

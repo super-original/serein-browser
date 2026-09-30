@@ -5,7 +5,7 @@ These original controlled CRX3 fixtures are signed with ephemeral test keys usin
 - `signed-fixture.crx`: version 1.0 with storage and local fixture access.
 - `signed-update.crx`: version 1.1, same developer key, adds tabs permission.
 - `signed-update-disabled.crx`: version 1.2, same developer key and permissions.
-- `signed-update-unsupported.crx`: same-key version 2.0 requiring unavailable production native messaging; must be rejected.
+- `signed-update-unsupported.crx`: same-key version 2.0 requiring unavailable downloads permission; must be rejected.
 - `wrong-developer.crx`: independently signed by a different key; must not update the RSA fixture.
 
 The content script reports runtime ID/version and writes a stable storage marker to verify preservation across updates. The matching independently generated RSA/P-256, tampering and invalid-proof unit fixtures are embedded in `CRXPackageTests.swift`.

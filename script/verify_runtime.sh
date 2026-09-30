@@ -55,6 +55,21 @@ APPLESCRIPT
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
         /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" plain > "$ROOT/glance-external-pointer-input.log" 2>&1
         ;;
+      native-host-registration-file)
+        NATIVE_MANIFEST=$(cat "$ROOT/native-host-manifest-path")
+        osascript - "$NATIVE_MANIFEST" <<'APPLESCRIPT'
+on run arguments
+  tell application "System Events" to tell process "Serein"
+    keystroke "g" using {command down, shift down}
+    delay 0.4
+    keystroke item 1 of arguments
+    key code 36
+    delay 0.6
+    key code 36
+  end tell
+end run
+APPLESCRIPT
+        ;;
       fullscreen-enter)
         read -r FULLSCREEN_X FULLSCREEN_Y < "$ROOT/fullscreen-click-point"
         /tmp/serein-pointer "$FULLSCREEN_X" "$FULLSCREEN_Y" plain > "$ROOT/fullscreen-pointer-input.log" 2>&1

@@ -23,9 +23,13 @@ public struct ExtensionManifest: Sendable {
         }
         permissions=manifest["permissions"] as? [String] ?? []
         hosts=manifest["host_permissions"] as? [String] ?? []
-        if permissions.contains("nativeMessaging") {throw ExtensionValidationError.invalid("Native messaging is not implemented. This extension cannot be installed with its requested capabilities.")}
         if manifest["externally_connectable"] != nil {throw ExtensionValidationError.invalid("External messaging semantics are not verified. Installation is blocked for this manifest.")}
         if manifest["devtools_page"] != nil {throw ExtensionValidationError.invalid("Developer-tools extensions are not hosted yet.")}
+    }
+    public func validateNativeMessagingIdentity(_ identity:SignedExtensionIdentity?) throws {
+        if permissions.contains("nativeMessaging"),identity?.format != "CRX3" {
+            throw ExtensionValidationError.invalid("Native messaging currently requires a verified CRX3 package and separate native-host registration. Unsigned and Firefox native-host identity verification is not implemented.")
+        }
     }
     /// WebKit can omit unknown required permissions without returning a manifest
     /// error. Never present a reduced capability list as a successful install.

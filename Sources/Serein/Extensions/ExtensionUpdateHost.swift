@@ -27,6 +27,7 @@ extension ExtensionHost {
         do {
             guard let identity = try prepare(source, at: candidate) else { throw ExtensionValidationError.invalid("Updates require a verified CRX3 package.") }
             let manifest = try ExtensionManifest(data: Data(contentsOf: candidate.appendingPathComponent("manifest.json")))
+            try manifest.validateNativeMessagingIdentity(identity)
             try SignedExtensionUpdate.validate(previous: previousIdentity, version: original.version, candidate: identity, candidateVersion: manifest.version)
             let ext = try await WKWebExtension(resourceBaseURL: candidate)
             guard ext.errors.isEmpty else { throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator: "\n")) }
@@ -82,6 +83,7 @@ extension ExtensionHost {
     }
     func unloadPreservingPageState(_ context:WKWebExtensionContext) throws {
         let runtimes=(manager?.windows ?? []).filter{!$0.session.state.isPrivate}.flatMap{Array($0.session.runtimes.values)}.filter{$0.captureExtensionReloadState(for:context)}
+        nativeMessaging.stop(context:context)
         do {try controller.unload(context)}
         catch {for runtime in runtimes {runtime.reload()};throw error}
     }

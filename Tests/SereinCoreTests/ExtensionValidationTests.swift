@@ -1,6 +1,15 @@
 import XCTest
 @testable import SereinCore
 final class ExtensionValidationTests: XCTestCase {
+    func testNativeMessagingRequiresVerifiedPackageIdentity() throws {
+        let manifest=try ExtensionManifest(data:Data("{\"manifest_version\":3,\"name\":\"A\",\"version\":\"1\",\"permissions\":[\"nativeMessaging\"]}".utf8))
+        XCTAssertThrowsError(try manifest.validateNativeMessagingIdentity(nil))
+        let chrome=SignedExtensionIdentity(format:"CRX3",extensionID:String(repeating:"a",count:32),publicKeySHA256:"fixture",packageSHA256:"fixture")
+        XCTAssertNoThrow(try manifest.validateNativeMessagingIdentity(chrome))
+        let firefox=SignedExtensionIdentity(format:"XPI",extensionID:"example@fixture",publicKeySHA256:"fixture",packageSHA256:"fixture")
+        XCTAssertThrowsError(try manifest.validateNativeMessagingIdentity(firefox))
+    }
+
     func testActionCommandNormalizationPreservesCapabilities() throws {
         for (version,action) in [(2,"_execute_browser_action"),(3,"_execute_action")] {
             let original=Data("{\"manifest_version\":\(version),\"permissions\":[\"webRequestBlocking\"],\"commands\":{\"\(action)\":{},\"ordinary\":{}}}".utf8)
@@ -18,7 +27,7 @@ final class ExtensionValidationTests: XCTestCase {
         XCTAssertEqual(try ExtensionCommandNormalization.normalize(original),original)
     }
     func testUnsupportedManifestsDoNotLoadAsPartialSuccess() {
-        for value in ["{\"manifest_version\":4,\"name\":\"A\",\"version\":\"1\"}","{\"manifest_version\":3,\"name\":\"A\",\"version\":\"1\",\"permissions\":[\"nativeMessaging\"]}"] {XCTAssertThrowsError(try ExtensionManifest(data:Data(value.utf8)))}
+        for value in ["{\"manifest_version\":4,\"name\":\"A\",\"version\":\"1\"}"] {XCTAssertThrowsError(try ExtensionManifest(data:Data(value.utf8)))}
     }
     func testUnknownRequiredPermissionsAreReportedRatherThanSilentlyDropped() throws {
         let manifest=try ExtensionManifest(data:Data(#"{"manifest_version":2,"name":"Fixture","version":"1","permissions":["storage","webRequestBlocking","https://example.com/*","<all_urls>"]}"#.utf8))

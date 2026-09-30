@@ -3,6 +3,12 @@ import WebKit
 import SereinCore
 
 extension ExtensionHost: WKWebExtensionControllerDelegate {
+    func webExtensionController(_ controller:WKWebExtensionController,sendMessage message:Any,toApplicationWithIdentifier applicationIdentifier:String?,for context:WKWebExtensionContext,replyHandler:@escaping (Any?,(any Error)?)->Void) {
+        nativeMessaging.send(message,name:applicationIdentifier,context:context,reply:replyHandler)
+    }
+    func webExtensionController(_ controller:WKWebExtensionController,connectUsing port:WKWebExtension.MessagePort,for context:WKWebExtensionContext,completionHandler:@escaping ((any Error)?)->Void) {
+        nativeMessaging.connect(port,context:context,completion:completionHandler)
+    }
     func webExtensionController(_ controller:WKWebExtensionController,didUpdate action:WKWebExtension.Action,forExtensionContext context:WKWebExtensionContext) {actionRevision += 1}
     func webExtensionController(_ controller: WKWebExtensionController,openWindowsFor context: WKWebExtensionContext) -> [any WKWebExtensionWindow] {
         manager?.windows.filter{!$0.session.state.isPrivate}.compactMap{$0.session.extensionWindow} ?? []

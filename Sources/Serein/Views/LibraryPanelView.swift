@@ -88,6 +88,14 @@ private struct ExtensionListView: View {
                         if record.packageIdentity != nil { Button("Update Signed Package…") { host.chooseUpdate(record.id, in: session) } }
                         Button("Remove…"){host.confirmRemoval(record,in:session)}
                     }.font(.caption)
+                    if record.packageIdentity?.format == "CRX3" {
+                        HStack {
+                            Button("Register Native Application…"){host.nativeMessaging.chooseRegistration(for:record,in:session)}
+                            ForEach(host.nativeMessaging.registrations(for:record.id)){registration in
+                                Menu(registration.manifest.name){Button("Revoke Access"){host.nativeMessaging.revoke(registration.id)}}
+                            }
+                        }.font(.caption)
+                    }
                 }.padding(.vertical,4).disabled(host.busyIDs.contains(record.id))
             }
             Button("Install Extension…"){host.chooseInstall(in:session)}

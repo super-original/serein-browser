@@ -43,3 +43,6 @@ Native-message framing, actual cat/printf/sleep transport cases, deadline/cancel
 ## Evidence conventions
 
 Most browser scenarios are in-process integration tests; native keyboard tests and separately supervised quit are labeled. Delegate tests are not JavaScript promise tests. Captures are retrieved and inspected, and screenshot existence alone is never a visual pass. Early diagnostic performance samples include WebKit subprocesses but failed rendering prevents representative browser performance claims. No significant unsupported requirement is waived by a passing compilation or package.
+
+
+Continuation checkpoint `a1dea358e9c346114ff46b46e411b2d832472300` ([run 36777877403](https://github.com/super-original/serein-browser/actions/runs/36777877403)) builds/tests/packages successfully. All 12 runtime-port checks pass on this run, including MV2 disable-disconnect; the previous intermittent failure remains relevant. The wake-pipe transport and awaitable cleanup compile and pass transport tests. Nine unprimed fullscreen checks and four zoom-event/about:blank checks still fail, as does desktop rendering. Production native-host integration, actual consent and signed MV2/MV3 process fixtures are the next verification target. No completion claim follows.
