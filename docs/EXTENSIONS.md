@@ -99,3 +99,7 @@ The same source explains a recoverable test failure: querying `.session` after u
 | Tab Session Manager 7.4.0 | Required `downloads`, `identity`, `tabGroups` omitted |
 
 These are capabilities requested by the exact packages, not a claim that every package in the same category is impossible to support. Future compatibility code must implement and test missing semantics; removing permission declarations to make installation appear successful would not meet the target.
+
+### Host-side permissions continuation
+
+Explicit runtime API and website permission grants, denials, and removals are now captured through public `WKWebExtensionContext` change notifications. Snapshots retain expiration dates and replace initial install grants on reload so revocation cannot silently become a grant again. Old installed records without a snapshot keep their original migration behavior. Tab-scoped `activeTab` gestures are not persisted. Per-site menu changes save immediately; private browsing remains excluded. Controlled tests exercise disk round-trip, revoked API access, restored site denial, and denied content-script injection. CI verification for this follow-up is pending.

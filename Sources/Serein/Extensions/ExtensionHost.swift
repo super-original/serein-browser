@@ -10,6 +10,7 @@ struct InstalledExtension: Identifiable, Codable {
     var enabled: Bool
     var permissions: [String]
     var hosts: [String]
+    var permissionState: ExtensionPermissionState? = nil
 }
 @MainActor @Observable final class ExtensionHost: NSObject {
     let controller=WKWebExtensionController()
@@ -26,6 +27,23 @@ struct InstalledExtension: Identifiable, Codable {
             let url=root.appendingPathComponent("extensions.json")
             if FileManager.default.fileExists(atPath:url.path) {records=try JSONDecoder().decode([InstalledExtension].self,from:Data(contentsOf:url))}
         } catch {self.error=error.localizedDescription}
+        for name in [WKWebExtensionContext.permissionsWereGrantedNotification,
+                     WKWebExtensionContext.permissionsWereDeniedNotification, WKWebExtensionContext.grantedPermissionsWereRemovedNotification,
+                     WKWebExtensionContext.deniedPermissionsWereRemovedNotification, WKWebExtensionContext.permissionMatchPatternsWereGrantedNotification,
+                     WKWebExtensionContext.permissionMatchPatternsWereDeniedNotification, WKWebExtensionContext.grantedPermissionMatchPatternsWereRemovedNotification,
+                     WKWebExtensionContext.deniedPermissionMatchPatternsWereRemovedNotification] {
+            NotificationCenter.default.addObserver(self,selector:#selector(permissionsChanged(_:)),name:name,object:nil)
+        }
+    }
+    @objc private func permissionsChanged(_ notification: Notification) {
+        guard let context=notification.object as? WKWebExtensionContext else{return}
+        rememberPermissions(context)
+    }
+    func rememberPermissions(_ context: WKWebExtensionContext) {
+        guard let id=contexts.first(where:{$0.value===context})?.key,
+              let index=records.firstIndex(where:{$0.id==id}) else{return}
+        records[index].permissionState=ExtensionPermissionState(context)
+        save()
     }
     func restore() async {
         for record in records where record.enabled {
@@ -46,6 +64,7 @@ struct InstalledExtension: Identifiable, Codable {
         context.hasAccessToPrivateData=false
         for permission in ext.requestedPermissions where record.permissions.contains(permission.rawValue) {context.setPermissionStatus(.grantedExplicitly,for:permission)}
         for pattern in ext.requestedPermissionMatchPatterns where record.hosts.contains(pattern.string) {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
+        if let state=record.permissionState {try state.apply(to:context)}
         try controller.load(context);contexts[record.id]=context
         for window in manager?.windows ?? [] where !window.session.state.isPrivate {
             if let bridge=window.session.extensionWindow {context.didOpenWindow(bridge)}
@@ -111,7 +130,7 @@ struct InstalledExtension: Identifiable, Codable {
         guard let i=records.firstIndex(where:{$0.id==id}) else{return}
         do {
             if enabled {try await load(records[i])}
-            else if let context=contexts[id] {try controller.unload(context);contexts[id]=nil}
+            else if let context=contexts[id] {rememberPermissions(context);try controller.unload(context);contexts[id]=nil}
             records[i].enabled=enabled;save()
         } catch {self.error=error.localizedDescription}
     }
@@ -143,6 +162,6 @@ struct InstalledExtension: Identifiable, Codable {
     func setCurrentSite(_ id: UUID,in session: BrowserSession,allow: Bool) {
         guard let context=contexts[id],let url=session.current?.webView.url else{return}
         context.setPermissionStatus(allow ? .grantedExplicitly : .deniedExplicitly,for:url)
-        // Per-site grants expire with this process; installation grants persist in records.
+        rememberPermissions(context)
     }
 }

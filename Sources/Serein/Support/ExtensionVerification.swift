@@ -40,6 +40,22 @@ import SereinCore
                 let value=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 let after=(value as? String).flatMap{$0.data(using:.utf8)}.flatMap{try? JSONSerialization.jsonObject(with:$0) as? [String:Any]}
                 check("\(name)-storage-persists-reload",(after?["count"] as? Int ?? 0)>firstCount && firstCount>0)
+                // Persist engine changes, including revocation, without depending on shutdown.
+                guard let live=host.contexts[id] else{throw ExtensionValidationError.invalid("Missing reloaded context")}
+                live.setPermissionStatus(.unknown,for:WKWebExtension.Permission(rawValue:"tabs"))
+                host.setCurrentSite(id,in:session,allow:false)
+                try await Task.sleep(for:.milliseconds(100))
+                let saved=try JSONDecoder().decode([InstalledExtension].self,from:Data(contentsOf:host.root.appendingPathComponent("extensions.json")))
+                guard let savedRecord=saved.first(where:{$0.id==id}),let savedState=savedRecord.permissionState else{throw ExtensionValidationError.invalid("Permission snapshot missing")}
+                check("\(name)-permission-revocation-written",savedState.granted["tabs"] == nil && !savedState.deniedHosts.isEmpty)
+                try host.controller.unload(live);host.contexts[id]=nil
+                try await host.load(savedRecord)
+                let restored=host.contexts[id]!
+                let site=URL(string:"http://127.0.0.1:8765/index.html")!
+                check("\(name)-permission-policy-restored",!restored.hasPermission(WKWebExtension.Permission(rawValue:"tabs")) && restored.permissionStatus(for:site) == .deniedExplicitly)
+                session.current!.webView.reload();try await Task.sleep(for:.seconds(1))
+                let revoked=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
+                check("\(name)-restored-denial-stops-injection",revoked is NSNull)
                 await host.setEnabled(id,false)
                 check("\(name)-disable-record",host.records.first{$0.id==id}?.enabled == false && host.contexts[id] == nil)
                 session.current!.webView.reload();try await Task.sleep(for:.seconds(1))
