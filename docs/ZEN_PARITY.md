@@ -72,7 +72,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Fullscreen | P | Native window/fullscreen WebKit preference; media runtime coverage incomplete |
 | Loading / errors / process recovery | P | Visible states; real process-crash injection pending |
 | Settings | P | Appearance, sidebar, website data clearing; advanced policies absent |
-| Glance / link preview | P | Native Option-click overlay and parent/child lifecycle implemented; geometry, minimum bounds, actual Option-click/Escape/focus, live movement/split, consent, private isolation and reopened relationships pass at `7ef2e5f`; cycling/expansion still fail. Configurable external-host popup routing is implemented pending verification. Nested previews and animation parity remain gaps. |
+| Glance / link preview | P | Native Option-click overlay and parent/child lifecycle implemented; geometry, minimum bounds, actual Option-click/Escape/focus, live movement/split, consent, private isolation and reopened relationships pass at `7ef2e5f`; cycling/expansion now pass at `4449c7a`. Configurable external-host popup routing is implemented; its first pointer scenario failed because the view was not attached when coordinates were measured. Corrected verification is pending. Nested previews and animation parity remain gaps. |
 | Folders / live folders | U | Not implemented |
 | Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/unpin and workspace moves verified at `e511f58` and later runs; full keyboard selection remains a gap |
 | Tab groups | U | Not implemented |

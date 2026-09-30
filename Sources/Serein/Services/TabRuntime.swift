@@ -4,6 +4,7 @@ import Observation
 import SereinCore
 
 @MainActor @Observable final class TabRuntime: NSObject {
+    private static let editScriptSource="document.addEventListener('input',()=>window.webkit.messageHandlers.edited.postMessage(true),{capture:true,once:true});"
     let id: UUID
     var title="New Tab"
     var isLoading=false
@@ -55,12 +56,13 @@ import SereinCore
         let context=url.flatMap{session?.extensions?.controller.extensionContext(for:$0)}
         configurationContext=context
         let config=context?.webViewConfiguration ?? initialConfiguration ?? WKWebViewConfiguration()
+        let sharesConfiguration=context != nil || initialConfiguration != nil
         initialConfiguration=nil
-        // Context configurations may share a user-content controller. Keep this tab's
+        // Extension and popup configurations may share a user-content controller. Keep this tab's
         // native message handler private to its view without altering engine settings.
-        if context != nil {
+        if sharesConfiguration {
             let content=WKUserContentController()
-            for script in config.userContentController.userScripts {content.addUserScript(script)}
+            for script in config.userContentController.userScripts where script.source != Self.editScriptSource {content.addUserScript(script)}
             config.userContentController=content
         }
         if let session {config.websiteDataStore=session.dataStore;config.webExtensionController=session.extensions?.controller}
@@ -68,7 +70,7 @@ import SereinCore
         config.preferences.javaScriptCanOpenWindowsAutomatically=false
         let bridge=EditBridge(runtime:self);editBridge=bridge
         config.userContentController.add(bridge,contentWorld:.world(name:"SereinPageState"),name:"edited")
-        config.userContentController.addUserScript(WKUserScript(source:"document.addEventListener('input',()=>window.webkit.messageHandlers.edited.postMessage(true),{capture:true,once:true});",injectionTime:.atDocumentStart,forMainFrameOnly:false,in:.world(name:"SereinPageState")))
+        config.userContentController.addUserScript(WKUserScript(source:Self.editScriptSource,injectionTime:.atDocumentStart,forMainFrameOnly:false,in:.world(name:"SereinPageState")))
         let view=WKWebView(frame:.zero,configuration:config);storedView=view
         view.wantsLayer=true
         view.navigationDelegate=self;view.uiDelegate=self;view.allowsBackForwardNavigationGestures=true
@@ -188,7 +190,10 @@ import SereinCore
 @MainActor private final class EditBridge: NSObject, WKScriptMessageHandler {
     weak var runtime: TabRuntime?
     init(runtime: TabRuntime) {self.runtime=runtime}
-    func userContentController(_ userContentController: WKUserContentController,didReceive message: WKScriptMessage) {runtime?.hasUserEdits=true}
+    func userContentController(_ userContentController: WKUserContentController,didReceive message: WKScriptMessage) {
+        guard let runtime,message.webView === runtime.loadedWebView,message.body as? Bool == true else{return}
+        runtime.hasUserEdits=true
+    }
 }
 extension TabRuntime: WKNavigationDelegate {
     func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {guard webView === storedView else{return};documentID=UUID();failedURL=nil;failure=nil;crashed=false;synchronize()}

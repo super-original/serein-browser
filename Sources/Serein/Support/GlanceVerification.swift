@@ -132,7 +132,8 @@ import WebKit
             else {UserDefaults.standard.removeObject(forKey:"previewExternalPinnedLinks")}
         }
         let currentParent=session.runtime(owner).webView
-        await wait{currentParent.url?.query=="glance-owner" && !currentParent.isLoading}
+        window.makeKeyAndOrderFront(nil)
+        await wait{currentParent.window === window && currentParent.bounds.width>200 && currentParent.bounds.height>200 && currentParent.url?.query=="glance-owner" && !currentParent.isLoading}
         let externalPoint=try? await currentParent.evaluateJavaScript("(()=>{const a=document.querySelector('a[target]');a.href='http://localhost:8765/second.html?external-glance';a.scrollIntoView({block:'center'});const r=a.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()") as? [String:Double]
         if let externalPoint,let x=externalPoint["x"],let y=externalPoint["y"],let screen=NSScreen.screens.first {
             window.makeKeyAndOrderFront(nil)
@@ -141,10 +142,21 @@ import WebKit
             try? "\(Int(location.x.rounded())) \(Int((screen.frame.maxY-location.y).rounded()))\n".write(to:root.appendingPathComponent("glance-click-point"),atomically:true,encoding:.utf8)
             let sent=await keyboard("glance-external-link")
             await wait{session.state.activeGlance != nil && session.current?.webView.url?.query=="external-glance" && session.current?.webView.isLoading==false}
-            check("native-essential-external-link-preview",sent && session.state.activeGlance?.glanceParentID==owner && session.current?.webView.url?.host=="localhost" && session.current?.webView.url?.query=="external-glance")
-            check("external-link-preserves-owner-and-store",currentParent.url?.query=="glance-owner" && session.current?.webView.configuration.websiteDataStore === session.dataStore && session.state.visibleTabs.contains{$0.id==owner} && !session.state.visibleTabs.contains{$0.id==session.state.activeGlance?.id})
+            check("native-essential-external-link-preview",sent && session.state.activeGlance?.glanceParentID==owner && session.current?.webView.url?.host=="localhost" && session.current?.webView.url?.query=="external-glance","preview=\(String(describing:session.state.activeGlance?.id)) URL=\(String(describing:session.current?.webView.url)) parentFrame=\(currentParent.frame)")
+            check("external-link-preserves-owner-and-store",session.state.activeGlance != nil && currentParent.url?.query=="glance-owner" && session.current?.webView.configuration.websiteDataStore === session.dataStore && session.state.visibleTabs.contains{$0.id==owner} && !session.state.visibleTabs.contains{$0.id==session.state.activeGlance?.id})
             try? "34-essential-preview".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
             await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("34-essential-preview.capture-finished").path)}
+            if let external=session.state.activeGlance {
+                let externalView=session.runtime(external.id).webView
+                check("popup-message-controller-isolated",externalView.configuration.userContentController !== currentParent.configuration.userContentController)
+                session.close(external.id,ask:false)
+                let ownerRuntime=session.runtime(owner)
+                ownerRuntime.hasUserEdits=false
+                _=try? await currentParent.evaluateJavaScript("document.querySelector('input').dispatchEvent(new Event('input',{bubbles:true}))")
+                await wait{ownerRuntime.hasUserEdits}
+                check("closing-popup-retains-owner-edit-tracking",ownerRuntime.hasUserEdits,"Synthetic DOM input tests native message routing, not physical typing")
+                ownerRuntime.hasUserEdits=false
+            }
         } else {check("native-essential-external-link-preview",false,"Could not locate controlled external link")}
         window.close()
         return results
