@@ -11,9 +11,14 @@ python3 script/fetch_extension_fixtures.py /tmp/serein-extension-audit
 ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-baseline.txt"
 open -n dist/Serein.app --stdout "$ROOT/application.log" --stderr "$ROOT/application-error.log" --args --test-root "$ROOT" --integration-test --real-extension-catalog /tmp/serein-extension-audit/catalog.json
 sleep 2
+APP_PID=$(pgrep -x Serein | head -1)
 osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' || true
 for i in $(seq 1 2400); do
   if test -s "$ROOT/results.json"; then break; fi
+  if ! kill -0 "$APP_PID" 2>/dev/null; then
+    echo "Serein exited before writing final results"
+    break
+  fi
   if test -f "$ROOT/keyboard-request"; then
     KEYBOARD_NAME=$(cat "$ROOT/keyboard-request")
     rm "$ROOT/keyboard-request"
@@ -45,6 +50,13 @@ for i in $(seq 1 2400); do
   fi
   sleep 0.1
 done
+python3 - "$ROOT" <<'PYCRASH'
+import pathlib,shutil,sys,time
+root=pathlib.Path(sys.argv[1])
+for p in (pathlib.Path.home()/'Library/Logs/DiagnosticReports').glob('Serein*'):
+    if p.is_file() and time.time()-p.stat().st_mtime < 1800:
+        shutil.copy2(p,root/p.name)
+PYCRASH
 cat "$ROOT/application.log"
 cat "$ROOT/application-error.log"
 log show --last 3m --style compact --predicate '(process CONTAINS "WebKit" OR subsystem BEGINSWITH "com.apple.WebKit") AND (messageType == error OR messageType == fault)' > "$ROOT/webkit-system.log" 2>&1 || true

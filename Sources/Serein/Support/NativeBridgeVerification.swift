@@ -22,10 +22,15 @@ import SereinCore
 @MainActor enum NativeBridgeVerification {
     static func run(root:URL) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
-        func check(_ name:String,_ passed:Bool,_ detail:String="") {results.append(.init(name:name,passed:passed,detail:detail))}
+        func check(_ name:String,_ passed:Bool,_ detail:String="") {
+            results.append(.init(name:name,passed:passed,detail:detail))
+            try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("native-bridge-probe.json"),options:.atomic)
+        }
+        func stage(_ name:String) {try? JSONEncoder().encode(["stage":name]).write(to:root.appendingPathComponent("native-bridge-stage.json"),options:.atomic)}
         for version in [2,3] {
             let prefix="mv\(version)-native-bridge"
             do {
+                stage(prefix+"-creating-controller")
                 let controller=WKWebExtensionController(),delegate=NativeBridgeProbeDelegate()
                 controller.delegate=delegate
                 let source=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/NativeBridge/mv\(version)")
@@ -35,6 +40,7 @@ import SereinCore
                 let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=UUID().uuidString
                 delegate.expectedContext=context.uniqueIdentifier
                 for pattern in ext.requestedPermissionMatchPatterns {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
+                stage(prefix+"-loading-context")
                 try controller.load(context)
                 defer {try? controller.unload(context)}
                 let config=WKWebViewConfiguration();config.webExtensionController=controller
@@ -48,13 +54,16 @@ import SereinCore
                     }
                     return nil
                 }
+                stage(prefix+"-probing-denial")
                 let denied=await probe("denied")
                 check(prefix+"-denied-before-host",denied?["allowed"] as? Bool==false && delegate.allowed==0 && delegate.rejected==0,String(describing:denied))
                 context.setPermissionStatus(.grantedExplicitly,for:WKWebExtension.Permission(rawValue:"nativeMessaging"))
+                stage(prefix+"-probing-grant")
                 let granted=await probe("granted")
                 let response=granted?["response"] as? [String:String]
                 check(prefix+"-scoped-reply",granted?["allowed"] as? Bool==true && response?["protocol"]=="serein-probe-1" && response?["context"]==delegate.expectedContext && delegate.allowed==1,String(describing:granted))
                 check(prefix+"-unknown-application-denied",granted?["unknownRejected"] as? Bool==true && delegate.rejected==1)
+                stage(prefix+"-unloading")
             } catch {check(prefix+"-setup",false,error.localizedDescription)}
         }
         try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("native-bridge-probe.json"),options:.atomic)
