@@ -17,6 +17,10 @@ public enum NativeMessageFraming {
     public static let maximumHostMessage=1024*1024
     public static let maximumChromeRequest=64*1024*1024
     public static func encode(_ value:Any,maximumBytes:Int=maximumChromeRequest) throws -> Data {
+        // JSONSerialization.data can raise an Objective-C exception for NaN or
+        // unsupported objects. Validate inside an array to permit JSON scalar
+        // roots without passing invalid values to the throwing serializer.
+        guard JSONSerialization.isValidJSONObject([value]) else{throw NativeMessageFramingError.invalidJSON}
         let payload:Data
         do {payload=try JSONSerialization.data(withJSONObject:value,options:[.fragmentsAllowed,.sortedKeys])}
         catch {throw NativeMessageFramingError.invalidJSON}
