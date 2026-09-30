@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/NativeHostFixture.swift', 'script/check_signed_fixtures.py', 'script/generate_signed_fixtures.py', 'script/verify_runtime.sh', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/verify_fullscreen_processes.py', 'script/fixture_server.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', 'script/PointerInput.swift', '.github/workflows/build.yml']
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/cache_budget.py', 'script/NativeHostFixture.swift', 'script/check_signed_fixtures.py', 'script/generate_signed_fixtures.py', 'script/verify_runtime.sh', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/verify_fullscreen_processes.py', 'script/fixture_server.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', 'script/PointerInput.swift', '.github/workflows/build.yml']
   pull_request:
 permissions:
   contents: read
@@ -19,9 +19,31 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: '27.0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Clean build, unit tests, and package
+      - name: Identify compiler cache
+        id: compiler
+        run: |
+          SIGNATURE=$({ sw_vers; uname -m; xcodebuild -version; xcrun swift --version; xcrun --sdk macosx --show-sdk-version; } | shasum -a 256 | awk '{print $1}')
+          echo "prefix=swift-v1-$SIGNATURE" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        id: compiler-cache
+        continue-on-error: true
+        with:
+          path: .build
+          key: ${{ steps.compiler.outputs.prefix }}-${{ hashFiles('Package.swift', 'Sources/**/*.swift', 'Tests/**/*.swift') }}
+          restore-keys: ${{ steps.compiler.outputs.prefix }}-
+      - name: Build, unit tests, and package
         id: build
         run: bash script/build.sh
+      - name: Bound compilation cache to free storage
+        id: cache-budget
+        if: ${{ steps.compiler-cache.outputs.cache-hit != 'true' }}
+        run: python3 script/cache_budget.py
+      - uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        if: ${{ steps.cache-budget.outputs.save == 'true' && steps.compiler-cache.outputs.cache-primary-key != '' }}
+        continue-on-error: true
+        with:
+          path: .build
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
       - name: Run actual macOS 27 application and integration scenarios
         run: bash script/verify_runtime.sh
       - name: Isolate public GPU fullscreen probes in fresh app processes

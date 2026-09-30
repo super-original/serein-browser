@@ -76,14 +76,15 @@ APPLESCRIPT
         osascript -e 'tell application "System Events" to tell process "Serein"' -e 'delay 0.3' -e 'keystroke "a" using command down' -e 'keystroke "Research notes"' -e 'key code 36' -e 'end tell'
         ;;
       folder-toggle|folder-context)
-        if osascript - "$KEYBOARD_NAME" > "$ROOT/$KEYBOARD_NAME-point" 2> "$ROOT/$KEYBOARD_NAME-input.log" <<'APPLESCRIPT'
+        FOLDER_IDENTIFIER=$(cat "$ROOT/folder-control-identifier")
+        if osascript - "$KEYBOARD_NAME" "$FOLDER_IDENTIFIER" > "$ROOT/$KEYBOARD_NAME-point" 2> "$ROOT/$KEYBOARD_NAME-input.log" <<'APPLESCRIPT'
 on run arguments
   with timeout of 5 seconds
   tell application "System Events" to tell process "Serein"
     set controls to entire contents of window 1
     repeat with uiElement in controls
       try
-        if role of uiElement is "AXButton" and name of uiElement is "Research notes" then
+        if value of attribute "AXIdentifier" of uiElement is item 2 of arguments then
           if item 1 of arguments is "folder-context" then
             set origin to position of uiElement
             set extent to size of uiElement
@@ -122,13 +123,41 @@ on run arguments
     delay 0.4
     keystroke "g" using {command down, shift down}
     delay 0.4
+    keystroke "a" using command down
     keystroke item 1 of arguments
     key code 36
     delay 0.6
     key code 36
+    repeat 8 times
+      repeat with candidateWindow in windows
+        if my openFileIfPresent(candidateWindow) then return
+        repeat with childSheet in sheets of candidateWindow
+          if my openFileIfPresent(childSheet) then return
+          repeat with nestedSheet in sheets of childSheet
+            if my openFileIfPresent(nestedSheet) then return
+          end repeat
+        end repeat
+      end repeat
+      delay 0.2
+    end repeat
+    error "Native Open button or consent was not found"
   end tell
   end timeout
 end run
+on openFileIfPresent(containerElement)
+  try
+  tell application "System Events"
+    if exists button "Open" of containerElement then
+      if enabled of button "Open" of containerElement then
+        perform action "AXPress" of button "Open" of containerElement
+        return true
+      end if
+    end if
+    if exists button "Allow" of containerElement then return true
+  end tell
+  end try
+  return false
+end openFileIfPresent
 APPLESCRIPT
         ;;
       fullscreen-enter)

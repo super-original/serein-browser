@@ -9,6 +9,11 @@ struct SidebarView: View {
     @State private var creatingWorkspace=false
     @State private var renamingWorkspace: UUID?
     private var collapsed: Bool {session.state.sidebar == .collapsed}
+    private var essentialColumns:[GridItem] {
+        let count=session.state.visibleTabs.filter{$0.kind == .essential}.count
+        let capacity=collapsed ? 1 : max(1,Int((session.state.sidebarWidth-10)/42))
+        return Array(repeating:GridItem(.flexible(minimum:36),spacing:6),count:max(1,min(count,capacity)))
+    }
     var body: some View {
         VStack(spacing:6) {
             if !collapsed {
@@ -21,7 +26,7 @@ struct SidebarView: View {
                 AddressField(session:session)
             } else {Color.clear.frame(height:54)}
             if !session.state.visibleTabs.filter({$0.kind == .essential}).isEmpty {
-                LazyVGrid(columns:[GridItem(.adaptive(minimum:36),spacing:6)],spacing:6) {
+                LazyVGrid(columns:essentialColumns,spacing:6) {
                     ForEach(session.state.visibleTabs.filter{$0.kind == .essential}){tab in tabRow(tab,essential:true)}
                 }.padding(.vertical,3)
             }

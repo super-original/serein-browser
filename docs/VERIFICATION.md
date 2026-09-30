@@ -2,6 +2,14 @@
 
 Full original-spec completion remains the goal and is not achieved. [Draft PR #1](https://github.com/super-original/serein-browser/pull/1) remains unmerged. [Historical checkpoints](VERIFICATION_HISTORY.md) preserve earlier results and failed experiments.
 
+## Latest package-format checkpoint
+
+`c0061e9e085134da25f020fc39f99d3aea5b3085`: [run 36787665204](https://github.com/super-original/serein-browser/actions/runs/36787665204) passes **108 unit tests and 409/431 browser checks**, plus **9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fresh fullscreen**. [App](https://github.com/super-original/serein-browser/actions/runs/36787665204/artifacts/11129749874) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36787665204/artifacts/11130104629).
+
+Actual folder-to-workspace conversion preserves the live loaded page; creation, nesting, persistence, cancellation, stale-document/membership consent, unpacking and deletion also pass. All 20 MV3 native-host checks pass. The first MV2 picker stays open with its JSON selected; the next revision targets the native Open button directly. Folder AX lookup by displayed name fails, so collapse/context-menu checks remain failed; the correction uses the explicit accessibility identifier. Retrieved/inspected captures 44/46 show the essential, matching 40-point folder/tab pitch and 14-point indentation; 48 shows legible native destructive consent, and 43 shows the registered host without a stale error. The essential tile width still differs from the reference. Web content remains blank and the desktop gate still fails.
+
+The Safari `.appex` fixture compiles, packages and signs, but WebKit rejects its missing `description` before installation consent. No runtime Safari bundle compatibility is claimed from this run. The description is added in the following revision. Its four layout unit tests pass; the remaining runtime outcomes still need execution.
+
 ## Folder implementation checkpoint
 
 `de3df8af6e8a8617c33c5cccdab5be6a68c69bc6`: [run 36784268919](https://github.com/super-original/serein-browser/actions/runs/36784268919) passes **101 unit tests, 386/406 browser checks, 9/9 quit, 12/12 download restart, and 12/12 isolated bridge checks**. Fresh fullscreen remains 8/12; desktop rendering still fails. [Download this development app](https://github.com/super-original/serein-browser/actions/runs/36784268919/artifacts/11128744715) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36784268919/artifacts/11128809511).
