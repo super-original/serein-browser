@@ -39,6 +39,11 @@ end run
 APPLESCRIPT
         ;;
       save-download) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
+      suggestion-query)
+        osascript -e 'tell application "System Events" to tell process "Serein"' -e 'keystroke "l" using command down' -e 'keystroke "a" using command down' -e 'keystroke "serein keyboard suggestion"' -e 'end tell'
+        ;;
+      suggestion-down) osascript -e 'tell application "System Events" to tell process "Serein" to key code 125' ;;
+      suggestion-return) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
       address) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "l" using command down' ;;
       new-tab) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "t" using command down' ;;
       close-tab) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "w" using command down' ;;

@@ -69,6 +69,16 @@ import SereinCore
         let closed=await keyboard("close-tab")
         check("keyboard-command-w",closed && session.state.tabs.count==initialTabCount)
         if let originalTab {session.select(originalTab)}
+        let suggestionURL="http://127.0.0.1:8765/second.html?keyboard-suggestion=1"
+        manager.library.bookmark(title:"Serein keyboard suggestion fixture",url:suggestionURL)
+        let typedSuggestion=await keyboard("suggestion-query")
+        let selectedSuggestion=await keyboard("suggestion-down")
+        await capture("24-address-keyboard-suggestion")
+        let submittedSuggestion=await keyboard("suggestion-return")
+        let suggestionArrived=await wait{session.current?.webView.url?.absoluteString==suggestionURL}
+        check("keyboard-address-suggestion",typedSuggestion && selectedSuggestion && submittedSuggestion && suggestionArrived,session.address)
+        if let bookmark=manager.library.bookmarks.first(where:{$0.url==suggestionURL}) {manager.library.removeBookmark(bookmark.id)}
+        session.navigate(fixture,ask:false);_=await wait{session.current?.webView.title=="Field Notes"}
         session.addressFocused=false;session.window?.makeFirstResponder(session.current?.webView)
         UserDefaults.standard.set("light",forKey:"appearance");await capture("01-light-expanded")
         let diagnosticWindow=NSWindow(contentRect:NSRect(x:80,y:90,width:800,height:580),styleMask:[.titled,.closable],backing:.buffered,defer:false)
