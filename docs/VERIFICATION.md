@@ -1,5 +1,9 @@
 # Verification and continuation backlog
 
+## Xcode 27.1 verified; missing zoom event isolated
+
+`17c03c2967cd1f2f121a56cf33a122c5ba607374`, [run 36746894298](https://github.com/super-original/serein-browser/actions/runs/36746894298), builds and passes 52 unit tests with Xcode 27.1 **27A9269**, Swift 6.4 and SDK/minimum 27.0 on macOS 27.0 **26A428**. Browser checks are **186/219**; 12 bridge checks pass. `tabs.onZoomChange` is undefined in both MV2/MV3, aborting the fixture before unrelated lifecycle assertions; the follow-up keeps the zoom event assertion failing but isolates its absence from other tests. Set/get/reset must be retested independently. Replacement navigation still appends history entries, so the next lifecycle fix captures settled interaction state before unloading the context rather than after engine invalidation. [App](https://github.com/super-original/serein-browser/actions/runs/36746894298/artifacts/11112269763), [evidence](https://github.com/super-original/serein-browser/actions/runs/36746894298/artifacts/11113700025). Same-workspace no-op and bulk actions pass. Desktop rendering remains failed.
+
 ## Bulk actions verified; reload history regression exposed
 
 `e511f5808b88c04301f7c6f36bf315cbf9254ec5`, [run 36746025525](https://github.com/super-original/serein-browser/actions/runs/36746025525), passes 52 unit tests, 209/212 browser checks and 12 bridge checks. Bulk pin/unpin preserve selection and existing pinned reset URLs; workspace moves process the full selection. The selected pinned-tab screenshot was retrieved and inspected. Fresh requests recover both re-enabled options tabs and all three repeat cycles, but each cycle appends a history entry (4→5→6→7). The next change uses a replacement navigation and retains the history-count assertions. Zoom semantics and same-workspace no-op regressions are pending. [App](https://github.com/super-original/serein-browser/actions/runs/36746025525/artifacts/11112248795), [evidence](https://github.com/super-original/serein-browser/actions/runs/36746025525/artifacts/11112373500). Desktop content remains blank; no visual page-rendering success is claimed.
@@ -118,3 +122,7 @@ The package host now streams only validated central/local UTF-8 entry names and 
 ### Signed update lifecycle (verification pending)
 
 The next source adds same-developer/newer-version CRX3 updates, explicit permission review, preserved enabled state/data/identity, immutable package directories and an atomic registry commit. Public WebKit resource origins are persisted and loaded extension pages reload after update. Per-extension operation locks also prevent enable/remove/update overlap and stale array-index writes. Controlled original fixtures cover rejection, cancellation, permission additions/revocation, disabled update/re-enable, storage preservation and options-page version changes. CI results remain pending.
+
+### Close and unload consent follow-up (pending verification)
+
+Single/bulk close and manual unload now bind confirmation to the captured document identity. A navigation or runtime replacement while the native sheet is open invalidates the old consent. Extension tab-close completion follows actual removal and reports cancellation rather than resolving before the user's decision. Runtime scenarios exercise pending completion, cancellation, replacement documents, bulk close, and unload. Existing form-input detection remains partial; this does not claim complete beforeunload or arbitrary application-state detection.

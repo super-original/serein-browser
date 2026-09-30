@@ -65,7 +65,10 @@ import SereinCore
     func reload(fromOrigin: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).reload(fromOrigin:fromOrigin);completionHandler(nil)}
     func goBack(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).goBack();completionHandler(nil)}
     func goForward(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).goForward();completionHandler(nil)}
-    func close(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.close(id);completionHandler(nil)}
+    func close(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {
+        guard let session else{completionHandler(ExtensionValidationError.invalid("The tab no longer exists."));return}
+        session.close(id) {closed in completionHandler(closed ? nil : ExtensionValidationError.invalid("Closing the tab was cancelled or its document changed."))}
+    }
     func duplicate(using configuration: WKWebExtension.TabConfiguration,for context: WKWebExtensionContext,completionHandler: @escaping ((any WKWebExtensionTab)?,(any Error)?)->Void) {
         guard let session,let tab else{completionHandler(nil,ExtensionValidationError.invalid("The tab no longer exists."));return}
         let destination=configuration.url ?? URL(string:tab.url)

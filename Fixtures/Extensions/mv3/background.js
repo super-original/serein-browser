@@ -9,7 +9,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
     await browser.storage.local.set({count});
     const createdEvents = [], removedEvents = [], zoomEvents = [];
     const onZoom = info => zoomEvents.push(info);
-    browser.tabs.onZoomChange.addListener(onZoom);
+    browser.tabs.onZoomChange?.addListener(onZoom);
     const onCreated = tab => createdEvents.push(tab.id);
     const onRemoved = id => removedEvents.push(id);
     browser.tabs.onCreated.addListener(onCreated);
@@ -23,10 +23,13 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       const queried = await browser.tabs.get(created.id);
       duplicate = await browser.tabs.duplicate(created.id);
       const copied = await browser.tabs.get(duplicate.id);
-      await browser.tabs.setZoom(created.id, 1.25);
-      const zoomSet = await browser.tabs.getZoom(created.id) === 1.25;
-      await browser.tabs.setZoom(created.id, 0);
-      const zoomReset = await browser.tabs.getZoom(created.id) === 1;
+      let zoomSet=false, zoomReset=false;
+      if (typeof browser.tabs.setZoom === 'function' && typeof browser.tabs.getZoom === 'function') {
+        await browser.tabs.setZoom(created.id, 1.25);
+        zoomSet = await browser.tabs.getZoom(created.id) === 1.25;
+        await browser.tabs.setZoom(created.id, 0);
+        zoomReset = await browser.tabs.getZoom(created.id) === 1;
+      }
 
       // This system WebKit omits tabs.highlight. Exercise the supported
       // per-tab update path separately, without claiming that API exists.
@@ -52,7 +55,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
         createdEvents:createdEvents.includes(created.id) && createdEvents.includes(duplicate.id),
         removedEvents:removedEvents.includes(created.id) && removedEvents.includes(duplicate.id)};
     } finally {
-      browser.tabs.onZoomChange.removeListener(onZoom);
+      browser.tabs.onZoomChange?.removeListener(onZoom);
       browser.tabs.onHighlighted.removeListener(onHighlighted);
       browser.tabs.onCreated.removeListener(onCreated);
       browser.tabs.onRemoved.removeListener(onRemoved);

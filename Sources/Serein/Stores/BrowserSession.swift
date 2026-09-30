@@ -80,7 +80,11 @@ import SereinCore
     func closeHighlighted() {
         let ids=state.tabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
         guard !ids.isEmpty else{return}
-        let closeAll: @MainActor ()->Void = { [weak self] in for id in ids {self?.close(id,ask:false)} }
+        let documents=ids.map{(id:$0,document:runtimes[$0]?.documentID)}
+        let closeAll: @MainActor ()->Void = { [weak self] in
+            guard let self,documents.allSatisfy({target in self.state.tabs.contains{$0.id==target.id} && self.runtimes[target.id]?.documentID==target.document}) else{return}
+            for id in ids {self.close(id,ask:false)}
+        }
         if ids.contains(where:{runtimes[$0]?.hasUserEdits == true}) {
             confirm("Close \(ids.count) selected tabs?",detail:"Edited pages may contain unsaved changes.",yes:"Close Tabs"){if $0 {closeAll()}}
         } else {closeAll()}
@@ -96,10 +100,14 @@ import SereinCore
         }
         return id
     }
-    func close(_ id:UUID,ask:Bool=true) {
-        guard state.tabs.contains(where:{$0.id==id}) else{return}
+    func close(_ id:UUID,ask:Bool=true,completion:(@MainActor (Bool)->Void)?=nil) {
+        guard state.tabs.contains(where:{$0.id==id}) else{completion?(false);return}
         if ask,let runtime=runtimes[id],runtime.hasUserEdits {
-            confirm("Close this tab?",detail:"This page has been edited. Unsaved changes may be lost."){[weak self] allowed in if allowed {self?.close(id,ask:false)}}
+            let document=runtime.documentID
+            confirm("Close this tab?",detail:"This page has been edited. Unsaved changes may be lost."){[weak self,weak runtime] allowed in
+                guard allowed,let self,let runtime,self.runtimes[id] === runtime,runtime.documentID==document else{completion?(false);return}
+                self.close(id,ask:false,completion:completion)
+            }
             return
         }
         let previous=state.selectedTabID,highlighted=tabSelection.ids
@@ -110,6 +118,7 @@ import SereinCore
         tabSelection.retain(Set(state.tabs.map(\.id)))
         if previous==id || tabSelection.ids.isEmpty {tabSelection.selectOnly(state.selectedTabID)}
         publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:previous != state.selectedTabID)
+        completion?(true)
     }
     func reopen() {
         let previous=state.selectedTabID,highlighted=tabSelection.ids
@@ -198,12 +207,13 @@ import SereinCore
         else {completion(false)}
     }
     func canUnload(_ id: UUID) -> Bool {
-        state.tabs.contains{$0.id==id} && id != state.selectedTabID && id != state.primarySplitTabID && id != state.secondaryTabID
+        state.tabs.contains{$0.id==id} && runtimes[id]?.loadedWebView != nil && id != state.selectedTabID && id != state.primarySplitTabID && id != state.secondaryTabID
     }
     func unload(_ id: UUID) {
-        guard canUnload(id) else{return}
-        confirm("Unload this tab?",detail:"The page will reload when selected. Media will stop and unsaved page state will be lost.",yes:"Unload") { [weak self] yes in
-            guard yes,let self,self.canUnload(id) else{return};self.runtimes[id]?.dispose();self.runtimes[id]=nil
+        guard canUnload(id),let runtime=runtimes[id] else{return}
+        let document=runtime.documentID
+        confirm("Unload this tab?",detail:"The page will reload when selected. Media will stop and unsaved page state will be lost.",yes:"Unload") { [weak self,weak runtime] yes in
+            guard yes,let self,let runtime,self.canUnload(id),self.runtimes[id] === runtime,runtime.documentID==document else{return};runtime.dispose();self.runtimes[id]=nil
         }
     }
 }

@@ -54,7 +54,7 @@ extension ExtensionHost {
             updated.permissionState = try state.updating(from: previous, to: ext)
             var proposed = records; proposed[index] = updated
             let registry = try JSONEncoder().encode(proposed)
-            if let context = contexts[id] { try controller.unload(context); contexts[id] = nil }
+            if let context = contexts[id] { try unloadPreservingPageState(context); contexts[id] = nil }
             do {
                 try ExtensionPackageStorage.commitPrepared(candidate, root: root, versionID: updated.packageVersionID!, registry: registry)
             } catch {
@@ -79,6 +79,11 @@ extension ExtensionHost {
             catch { self.error = "Update installed; previous package cleanup failed: \(error.localizedDescription)" }
             return true
         } catch { self.error = error.localizedDescription; return false }
+    }
+    func unloadPreservingPageState(_ context:WKWebExtensionContext) throws {
+        let runtimes=(manager?.windows ?? []).filter{!$0.session.state.isPrivate}.flatMap{Array($0.session.runtimes.values)}.filter{$0.captureExtensionReloadState(for:context)}
+        do {try controller.unload(context)}
+        catch {for runtime in runtimes {runtime.discardExtensionReloadState()};throw error}
     }
     func reloadResourcePages(base: URL) {
         for window in manager?.windows ?? [] where !window.session.state.isPrivate {

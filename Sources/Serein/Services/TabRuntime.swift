@@ -25,6 +25,7 @@ import SereinCore
     @ObservationIgnored private var pendingPageFocus=false
     @ObservationIgnored private weak var replacedResponder:NSResponder?
     private(set) var viewRevision=0
+    @ObservationIgnored private var extensionReloadState:Any?
     @ObservationIgnored private var configurationContext: WKWebExtensionContext?
     var loadedWebView:WKWebView? {storedView}
     var webView: WKWebView {
@@ -59,11 +60,18 @@ import SereinCore
         return view
     }
     init(id: UUID, session: BrowserSession, configuration: WKWebViewConfiguration? = nil) {self.id=id;self.session=session;initialConfiguration=configuration;super.init()}
-    private func view(for url:URL) -> WKWebView {
+    func captureExtensionReloadState(for context:WKWebExtensionContext) -> Bool {
+        guard configurationContext === context else{return false}
+        extensionReloadState=storedView?.interactionState
+        return true
+    }
+    func discardExtensionReloadState(){extensionReloadState=nil}
+    private func view(for url:URL,restoringCurrentPage:Bool=false) -> WKWebView {
         let current=webView
         let context=session?.extensions?.controller.extensionContext(for:url)
         guard configurationContext !== context else{return current}
-        let state=current.interactionState
+        let state=extensionReloadState ?? current.interactionState
+        extensionReloadState=nil
         let responder=current.window?.firstResponder as? NSView
         let restoreFocus=responder.map{$0 === current || $0.isDescendant(of:current)} ?? false
         dispose()
@@ -72,7 +80,7 @@ import SereinCore
         if current.backForwardList.currentItem != nil,let state {
             replacement.interactionState=state
             // Restore the list, then let the caller request its destination.
-            replacement.stopLoading()
+            if !restoringCurrentPage {replacement.stopLoading()}
         }
         replacement.pageZoom=current.pageZoom
         viewRevision += 1
@@ -104,21 +112,9 @@ import SereinCore
         if url.isFileURL {openFile(url);return}
         let previous=webView
         documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false
-        let view=view(for:url)
-        // Restored history can retain an entry associated with the unloaded
-        // extension context. Issue a fresh request against the new context;
-        // reloading that restored entry can fail with WebKit error 102.
-        if view !== previous {
-            if view.backForwardList.currentItem != nil {
-                // Replace the restored current entry with a new request. A normal
-                // load appends a duplicate; reload reuses the interrupted entry.
-                view.callAsyncJavaScript("location.replace(destination)",arguments:["destination":url.absoluteString],in:nil,in:.page) { [weak self,weak view] result in
-                    guard let self,let view,view === self.storedView else{return}
-                    if case .failure(let error)=result {self.failed(error)}
-                }
-            } else {view.load(URLRequest(url:url))}
-            return
-        }
+        let restoring=previous.backForwardList.currentItem?.url==url && (extensionReloadState ?? previous.interactionState) != nil
+        let view=view(for:url,restoringCurrentPage:restoring)
+        if view !== previous,restoring {return}
         if view.backForwardList.currentItem?.url==url {if fromOrigin {view.reloadFromOrigin()} else {view.reload()}} else {view.load(url)}
     }
     func openFile(_ url:URL) {

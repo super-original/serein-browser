@@ -176,7 +176,7 @@ struct InstalledExtension: Identifiable, Codable {
         busyIDs.insert(id); defer { busyIDs.remove(id) }
         do {
             if enabled { try await load(record) }
-            else if let context = contexts[id] { rememberPermissions(context); try controller.unload(context); contexts[id] = nil }
+            else if let context = contexts[id] { rememberPermissions(context); try unloadPreservingPageState(context); contexts[id] = nil }
             guard let index = records.firstIndex(where: { $0.id == id && $0.packageVersionID == record.packageVersionID }) else { return }
             records[index].enabled = enabled; save()
         } catch { self.error = error.localizedDescription }

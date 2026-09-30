@@ -173,6 +173,14 @@ import SereinCore
         if let unloadSheet {session.window?.endSheet(unloadSheet,returnCode:.alertFirstButtonReturn)}
         try? await Task.sleep(for:.milliseconds(100))
         check("unload-revalidates-selection",session.runtimes[inactive] === inactiveRuntime)
+        session.select(third)
+        _=await wait{!inactiveRuntime.isLoading}
+        session.unload(inactive)
+        let staleUnloadSheet=session.window?.attachedSheet
+        inactiveRuntime.load(URL(string:fixture+"?replacement-before-unload")!)
+        if let staleUnloadSheet {session.window?.endSheet(staleUnloadSheet,returnCode:.alertFirstButtonReturn)}
+        await pause(200)
+        check("unload-preserves-new-document",staleUnloadSheet != nil && session.runtimes[inactive] === inactiveRuntime)
         session.close(inactive,ask:false)
 
         session.select(third)
@@ -195,6 +203,37 @@ import SereinCore
             check("navigation-confirmation-keeps-new-document",documentSheet != nil && edited.webView.url?.query=="fresh-document")
         }
 
+        let closing=session.newTab(url:fixture)
+        let closingRuntime=session.runtime(closing)
+        _=await wait{closingRuntime.webView.title=="Field Notes" && !closingRuntime.isLoading}
+        closingRuntime.hasUserEdits=true
+        var closeResult:Bool?
+        session.close(closing){closeResult=$0}
+        let closeSheet=session.window?.attachedSheet
+        check("edited-close-waits-for-consent",closeSheet != nil && closeResult==nil)
+        closingRuntime.load(URL(string:fixture+"?replacement-before-close")!)
+        if let closeSheet {session.window?.endSheet(closeSheet,returnCode:.alertFirstButtonReturn)}
+        _=await wait{closeResult != nil}
+        check("edited-close-preserves-new-document",closeResult==false && session.state.tabs.contains{$0.id==closing})
+        _=await wait{!closingRuntime.isLoading}
+        closingRuntime.hasUserEdits=true;closeResult=nil
+        session.close(closing){closeResult=$0}
+        if let sheet=session.window?.attachedSheet {session.window?.endSheet(sheet,returnCode:.alertSecondButtonReturn)}
+        _=await wait{closeResult != nil}
+        check("edited-close-cancel-reports-failure",closeResult==false && session.state.tabs.contains{$0.id==closing})
+        let closeCompanion=session.newTab()
+        session.clickTab(closing,modifiers:.command)
+        session.closeHighlighted()
+        let bulkCloseSheet=session.window?.attachedSheet
+        closingRuntime.load(URL(string:fixture+"?replacement-before-bulk-close")!)
+        if let bulkCloseSheet {session.window?.endSheet(bulkCloseSheet,returnCode:.alertFirstButtonReturn)}
+        await pause(200)
+        check("bulk-close-preserves-replacement-document",bulkCloseSheet != nil && session.state.tabs.filter{[closing,closeCompanion].contains($0.id)}.count==2)
+        session.close(closeCompanion,ask:false)
+        closeResult=nil
+        session.close(closing,ask:false){closeResult=$0}
+        check("close-completion-follows-removal",closeResult==true && !session.state.tabs.contains{$0.id==closing})
+        session.select(third)
         session.state.sidebar = .expanded;session.libraryPanel = .settings;await capture("11-settings");session.libraryPanel=nil
         session.findVisible=true;session.findText="Workspace";session.find();await capture("12-find");session.findVisible=false
         let unavailable="http://127.0.0.1:19876/unavailable"
