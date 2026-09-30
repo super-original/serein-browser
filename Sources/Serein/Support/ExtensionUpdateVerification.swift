@@ -179,12 +179,14 @@ import SereinCore
                 try await Task.sleep(for:.milliseconds(100))
             }
             check("unavailable-options-retry-after-context-load",restoredText=="Version 1.2",(restoredText ?? "no document")+" "+diagnostic(restoredOptionsRuntime))
+            let historyCount=optionsRuntime.webView.backForwardList.backList.count
             for cycle in 1...3 {
                 await host.setEnabled(id,false)
                 await host.setEnabled(id,true)
                 guard let latest=host.contexts[id] else{throw ExtensionValidationError.invalid("Context did not return during reload cycle")}
                 restored=latest
                 check("repeat-options-recovery-\(cycle)",await waitForOptions("Version 1.2"),diagnostic(optionsRuntime))
+                check("repeat-options-history-count-\(cycle)",optionsRuntime.webView.backForwardList.backList.count==historyCount,"before=\(historyCount) after=\(optionsRuntime.webView.backForwardList.backList.count)")
             }
             results += await ExtensionReloadProbe.inspectHost(context:restored,dataStore:session.dataStore,version:"1.2")
             session.close(optionsTab,ask:false);session.close(restoredOptionsTab,ask:false)

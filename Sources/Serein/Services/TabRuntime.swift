@@ -59,7 +59,7 @@ import SereinCore
         return view
     }
     init(id: UUID, session: BrowserSession, configuration: WKWebViewConfiguration? = nil) {self.id=id;self.session=session;initialConfiguration=configuration;super.init()}
-    private func view(for url:URL,restoringCurrentPage:Bool=false) -> WKWebView {
+    private func view(for url:URL) -> WKWebView {
         let current=webView
         let context=session?.extensions?.controller.extensionContext(for:url)
         guard configurationContext !== context else{return current}
@@ -71,9 +71,8 @@ import SereinCore
         let replacement=makeView(for:url)
         if current.backForwardList.currentItem != nil,let state {
             replacement.interactionState=state
-            // A context reload can use the restoration's own navigation. Other
-            // transitions restore the list then request a different destination.
-            if !restoringCurrentPage {replacement.stopLoading()}
+            // Restore the list, then let the caller request its destination.
+            replacement.stopLoading()
         }
         replacement.pageZoom=current.pageZoom
         viewRevision += 1
@@ -95,10 +94,12 @@ import SereinCore
         guard let url=failedURL ?? storedView?.url ?? session?.state.tabs.first(where:{$0.id==id}).flatMap({URL(string:$0.url)}) else{webView.reload();return}
         if url.isFileURL {openFile(url);return}
         let previous=webView
-        let restoring=previous.backForwardList.currentItem?.url==url && previous.interactionState != nil
         documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false
-        let view=view(for:url,restoringCurrentPage:restoring)
-        if view !== previous,restoring {return}
+        let view=view(for:url)
+        // Restored history can retain an entry associated with the unloaded
+        // extension context. Issue a fresh request against the new context;
+        // reloading that restored entry can fail with WebKit error 102.
+        if view !== previous {view.load(URLRequest(url:url));return}
         if view.backForwardList.currentItem?.url==url {if fromOrigin {view.reloadFromOrigin()} else {view.reload()}} else {view.load(url)}
     }
     func openFile(_ url:URL) {

@@ -140,6 +140,16 @@ import SereinCore
     func setKind(_ id: UUID, _ kind: TabKind) {
         state.setKind(id,kind);extensions?.controller.didChangeTabProperties(.pinned,for:bridge(id))
     }
+    func setHighlightedKind(_ kind:TabKind) {
+        let targets=state.visibleTabs.filter{tabSelection.ids.contains($0.id) && $0.kind != kind}.map(\.id)
+        for id in targets {setKind(id,kind)}
+    }
+    func moveHighlightedToWorkspace(_ workspace:UUID) {
+        guard state.workspaces.contains(where:{$0.id==workspace}) else{return}
+        let targets=state.visibleTabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
+        // Snapshot selection before the first move changes the active tab.
+        changeWorkspace {state in for id in targets {state.moveToWorkspace(id,workspace)}}
+    }
     func move(_ id: UUID, before other: UUID) {
         guard let old=state.tabs.firstIndex(where:{$0.id==id}) else{return}
         state.move(id,before:other);extensions?.controller.didMoveTab(bridge(id),from:old,in:extensionWindow)

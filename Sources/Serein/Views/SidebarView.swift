@@ -111,6 +111,14 @@ private struct TabRow: View {
         .background(session.state.selectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
         .onHover{hovering=$0}.help(tab.title+"\n"+tab.url)
         .contextMenu {
+            if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {
+                Button("Pin Selected Tabs"){session.setHighlightedKind(.pinned)}
+                Button("Unpin Selected Tabs"){session.setHighlightedKind(.regular)}
+                Menu("Move Selected Tabs to Workspace") {
+                    ForEach(session.state.workspaces){space in Button(space.name){session.moveHighlightedToWorkspace(space.id)}}
+                }
+                Divider()
+            }
             Button("Duplicate Tab"){session.duplicate(tab.id)}
             Button(tab.kind == .pinned ? "Unpin Tab" : "Pin Tab"){session.setKind(tab.id,tab.kind == .pinned ? .regular : .pinned)}
             Button(tab.kind == .essential ? "Remove from Essentials" : "Add to Essentials"){session.setKind(tab.id,tab.kind == .essential ? .regular : .essential)}

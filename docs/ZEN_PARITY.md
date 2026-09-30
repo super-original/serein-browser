@@ -74,7 +74,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Settings | P | Appearance, sidebar, website data clearing; advanced policies absent |
 | Glance / link preview | U | Not implemented |
 | Folders / live folders | U | Not implemented |
-| Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/move and full keyboard selection remain gaps |
+| Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/unpin and workspace moves now have runtime regressions pending; full keyboard selection remains a gap |
 | Tab groups | U | Not implemented |
 | Containers / profiles / per-site isolation | U | Not implemented |
 | Zen Mods / themes / gradient editor | U | Not implemented; native glass adaptation is separate |
