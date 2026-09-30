@@ -90,6 +90,7 @@ struct InstalledExtension: Identifiable, Codable {
         for window in manager?.windows ?? [] where !window.session.state.isPrivate {
             if let bridge=window.session.extensionWindow {context.didOpenWindow(bridge)}
         }
+        reloadResourcePages(base:context.baseURL)
     }
     func chooseInstall(in session: BrowserSession) {
         guard !session.state.isPrivate,let window=session.dialogWindow else{return}

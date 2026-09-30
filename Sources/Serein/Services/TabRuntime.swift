@@ -39,9 +39,11 @@ import SereinCore
         initialConfiguration=nil
         // Context configurations may share a user-content controller. Keep this tab's
         // native message handler private to its view without altering engine settings.
-        let content=WKUserContentController()
-        for script in config.userContentController.userScripts {content.addUserScript(script)}
-        config.userContentController=content
+        if context != nil {
+            let content=WKUserContentController()
+            for script in config.userContentController.userScripts {content.addUserScript(script)}
+            config.userContentController=content
+        }
         if let session {config.websiteDataStore=session.dataStore;config.webExtensionController=session.extensions?.controller}
         config.preferences.isElementFullscreenEnabled=true
         config.preferences.javaScriptCanOpenWindowsAutomatically=false
@@ -63,6 +65,10 @@ import SereinCore
         dispose()
         let replacement=makeView(for:url)
         replacement.interactionState=state
+        // Restoration also starts loading the previous current item. Cancel that
+        // transient load before the caller requests its intended destination.
+        replacement.stopLoading()
+        replacement.pageZoom=current.pageZoom
         viewRevision += 1
         return replacement
     }
@@ -77,7 +83,12 @@ import SereinCore
         let view=view(for:item.url)
         if let restored=view.backForwardList.item(at:offset){view.go(to:restored)}
     }
-    func reload() {if let failedURL {if failedURL.isFileURL {openFile(failedURL)} else {load(failedURL)}} else if let url=storedView?.url ?? session?.state.tabs.first(where:{$0.id==id}).flatMap({URL(string:$0.url)}) {view(for:url).reloadFromOrigin()} else {webView.reload()}}
+    func reload() {
+        if let failedURL {if failedURL.isFileURL {openFile(failedURL)} else {load(failedURL)};return}
+        guard let url=storedView?.url ?? session?.state.tabs.first(where:{$0.id==id}).flatMap({URL(string:$0.url)}) else{webView.reload();return}
+        let view=view(for:url)
+        if view.backForwardList.currentItem != nil {view.reloadFromOrigin()} else {view.load(url)}
+    }
     func openFile(_ url:URL) {
         let root=url.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
         permittedFileRoot=root;documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false
@@ -127,10 +138,13 @@ extension TabRuntime: WKNavigationDelegate {
            destinationContext != nil || ["http","https","about"].contains(url.scheme?.lowercased() ?? "") {
             decisionHandler(.cancel)
             let request=action.request
+            let offsets=Array((-webView.backForwardList.backList.count)...webView.backForwardList.forwardList.count)
+            let historyOffset=action.navigationType == .backForward ? offsets.sorted{abs($0)<abs($1)}.first{webView.backForwardList.item(at:$0)?.url==url} : nil
             Task { @MainActor [weak self,weak webView] in
                 guard let self,let webView,webView === self.storedView else{return}
                 let replacement=self.view(for:url)
-                replacement.load(request)
+                if let historyOffset,let item=replacement.backForwardList.item(at:historyOffset) {replacement.go(to:item)}
+                else {replacement.load(request)}
             }
             return
         }

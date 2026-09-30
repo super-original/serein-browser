@@ -117,7 +117,15 @@ import SereinCore
             check("forward-to-ordinary-document",optionsRuntime.webView.url==ordinary)
             optionsRuntime.load(options)
             check("ordinary-to-options-document",await waitForOptions("Version 1.1"))
-            session.close(optionsTab, ask: false)
+            _=try? await optionsRuntime.webView.evaluateJavaScript("location.href='http://127.0.0.1:8765/second.html?options-link=1'")
+            for _ in 0..<50 {
+                if optionsRuntime.webView.url?.query=="options-link=1",!optionsRuntime.webView.isLoading{break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("page-initiated-origin-transition",optionsRuntime.webView.url?.query=="options-link=1")
+            _=try? await optionsRuntime.webView.evaluateJavaScript("history.back()")
+            check("script-history-back-to-options",await waitForOptions("Version 1.1"))
+            check("script-history-preserves-forward",optionsRuntime.webView.canGoForward)
             check("new-permission-consented", host.contexts[id]?.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) == true)
             check("old-package-cleaned-after-commit", !FileManager.default.fileExists(atPath: before.directory(in: host.root).path))
             guard let context = host.contexts[id] else { throw ExtensionValidationError.invalid("Updated context missing") }
@@ -126,12 +134,25 @@ import SereinCore
             context.setPermissionStatus(.deniedExplicitly, for: site)
             host.rememberPermissions(context)
             await host.setEnabled(id, false)
+            let restoredOptionsTab=session.newTab(url:options.absoluteString,select:false)
+            let restoredOptionsRuntime=session.runtime(restoredOptionsTab)
+            _=restoredOptionsRuntime.webView
+            try await Task.sleep(for:.milliseconds(200))
             let disabledUpdate = try await apply("signed-update-disabled.crx", accept: true)
             check("disabled-state-preserved", disabledUpdate && host.records.first(where: { $0.id == id })?.enabled == false && host.contexts[id] == nil)
             let saved = try JSONDecoder().decode([InstalledExtension].self, from: Data(contentsOf: host.root.appendingPathComponent("extensions.json")))
             check("version-pointer-persists", saved.first(where: { $0.id == id })?.packageVersionID != nil && saved.first(where: { $0.id == id })?.version == "1.2")
             await host.setEnabled(id, true)
             guard let restored = host.contexts[id] else { throw ExtensionValidationError.invalid("Disabled update did not re-enable") }
+            check("open-options-refresh-after-reenable",await waitForOptions("Version 1.2"))
+            var restoredText:String?
+            for _ in 0..<50 {
+                restoredText=try? await restoredOptionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
+                if restoredText=="Version 1.2"{break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("unavailable-options-retry-after-context-load",restoredText=="Version 1.2",restoredText ?? "no document")
+            session.close(optionsTab,ask:false);session.close(restoredOptionsTab,ask:false)
             check("revocation-and-site-denial-preserved", !restored.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) && restored.permissionStatus(for: site) == .deniedExplicitly)
             restored.setPermissionStatus(.grantedExplicitly, for: site)
             host.rememberPermissions(restored)

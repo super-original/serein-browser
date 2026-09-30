@@ -74,14 +74,13 @@ extension ExtensionHost {
                     return false
                 }
             }
-            if let context = contexts[id] { reloadResourcePages(base: context.baseURL) }
             actionRevision += 1
             do { try FileManager.default.removeItem(at: previous.directory(in: root)) }
             catch { self.error = "Update installed; previous package cleanup failed: \(error.localizedDescription)" }
             return true
         } catch { self.error = error.localizedDescription; return false }
     }
-    private func reloadResourcePages(base: URL) {
+    func reloadResourcePages(base: URL) {
         for window in manager?.windows ?? [] where !window.session.state.isPrivate {
             let session = window.session
             for tab in session.state.tabs {
