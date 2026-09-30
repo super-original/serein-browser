@@ -6,14 +6,14 @@ import SereinCore
     var windows: [BrowserWindowController] = []
     var restorationError: String?
     let library: LibraryStore
-    let downloads=DownloadStore()
+    let downloads:DownloadStore
     let sitePermissions: SitePermissionStore
     let extensions: ExtensionHost
     @ObservationIgnored private var saveTask: Task<Void,Never>?
     @ObservationIgnored lazy var menu=BrowserMenu(manager:self)
     let root: URL
     init(root: URL) {
-        self.root=root;sitePermissions=SitePermissionStore(file:root.appendingPathComponent("site-permissions.json"));library=LibraryStore(root:root);extensions=ExtensionHost(root:root.appendingPathComponent("Extensions"));extensions.manager=self
+        self.root=root;sitePermissions=SitePermissionStore(file:root.appendingPathComponent("site-permissions.json"));library=LibraryStore(root:root);downloads=DownloadStore(root:root);extensions=ExtensionHost(root:root.appendingPathComponent("Extensions"));extensions.manager=self
     }
     var active: BrowserSession? {windows.first{$0.window?.isKeyWindow==true}?.session ?? windows.last?.session}
     func restore() {
@@ -38,7 +38,7 @@ import SereinCore
         for runtime in session.runtimes.values {runtime.dispose()}
         session.runtimes=[:];session.extensionTabs=[:]
         windows.removeAll{$0===controller}
-        if session.state.isPrivate {downloads.clearFinished(privateMode:true)}
+        if session.state.isPrivate {downloads.closePrivateWindow(session.state.id)}
         scheduleSave()
     }
     func moveTab(_ id: UUID,from source: BrowserSession,to destination: BrowserSession? = nil) {

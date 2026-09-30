@@ -149,17 +149,7 @@ import SereinCore
             privateSession.window?.performClose(nil)
         } catch {check("private-cookie-isolation",false,error.localizedDescription)}
         session.window?.makeKeyAndOrderFront(nil)
-        let downloadVerifier=DownloadVerification(destination:root.appendingPathComponent("download-result.txt"))
-        let download:WKDownload=await withCheckedContinuation{continuation in
-            session.current!.webView.startDownload(using:URLRequest(url:URL(string:"http://127.0.0.1:8765/download.txt")!)){download in
-                download.delegate=downloadVerifier
-                continuation.resume(returning:download)
-            }
-        }
-        _=download
-        let downloadFinished=await wait{downloadVerifier.completed}
-        check("download-completes",downloadFinished && downloadVerifier.error==nil,downloadVerifier.error ?? "")
-        check("download-content",(try? String(contentsOf:downloadVerifier.destination,encoding:.utf8))=="Serein deterministic download fixture v1.\n")
+        results += await DownloadVerification.run(manager:manager,session:session,root:root)
         // Exercise the actual permission stores used by delegate decisions and settings.
         let permissionOrigin=SiteOrigin(url:URL(string:fixture)!)!
         let permissionKey=SitePermissionKey(topLevel:permissionOrigin,requesting:permissionOrigin,capability:.camera)

@@ -100,6 +100,6 @@ extension TabRuntime: WKNavigationDelegate {
         if !response.canShowMIMEType {provisionalURL=nil;failedURL=nil;synchronize()}
         decisionHandler(response.canShowMIMEType ? .allow : .download)
     }
-    func webView(_ webView: WKWebView,navigationAction: WKNavigationAction,didBecome download: WKDownload) {session?.manager?.downloads.add(download,privateMode:session?.state.isPrivate ?? true,window:session?.window)}
-    func webView(_ webView: WKWebView,navigationResponse: WKNavigationResponse,didBecome download: WKDownload) {session?.manager?.downloads.add(download,privateMode:session?.state.isPrivate ?? true,window:session?.window)}
+    func webView(_ webView: WKWebView,navigationAction: WKNavigationAction,didBecome download: WKDownload) {if let session {session.manager?.downloads.add(download,in:session)} else {download.cancel(nil)}}
+    func webView(_ webView: WKWebView,navigationResponse: WKNavigationResponse,didBecome download: WKDownload) {if let session {session.manager?.downloads.add(download,in:session)} else {download.cancel(nil)}}
 }

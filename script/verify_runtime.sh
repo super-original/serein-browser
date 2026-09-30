@@ -4,7 +4,7 @@ ROOT="$PWD/evidence/runtime"
 mkdir -p "$ROOT"
 xcrun swiftc -parse-as-library -target arm64-apple-macos27.0 script/ScreenCapture.swift -o /tmp/serein-capture
 system_profiler SPDisplaysDataType > "$ROOT/display.txt"
-python3 -m http.server 8765 --bind 127.0.0.1 --directory Fixtures > "$ROOT/server.log" 2>&1 &
+python3 script/fixture_server.py --directory Fixtures > "$ROOT/server.log" 2>&1 &
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
 python3 script/fetch_extension_fixtures.py /tmp/serein-extension-audit
