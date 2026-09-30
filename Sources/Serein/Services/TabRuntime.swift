@@ -26,7 +26,7 @@ import SereinCore
     @ObservationIgnored private weak var replacedResponder:NSResponder?
     private(set) var viewRevision=0
     @ObservationIgnored private var extensionReloadState:Any?
-    @ObservationIgnored private var extensionReloadZoom=1.0
+    @ObservationIgnored private var extensionReloadZoom:CGFloat=1
     @ObservationIgnored private var awaitingExtensionReload=false
     var hasPendingExtensionReload:Bool {awaitingExtensionReload}
     @ObservationIgnored private var configurationContext: WKWebExtensionContext?

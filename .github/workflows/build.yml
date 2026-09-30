@@ -20,17 +20,18 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Clean build, unit tests, and package
+        id: build
         run: bash script/build.sh
       - name: Run actual macOS 27 application and integration scenarios
         run: bash script/verify_runtime.sh
       - name: Verify native quit consent and process exit
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: python3 script/verify_quit_consent.py
       - name: Probe isolated extension native messaging
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: bash script/verify_native_bridge.sh
       - name: Gate actual desktop rendering
-        if: always()
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           xcrun swift script/VisualGate.swift evidence/runtime/01-light-expanded.png evidence/runtime/visual-gate.json
       - name: Export screenshots for inspection
