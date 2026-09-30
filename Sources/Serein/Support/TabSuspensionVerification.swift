@@ -12,18 +12,20 @@ import WebKit
         defer {session.window?.close()}
         guard let id=session.state.selectedTabID else{return results}
         let runtime=session.runtime(id)
-        for path in ["index.html?suspend=first","second.html?suspend=middle","index.html?suspend=last"] {
+        for (index,path) in ["index.html?suspend=first","second.html?suspend=middle","index.html?suspend=last"].enumerated() {
             let url=URL(string:"http://127.0.0.1:8765/"+path)!
             runtime.load(url)
-            await wait{runtime.loadedWebView?.url==url && !runtime.isLoading}
+            await wait{runtime.loadedWebView?.url==url && runtime.loadedWebView?.isLoading==false && runtime.loadedWebView?.backForwardList.currentItem?.url==url && (runtime.loadedWebView?.backForwardList.backList.count ?? -1)>=index}
         }
         runtime.goBack()
-        await wait{runtime.loadedWebView?.url?.query=="suspend=middle" && !runtime.isLoading}
+        await wait{runtime.loadedWebView?.url?.query=="suspend=middle" && runtime.loadedWebView?.isLoading==false}
         _=runtime.setZoom(1.35)
         let expectedBack=runtime.webView.backForwardList.backList.map(\.url)
         let expectedCurrent=runtime.webView.url
         let expectedForward=runtime.webView.backForwardList.forwardList.map(\.url)
-        check("setup-has-both-directions",!expectedBack.isEmpty && !expectedForward.isEmpty)
+        let ready=expectedCurrent?.query=="suspend=middle" && !expectedBack.isEmpty && !expectedForward.isEmpty
+        check("setup-has-both-directions",ready,"back=\(expectedBack) current=\(String(describing:expectedCurrent)) forward=\(expectedForward)")
+        guard ready else{return results}
         session.newTab()
         for cycle in 1...2 {
             weak var retired=runtime.loadedWebView
@@ -36,14 +38,14 @@ import WebKit
             await wait{retired==nil}
             check("cycle-\(cycle)-releases-old-view",retired==nil)
             session.select(id)
-            await wait{runtime.loadedWebView?.url==expectedCurrent && !runtime.isLoading}
+            await wait{runtime.loadedWebView?.url==expectedCurrent && runtime.loadedWebView?.isLoading==false}
             let view=runtime.webView
             check("cycle-\(cycle)-history-and-position",view.url==expectedCurrent && view.backForwardList.backList.map(\.url)==expectedBack && view.backForwardList.forwardList.map(\.url)==expectedForward,"back=\(view.backForwardList.backList.map(\.url)) current=\(String(describing:view.url)) forward=\(view.backForwardList.forwardList.map(\.url))")
             check("cycle-\(cycle)-zoom",abs(view.pageZoom-1.35)<0.001)
             session.newTab()
         }
         session.select(id);runtime.goForward()
-        await wait{runtime.loadedWebView?.url==expectedForward.first && !runtime.isLoading}
+        await wait{runtime.loadedWebView?.url==expectedForward.first && runtime.loadedWebView?.isLoading==false}
         check("forward-after-resume",runtime.loadedWebView?.url==expectedForward.first)
         return results
     }

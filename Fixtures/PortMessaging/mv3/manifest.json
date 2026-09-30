@@ -18,5 +18,6 @@
   ],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "description": "Controlled runtime port ordering, payload and disconnect verification."
 }

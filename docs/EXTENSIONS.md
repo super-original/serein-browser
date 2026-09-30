@@ -205,3 +205,5 @@ At `29dabbf`, granted-HTTP populated-window URLs pass in both generations; `abou
 New dedicated MV2/MV3 fixtures exercise actual runtime.connect ports, ordered bidirectional nested JSON/Unicode messages, sender frame metadata, explicit disconnect and disconnect when the production host disables the extension. These checks are pending exact-head CI. They do not establish service-worker suspension/wakeup or native-host messaging.
 
 Port tests follow the [runtime.Port contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/Port). Firefox and Chrome differ when one of several receiving contexts unloads; the current single-recipient fixtures do not establish that multi-recipient behavior.
+
+At `88483f8`, both port fixtures failed manifest validation because descriptions were missing; no port semantics were established. Corrected manifests are pending. New native-message framing/stdio components are also pending CI. They have no production delegate route or host-registration UI, so nativeMessaging remains blocked at installation.

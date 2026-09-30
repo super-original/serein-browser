@@ -21,5 +21,6 @@
       "background.js"
     ],
     "persistent": true
-  }
+  },
+  "description": "Controlled runtime port ordering, payload and disconnect verification."
 }
