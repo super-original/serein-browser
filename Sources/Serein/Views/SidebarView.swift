@@ -102,13 +102,16 @@ private struct TabRow: View {
             Button {session.clickTab(tab.id,modifiers:NSApp.currentEvent?.modifierFlags ?? [])} label: {
                 HStack(spacing:10) {
                     Image(systemName:tab.kind == .essential ? "star.fill" : "globe").font(.system(size:14)).frame(width:16,height:16)
-                    if !compact {Text(tab.title).font(.system(size:13,weight:session.state.selectedTabID==tab.id ? .semibold : .regular)).lineLimit(1);Spacer(minLength:0)}
+                    if !compact {Text(tab.title).font(.system(size:13,weight:session.state.sidebarSelectedTabID==tab.id ? .semibold : .regular)).lineLimit(1);Spacer(minLength:0)}
                 }.frame(maxWidth:.infinity,alignment:compact ? .center : .leading).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)").accessibilityAddTraits(session.tabSelection.ids.contains(tab.id) ? .isSelected : [])
+            }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)").accessibilityAddTraits(session.tabSelection.ids.contains(tab.id) || session.state.sidebarSelectedTabID==tab.id ? .isSelected : [])
+            if session.state.glance(for:tab.id) != nil {
+                Button {session.select(tab.id)} label:{Image(systemName:"rectangle.on.rectangle").font(.system(size:12)).frame(width:24,height:24)}.buttonStyle(.plain).accessibilityLabel("Show Link Preview").help("Show Link Preview")
+            }
             if !compact,hovering,tab.kind == .regular {Button("Close Tab",systemImage:"xmark"){session.close(tab.id)}.labelStyle(.iconOnly).font(.system(size:10)).buttonStyle(.plain)}
         }
         .padding(.horizontal,10).frame(height:36)
-        .background(session.state.selectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
+        .background(session.state.sidebarSelectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
         .onHover{hovering=$0}.help(tab.title+"\n"+tab.url)
         .contextMenu {
             if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {

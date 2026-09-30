@@ -228,6 +228,13 @@ extension TabRuntime: WKNavigationDelegate {
     }
     func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy)->Void) {
         guard webView === storedView,let url=action.request.url else {decisionHandler(.cancel);return}
+        if action.navigationType == .linkActivated,action.modifierFlags.intersection([.option,.command,.control,.shift]) == .option,
+           !action.shouldPerformDownload,["http","https"].contains(url.scheme?.lowercased() ?? ""),
+           let session,session.state.visibleTabs.contains(where:{$0.id==id}) {
+            decisionHandler(.cancel)
+            session.openGlance(url,from:id)
+            return
+        }
         let destinationContext=session?.extensions?.controller.extensionContext(for:url)
         if ProcessInfo.processInfo.arguments.contains("--integration-test"),url.scheme=="webkit-extension" || configurationContext != nil {
             ExtensionNavigationTrace.record("EXTENSION_NAV tab=\(id) revision=\(viewRevision) type=\(action.navigationType.rawValue) target=\(url) configured=\(String(describing:configurationContext?.baseURL)) registered=\(String(describing:destinationContext?.baseURL)) sameContext=\(configurationContext === destinationContext) source=\(action.sourceFrame.securityOrigin.protocol)://\(action.sourceFrame.securityOrigin.host)")

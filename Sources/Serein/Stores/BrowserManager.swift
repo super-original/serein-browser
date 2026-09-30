@@ -42,21 +42,30 @@ import SereinCore
         scheduleSave()
     }
     func moveTab(_ id: UUID,from source: BrowserSession,to destination: BrowserSession? = nil) {
-        guard let tab=source.state.tabs.first(where:{$0.id==id}) else{return}
+        guard source.state.tabs.contains(where:{$0.id==id}) else{return}
         guard !source.state.isPrivate else {source.error="Moving a live private tab between isolated windows is not supported.";return}
         let target=destination ?? newWindow(isPrivate:false)
         guard target !== source,target.state.isPrivate==source.state.isPrivate else{return}
         // Transfer the live WKWebView and data store only between matching privacy contexts.
         // Private windows intentionally use separate stores, so their transfer is rejected.
         guard !source.state.isPrivate else {source.error="Moving a live private tab between isolated windows is not supported.";return}
-        var moved=tab;moved.workspaceID=target.state.activeWorkspaceID
-        let oldIndex=source.state.tabs.firstIndex{$0.id==id} ?? 0
-        let bridge=source.bridge(id)
+        let movingIDs=Set(source.state.closingTabIDs(id))
+        let moving=source.state.tabs.filter{movingIDs.contains($0.id)}
+        let oldIndices=Dictionary(uniqueKeysWithValues:source.state.tabs.enumerated().map{($0.element.id,$0.offset)})
+        let bridges=Dictionary(uniqueKeysWithValues:moving.map{($0.id,source.bridge($0.id))})
         source.state.close(id,remember:false)
-        target.state.tabs.append(moved)
-        if let runtime=source.runtimes.removeValue(forKey:id) {runtime.session=target;runtime.webView.removeFromSuperview();target.runtimes[id]=runtime}
-        source.extensionTabs[id]=nil;bridge.session=target;target.extensionTabs[id]=bridge
-        extensions.controller.didMoveTab(bridge,from:oldIndex,in:source.extensionWindow)
+        for added in source.state.tabs where oldIndices[added.id]==nil {extensions.controller.didOpenTab(source.bridge(added.id))}
+        for tab in moving {
+            var moved=tab;moved.workspaceID=target.state.activeWorkspaceID
+            if let parent=moved.glanceParentID,!movingIDs.contains(parent){moved.glanceParentID=nil}
+            target.state.tabs.append(moved)
+            if let runtime=source.runtimes.removeValue(forKey:tab.id) {runtime.session=target;runtime.webView.removeFromSuperview();target.runtimes[tab.id]=runtime}
+            source.extensionTabs[tab.id]=nil
+            if let bridge=bridges[tab.id] {bridge.session=target;target.extensionTabs[tab.id]=bridge}
+        }
+        for tab in moving {
+            if let bridge=bridges[tab.id] {extensions.controller.didMoveTab(bridge,from:oldIndices[tab.id] ?? 0,in:source.extensionWindow)}
+        }
         target.select(id);source.state.repair();if let next=source.state.selectedTabID {source.select(next)}
         scheduleSave()
     }

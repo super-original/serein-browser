@@ -46,6 +46,26 @@ APPLESCRIPT
       suggestion-up) osascript -e 'tell application "System Events" to tell process "Serein" to key code 126' ;;
       suggestion-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
       suggestion-return) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
+      glance-option-click)
+        read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
+        osascript - "$GLANCE_X" "$GLANCE_Y" <<'APPLESCRIPT'
+on run arguments
+  set pointX to item 1 of arguments as integer
+  set pointY to item 2 of arguments as integer
+  tell application "System Events" to tell process "Serein"
+    key down option
+    try
+      click at {pointX, pointY}
+    on error problem
+      key up option
+      error problem
+    end try
+    key up option
+  end tell
+end run
+APPLESCRIPT
+        ;;
+      glance-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
       find-query) osascript -e 'tell application "System Events" to tell process "Serein"' -e 'keystroke "f" using command down' -e 'delay 0.3' -e 'keystroke "a" using command down' -e 'keystroke "Workspaces"' -e 'end tell' ;;
       find-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
       find-page-key) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "k"' ;;

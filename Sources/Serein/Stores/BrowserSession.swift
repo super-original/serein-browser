@@ -41,7 +41,7 @@ import SereinCore
         if let tab=extensionTabs[id] {return tab}
         let tab=ExtensionTab(id:id,session:self);extensionTabs[id]=tab;return tab
     }
-    private func publishSelection(previousActive:UUID?,previousHighlighted:Set<UUID>,refreshActive:Bool=true) {
+    func publishSelection(previousActive:UUID?,previousHighlighted:Set<UUID>,refreshActive:Bool=true) {
         let valid=Set(state.tabs.map(\.id));tabSelection.retain(valid)
         if previousActive != state.selectedTabID {findRequestID=UUID();findResult=""}
         if refreshActive {address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? "";addressFocused=false}
@@ -59,7 +59,7 @@ import SereinCore
         guard state.tabs.contains(where:{$0.id==id}) else{return}
         let previous=state.selectedTabID,highlighted=tabSelection.ids
         state.select(id)
-        if preservingSelection {tabSelection.set(id,selected:true)} else {tabSelection.selectOnly(id)}
+        if preservingSelection {tabSelection.set(id,selected:true)} else {tabSelection.selectOnly(state.selectedTabID)}
         publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:!preservingSelection || previous != id)
     }
     @discardableResult func setHighlighted(_ id:UUID,_ selected:Bool)->Bool {
@@ -70,6 +70,7 @@ import SereinCore
         return true
     }
     func clickTab(_ id:UUID,modifiers:NSEvent.ModifierFlags) {
+        if !modifiers.intersection([.command,.shift]).isEmpty,let preview=state.activeGlance {state.expandGlance(preview.id)}
         guard state.visibleTabs.contains(where:{$0.id==id}) else{return}
         if modifiers.contains(.shift) {
             let previous=state.selectedTabID,highlighted=tabSelection.ids
@@ -91,12 +92,13 @@ import SereinCore
     func closeHighlighted() {
         let ids=state.tabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
         guard !ids.isEmpty else{return}
-        let documents=ids.map{(id:$0,document:runtimes[$0]?.documentID)}
+        let group=ids.flatMap{state.closingTabIDs($0)}
+        let documents=group.map{(id:$0,document:runtimes[$0]?.documentID)}
         let closeAll: @MainActor ()->Void = { [weak self] in
-            guard let self,documents.allSatisfy({target in self.state.tabs.contains{$0.id==target.id} && self.runtimes[target.id]?.documentID==target.document}) else{return}
+            guard let self,ids.flatMap({self.state.closingTabIDs($0)})==group,documents.allSatisfy({target in self.state.tabs.contains{$0.id==target.id} && self.runtimes[target.id]?.documentID==target.document}) else{return}
             for id in ids {self.close(id,ask:false)}
         }
-        if ids.contains(where:{runtimes[$0]?.hasUserEdits == true}) {
+        if group.contains(where:{runtimes[$0]?.hasUserEdits == true}) {
             confirm("Close \(ids.count) selected tabs?",detail:"Edited pages may contain unsaved changes.",yes:"Close Tabs"){if $0 {closeAll()}}
         } else {closeAll()}
     }
@@ -113,14 +115,17 @@ import SereinCore
     }
     func close(_ id:UUID,ask:Bool=true,completion:(@MainActor (Bool)->Void)?=nil) {
         guard state.tabs.contains(where:{$0.id==id}) else{completion?(false);return}
-        if ask,let runtime=runtimes[id],runtime.hasUserEdits {
-            let document=runtime.documentID
-            confirm("Close this tab?",detail:"This page has been edited. Unsaved changes may be lost.",yes:"Close Tab"){[weak self,weak runtime] allowed in
-                guard allowed,let self,let runtime,self.runtimes[id] === runtime,runtime.documentID==document else{completion?(false);return}
+        let group=state.closingTabIDs(id)
+        if ask,group.contains(where:{runtimes[$0]?.hasUserEdits==true}) {
+            let documents=group.map{(id:$0,document:runtimes[$0]?.documentID)}
+            confirm("Close this tab?",detail:"This tab or its preview has edits. Unsaved changes may be lost.",yes:"Close Tab"){[weak self] allowed in
+                guard allowed,let self,self.state.closingTabIDs(id)==group,
+                      documents.allSatisfy({self.runtimes[$0.id]?.documentID==$0.document}) else{completion?(false);return}
                 self.close(id,ask:false,completion:completion)
             }
             return
         }
+        for child in group where child != id {close(child,ask:false)}
         let previous=state.selectedTabID,highlighted=tabSelection.ids
         extensions?.controller.didCloseTab(bridge(id),windowIsClosing:false)
         runtimes[id]?.dispose();runtimes[id]=nil;extensionTabs[id]=nil
@@ -214,7 +219,7 @@ import SereinCore
         else {completion(false)}
     }
     func canUnload(_ id: UUID) -> Bool {
-        state.tabs.contains{$0.id==id} && runtimes[id]?.loadedWebView != nil && id != state.selectedTabID && !state.splitTabIDs.contains(id)
+        state.tabs.contains{$0.id==id} && runtimes[id]?.loadedWebView != nil && id != state.selectedTabID && id != state.activeGlance?.glanceParentID && !state.splitTabIDs.contains(id)
     }
     func unload(_ id: UUID) {
         guard canUnload(id),let runtime=runtimes[id] else{return}

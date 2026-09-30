@@ -9,6 +9,7 @@ public struct BrowserTab: Identifiable, Codable, Equatable, Sendable {
     public var title: String
     public var kind: TabKind
     public var homeURL: String?
+    public var glanceParentID: UUID?
     public init(id: UUID = UUID(), workspaceID: UUID, url: String = "about:blank", title: String = "New Tab", kind: TabKind = .regular) {
         self.id=id; self.workspaceID=workspaceID; self.url=url; self.title=title; self.kind=kind
         homeURL = kind == .regular ? nil : url
@@ -42,7 +43,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public var selectedTab: BrowserTab? { tabs.first { $0.id == selectedTabID } }
     public var visibleTabs: [BrowserTab] {
-        let relevant=tabs.filter { $0.kind == .essential || $0.workspaceID == activeWorkspaceID }
+        let relevant=tabs.filter { $0.glanceParentID == nil && ($0.kind == .essential || $0.workspaceID == activeWorkspaceID) }
         return relevant.filter{$0.kind == .essential} + relevant.filter{$0.kind == .pinned} + relevant.filter{$0.kind == .regular}
     }
     @discardableResult public mutating func newTab(url: String = "about:blank", select: Bool = true) -> UUID {
@@ -51,27 +52,32 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         return tab.id
     }
     public mutating func select(_ id: UUID) {
-        guard let tab=tabs.first(where:{$0.id==id}) else {return}
-        if tab.kind != .essential && tab.workspaceID != activeWorkspaceID {activeWorkspaceID=tab.workspaceID;clearSplit()}
-        if !splitTabIDs.isEmpty,!splitTabIDs.contains(id) {clearSplit()}
-        selectedTabID=id
+        guard let requested=tabs.first(where:{$0.id==id}) else{return}
+        let owner=requested.glanceParentID.flatMap{parent in tabs.first{$0.id==parent}} ?? requested
+        if owner.kind != .essential && owner.workspaceID != activeWorkspaceID {activeWorkspaceID=owner.workspaceID;clearSplit()}
+        let target=glance(for:owner.id)?.id ?? requested.id
+        if !splitTabIDs.isEmpty,!splitTabIDs.contains(target) {clearSplit()}
+        selectedTabID=target
     }
     public mutating func close(_ id: UUID, remember: Bool = true) {
+        guard tabs.contains(where:{$0.id==id}) else{return}
+        for child in tabs.filter({$0.glanceParentID==id}).map(\.id) {close(child,remember:false)}
         guard let index=tabs.firstIndex(where:{$0.id==id}) else{return}
+        let parent=tabs[index].glanceParentID
         let oldOrder=visibleTabs.map(\.id);let selectedIndex=oldOrder.firstIndex(of:id) ?? 0
         let removed=tabs.remove(at:index)
-        if remember {closedTabs.append(removed);closedTabs=Array(closedTabs.suffix(25))}
+        if remember {var closed=removed;closed.glanceParentID=nil;closedTabs.append(closed);closedTabs=Array(closedTabs.suffix(25))}
         removeSplitTab(id)
         if selectedTabID==id {
             let candidates=visibleTabs
-            selectedTabID=candidates.isEmpty ? nil : candidates[min(selectedIndex,candidates.count-1)].id
+            selectedTabID=parent.flatMap{p in candidates.first{$0.id==p}?.id} ?? (candidates.isEmpty ? nil : candidates[min(selectedIndex,candidates.count-1)].id)
         }
         if visibleTabs.isEmpty {newTab()}
     }
     @discardableResult public mutating func reopen() -> UUID? {
         guard var tab=closedTabs.popLast() else{return nil}
         if !workspaces.contains(where:{$0.id==tab.workspaceID}) {tab.workspaceID=activeWorkspaceID}
-        if tabs.contains(where:{$0.id==tab.id}) {tab.id=UUID()}
+        if tabs.contains(where:{$0.id==tab.id}) {tab.id=UUID()};tab.glanceParentID=nil
         tabs.append(tab);select(tab.id);return tab.id
     }
     @discardableResult public mutating func duplicate(_ id: UUID) -> UUID? {
@@ -81,7 +87,8 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public mutating func setKind(_ id: UUID, _ kind: TabKind) {
         guard let i=tabs.firstIndex(where:{$0.id==id}) else{return}
-        tabs[i].kind=kind;tabs[i].workspaceID=activeWorkspaceID
+        tabs[i].glanceParentID=nil;tabs[i].kind=kind;tabs[i].workspaceID=activeWorkspaceID
+        for child in tabs.indices where tabs[child].glanceParentID==id {tabs[child].workspaceID=activeWorkspaceID}
         tabs[i].homeURL=kind == .regular ? nil : tabs[i].url
     }
     public mutating func move(_ id: UUID, before target: UUID) {
@@ -91,10 +98,12 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public mutating func moveToWorkspace(_ id: UUID, _ space: UUID) {
         guard workspaces.contains(where:{$0.id==space}),let i=tabs.firstIndex(where:{$0.id==id}) else{return}
-        tabs[i].workspaceID=space
+        let wasSelected=sidebarSelectedTabID==id || selectedTabID==id
+        tabs[i].glanceParentID=nil;tabs[i].workspaceID=space
+        for child in tabs.indices where tabs[child].glanceParentID==id {tabs[child].workspaceID=space}
         if tabs[i].kind == .essential {tabs[i].kind = .pinned}
         if space != activeWorkspaceID {removeSplitTab(id)}
-        if selectedTabID==id {selectedTabID=visibleTabs.first?.id}
+        if wasSelected {selectedTabID=visibleTabs.first?.id}
         if visibleTabs.isEmpty {newTab()}
     }
     @discardableResult public mutating func addWorkspace(name: String) -> UUID {
@@ -135,6 +144,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         if remaining.count<2 {clearSplit()} else {_=setSplitTabs(remaining)}
     }
     public mutating func split(with id: UUID) {
+        if let preview=activeGlance {expandGlance(preview.id)}
         guard let selectedTabID,id != selectedTabID,visibleTabs.contains(where:{$0.id==id}) else{return}
         _=setSplitTabs([selectedTabID,id])
     }
@@ -146,8 +156,9 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         for i in tabs.indices {
             if !workspaces.contains(where:{$0.id==tabs[i].workspaceID}) {tabs[i].workspaceID=activeWorkspaceID}
         }
+        repairGlances()
         sidebarWidth=min(500,max(180,sidebarWidth.isFinite ? sidebarWidth : 240))
-        if !visibleTabs.contains(where:{$0.id==selectedTabID}) {selectedTabID=visibleTabs.first?.id}
+        if !visibleTabs.contains(where:{$0.id==sidebarSelectedTabID}) {selectedTabID=visibleTabs.first?.id}
         if selectedTabID==nil {newTab()}
         var splitSeen=Set<UUID>()
         let panes=Array(splitTabIDs.filter{id in visibleTabs.contains{$0.id==id} && splitSeen.insert(id).inserted}.prefix(4))

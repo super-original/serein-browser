@@ -24,7 +24,9 @@ struct BrowserView: View {
                 VStack(spacing:6) {
                     if session.state.sidebar == .collapsed {NavigationBar(session:session).padding(.leading,48).frame(height:38)}
                     if session.findVisible {FindBar(session:session)}
-                    if session.state.splitTabIDs.count>=2 {
+                    if let preview=session.state.activeGlance,let owner=preview.glanceParentID {
+                        GlancePages(session:session,owner:owner,preview:preview.id)
+                    } else if session.state.splitTabIDs.count>=2 {
                         SplitPages(session:session,ids:session.state.splitTabIDs)
                     } else if let selected=session.state.selectedTabID {PagePane(session:session,id:selected)}
                 }

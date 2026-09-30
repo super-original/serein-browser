@@ -72,7 +72,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Fullscreen | P | Native window/fullscreen WebKit preference; media runtime coverage incomplete |
 | Loading / errors / process recovery | P | Visible states; real process-crash injection pending |
 | Settings | P | Appearance, sidebar, website data clearing; advanced policies absent |
-| Glance / link preview | U | Not implemented |
+| Glance / link preview | P | Native Option-click overlay and parent/child lifecycle implemented; runtime/visual checks pending. Essential external-link routing, nested previews, animation parity and closed-parent preview restoration remain gaps. |
 | Folders / live folders | U | Not implemented |
 | Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/unpin and workspace moves verified at `e511f58` and later runs; full keyboard selection remains a gap |
 | Tab groups | U | Not implemented |
@@ -101,3 +101,8 @@ The fresh four-pane grid in [run 36753946618](https://github.com/super-original/
 At `e32960d`, the native divider follow-up passes balanced geometry and minimum-window tests. Retrieved/inspected screenshots confirm eight-point column gaps and 327/326-point rows. [Original-image comparison](evidence/2026-09-30/grid/README.md) records exact differences from Zen, including differing sidebar/focus state and blank Serein content. This is geometry evidence, not complete visual parity.
 
 Glance research uses the pinned [manager](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/glance/ZenGlanceManager.mjs) and [styles](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/glance/zen-glance.css). Zen associates a hidden child tab with its owner, overlays the preview, and provides close, expand and split actions. A new real reference capture opens an existing tab through this manager; it does not claim to test modifier-click input. Serein Glance remains unimplemented until native behavior and matching geometry are verified.
+
+
+The [Glance reference run 36760541400](https://github.com/super-original/serein-browser/actions/runs/36760541400) succeeded and capture 19 was retrieved/inspected. At 1000×677 outer bounds, preview content is (311.6,8,604.8,661) relative to the window, and controls occupy (916.4,23,56,144). The [pinned preference](https://github.com/zen-browser/desktop/blob/1.22.2b/prefs/zen/glance.yaml) defaults activation to Alt (Option), overriding the actor's Ctrl fallback. Serein uses native glass buttons for close/expand/split, matching the 80%-width/full-height layout at reference size. At minimum width the preview narrows to retain a 56-point controls margin. These intentional native/adaptive choices do not establish visual parity; source/runtime screenshots are pending.
+
+Parent and preview remain separate native tabs sharing one session's website data. The preview is hidden from the ordinary sidebar list and represented by a parent-row badge. Expand/split reuse its live web view. Closing an owner includes preview edit consent; cross-window movement carries both live views. Private previews stay in their window's nonpersistent store. Unit/runtime scenarios are included, but their addition alone is not a passing result. No Zen code or assets were copied into this implementation.

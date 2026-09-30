@@ -14,7 +14,7 @@ import AppKit
         let edit=NSMenu(title:"Edit")
         for (name,key,selector) in [("Undo","z",Selector(("undo:"))),("Redo","Z",Selector(("redo:"))),("Cut","x",#selector(NSText.cut(_:))),("Copy","c",#selector(NSText.copy(_:))),("Paste","v",#selector(NSText.paste(_:))),("Select All","a",#selector(NSText.selectAll(_:)))] {edit.addItem(NSMenuItem(title:name,action:selector,keyEquivalent:key))}
         edit.addItem(.separator());edit.addItem(item("Find in Page…","f",action:#selector(find)));let editParent=NSMenuItem();editParent.submenu=edit;bar.addItem(editParent)
-        submenu("View",[item("Focus Address","l",action:#selector(address)),item("Reload","r",action:#selector(reload)),item("Stop Loading",".",action:#selector(stop)),.separator(),item("Toggle Sidebar","s",mods:[.command,.shift],action:#selector(sidebar)),item("Toggle Compact Mode","c",mods:[.command,.option],action:#selector(compact)),item("Split with Next Tab","s",mods:[.command,.option],action:#selector(split)),item("Exit Split View",action:#selector(unsplit)),.separator(),item("Zoom In","+",action:#selector(zoomIn)),item("Zoom Out","-",action:#selector(zoomOut)),item("Actual Size","0",action:#selector(actualSize)),item("Enter Full Screen","f",mods:[.command,.control],action:#selector(fullscreen))])
+        submenu("View",[item("Focus Address","l",action:#selector(address)),item("Reload","r",action:#selector(reload)),item("Stop Loading",".",action:#selector(stop)),.separator(),item("Toggle Sidebar","s",mods:[.command,.shift],action:#selector(sidebar)),item("Toggle Compact Mode","c",mods:[.command,.option],action:#selector(compact)),item("Split with Next Tab","s",mods:[.command,.option],action:#selector(split)),item("Exit Split View",action:#selector(unsplit)),item("Close Preview","\u{1b}",mods:[],action:#selector(closeGlance)),.separator(),item("Zoom In","+",action:#selector(zoomIn)),item("Zoom Out","-",action:#selector(zoomOut)),item("Actual Size","0",action:#selector(actualSize)),item("Enter Full Screen","f",mods:[.command,.control],action:#selector(fullscreen))])
         submenu("History",[item("Back","[",action:#selector(back)),item("Forward","]",action:#selector(forward)),item("History","y",action:#selector(history))])
         submenu("Bookmarks",[item("Bookmark This Page","d",action:#selector(bookmark)),item("Show Bookmarks",action:#selector(bookmarks))])
         submenu("Tools",[item("Downloads","j",action:#selector(downloads)),item("Extensions",action:#selector(extensions))])
@@ -22,6 +22,7 @@ import AppKit
         NSApp.mainMenu=bar;NSApp.windowsMenu=bar.items.last?.submenu
     }
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == #selector(closeGlance) {return manager?.active?.state.activeGlance != nil && manager?.active?.window?.attachedSheet == nil && manager?.active?.findVisible == false && manager?.active?.addressFocused == false}
         if item.action == #selector(back) {return manager?.active?.current?.canGoBack ?? false}
         if item.action == #selector(forward) {return manager?.active?.current?.canGoForward ?? false}
         if item.action == #selector(unsplit) {return !(manager?.active?.state.splitTabIDs.isEmpty ?? true)}
@@ -33,6 +34,7 @@ import AppKit
         return true
     }
     @objc func newTab(){if let session=manager?.active{session.newTab()}else{manager?.newWindow()}}
+    @objc func closeGlance(){manager?.active?.closeGlance()}
     @objc func newWindow(){manager?.newWindow()}
     @objc func privateWindow(){manager?.newWindow(isPrivate:true)}
     @objc func closeTab(){if let session=manager?.active,let id=session.state.selectedTabID{session.close(id)}}

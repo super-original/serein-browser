@@ -4,13 +4,13 @@ Full original-spec completion remains the goal and is not achieved. [Draft PR #1
 
 ## Latest verified source
 
-`29dabbffa7850be5722a2113e4d7e0743f346844`: [run 36759510025](https://github.com/super-original/serein-browser/actions/runs/36759510025) passes **58 unit tests, 302/306 browser checks, ten independent download-restart checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
+`ade607b575fa2b89071eaf4e6c39494b387194b8`: [run 36760548509](https://github.com/super-original/serein-browser/actions/runs/36760548509) passes **58 unit tests, 306/310 browser checks, ten independent download-restart checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
 
-[Download app](https://github.com/super-original/serein-browser/actions/runs/36759510025/artifacts/11118595486) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36759510025/artifacts/11118705275). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
+[Download app](https://github.com/super-original/serein-browser/actions/runs/36760548509/artifacts/11118024139) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36760548509/artifacts/11118089715). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
 
-Normal paused downloads resume in a new app process with full 8 MiB byte integrity. Private resume data/history stay off disk; owner-only file permissions and completion/cancellation cleanup pass. Active downloads without saved resume data still become interrupted. The inspected Downloads screenshot exposed outdated in-process-only help text, now being corrected.
+Normal paused downloads resume in a new app process with full 8 MiB byte integrity. Private resume data/history stay off disk; owner-only file permissions and completion/cancellation cleanup pass. Active downloads without saved resume data still become interrupted. The inspected Downloads screenshot now describes this relaunch behavior correctly.
 
-Extension recovery passes complete back/forward URL-list, current-position and zoom preservation, plus exactly one options-script initialization per page across initial and three repeated cycles. Public navigation preferences suppress scripts during the transient real-resource preload. Find checks, native/extension-window consent, actual quit/session saving, balanced four-pane grids, minimum-window bounds and keyboard/menu extension commands pass. Window lifecycle and populated URLs for granted HTTP pages pass through MV2/MV3 JavaScript APIs.
+Extension recovery passes complete back/forward URL-list, current-position and zoom preservation, plus exactly one options-script initialization per page across initial and three repeated cycles. Public navigation preferences suppress scripts during the transient real-resource preload. Find checks including actual Command-F, query entry, Escape and subsequent web-page key delivery, native/extension-window consent, actual quit/session saving, balanced four-pane grids, minimum-window bounds and keyboard/menu extension commands pass. Window lifecycle and populated URLs for granted HTTP pages pass through MV2/MV3 JavaScript APIs.
 
 The four browser failures are missing MV2/MV3 `tabs.onZoomChange` and empty `about:blank` URLs in populated-window results. The separate **actual desktop rendering gate fails** with zero content glyph pixels. DOM/internal snapshots are not desktop-rendering evidence. Plain WKWebView and Apple-signed Safari reproduce IOSurface failures on this free runner. No supported second free macOS 27 image has been identified; no private flags, security weakening, lower deployment target or engine substitution is used. [Prepared upstream report](MACOS27_RENDERING_REPORT.md) has not been posted.
 
@@ -18,7 +18,7 @@ Downloads and extension-management screenshots from this exact commit were retri
 
 ## Current work under verification
 
-Follow-up adds real Command-F/entry/Escape/page-key delivery, explicit extension `tabs` grant diagnostics, and a build-time signed-fixture freshness guard. A new pinned Zen Glance capture will establish the missing feature's geometry before implementation. Full original-spec completion remains the goal.
+Glance implementation awaits exact-head build/runtime/visual checks: Option-click activation, parent-linked hidden preview tabs, native close/expand/split controls, live-view preservation, edit consent, movement and private isolation. The pinned Zen capture was retrieved and inspected; preview geometry is 80% content width, full height, with a 56-point control column. Native tabs-grant diagnostics and the signed-fixture freshness guard pass. Full original-spec completion remains the goal.
 
 ## Prioritized remaining work
 
