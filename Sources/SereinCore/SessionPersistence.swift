@@ -3,7 +3,7 @@ import Foundation
 public struct SavedSession: Codable, Sendable {
     public var version: Int = 1
     public var windows: [BrowserWindowState]
-    public init(windows: [BrowserWindowState]) {self.windows=windows.filter{!$0.isPrivate}}
+    public init(windows: [BrowserWindowState]) {self.windows=windows.filter{!$0.isPrivate}.map(StoredPageURL.sanitize)}
     public func encoded() throws -> Data {
         let filtered=SavedSession(windows:windows)
         let encoder=JSONEncoder();encoder.outputFormatting=[.sortedKeys]
@@ -12,7 +12,7 @@ public struct SavedSession: Codable, Sendable {
     public static func decode(_ data: Data) throws -> SavedSession {
         var session=try JSONDecoder().decode(SavedSession.self,from:data)
         guard session.version==1 else {throw PersistenceError.unsupportedVersion}
-        session.windows=session.windows.filter{!$0.isPrivate}.map {var window=$0;window.repair();return window}
+        session.windows=session.windows.filter{!$0.isPrivate}.map {var window=StoredPageURL.sanitize($0);window.repair();return window}
         var seen=Set<UUID>();session.windows=session.windows.filter{seen.insert($0.id).inserted}
         return session
     }

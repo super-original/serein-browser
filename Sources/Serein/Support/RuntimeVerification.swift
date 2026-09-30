@@ -183,6 +183,7 @@ import SereinCore
             privateSession.window?.performClose(nil)
         } catch {check("private-cookie-isolation",false,error.localizedDescription)}
         session.window?.makeKeyAndOrderFront(nil)
+        results += LibraryVerification.run(root: root)
         results += await DownloadVerification.run(manager:manager,session:session,root:root)
         // Exercise the actual permission stores used by delegate decisions and settings.
         let permissionOrigin=SiteOrigin(url:URL(string:fixture)!)!

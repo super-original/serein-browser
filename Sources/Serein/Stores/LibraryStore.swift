@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import SereinCore
 
-struct PageRecord: Identifiable, Codable {
+struct PageRecord: Identifiable, Codable, Equatable {
     var id=UUID()
     var title: String
     var url: String
@@ -19,7 +19,18 @@ struct PageRecord: Identifiable, Codable {
             try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
             bookmarks=try read("bookmarks.json") ?? []
             history=try read("history.json") ?? []
+            let oldBookmarks = bookmarks, oldHistory = history
+            bookmarks = bookmarks.compactMap { Self.sanitized($0, history: false) }
+            history = history.compactMap { Self.sanitized($0, history: true) }
+            if bookmarks != oldBookmarks { write(bookmarks, name: "bookmarks.json") }
+            if history != oldHistory { write(history, name: "history.json") }
         } catch {self.error="Could not restore browsing library: \(error.localizedDescription)"}
+    }
+    private static func sanitized(_ record: PageRecord, history: Bool) -> PageRecord? {
+        guard let safeURL = history ? StoredPageURL.webHistoryURL(record.url) : StoredPageURL.removingCredentials(record.url) else { return nil }
+        var result = record; result.url = safeURL
+        if record.title == record.url { result.title = safeURL }
+        return result
     }
     func read<T: Decodable>(_ name: String) throws -> T? {
         let url=root.appendingPathComponent(name)
@@ -31,13 +42,13 @@ struct PageRecord: Identifiable, Codable {
         catch {self.error="Could not save \(name): \(error.localizedDescription)"}
     }
     func visit(title: String, url: String, isPrivate: Bool) {
-        guard !isPrivate,url.hasPrefix("http") else{return}
-        history.removeAll{$0.url==url};history.insert(PageRecord(title:title,url:url),at:0)
+        guard !isPrivate, let safeURL = StoredPageURL.webHistoryURL(url) else { return }
+        history.removeAll{$0.url==safeURL};history.insert(PageRecord(title:title == url ? safeURL : title,url:safeURL),at:0)
         history=Array(history.prefix(3000));write(history,name:"history.json")
     }
     func bookmark(title: String, url: String) {
-        guard !bookmarks.contains(where:{$0.url==url}),URL(string:url) != nil else{return}
-        bookmarks.append(PageRecord(title:title,url:url));write(bookmarks,name:"bookmarks.json")
+        guard let safeURL = StoredPageURL.removingCredentials(url), !bookmarks.contains(where:{$0.url==safeURL}) else { return }
+        bookmarks.append(PageRecord(title:title == url ? safeURL : title,url:safeURL));write(bookmarks,name:"bookmarks.json")
     }
     func removeBookmark(_ id: UUID) {bookmarks.removeAll{$0.id==id};write(bookmarks,name:"bookmarks.json")}
     func clearHistory() {history=[];write(history,name:"history.json")}
