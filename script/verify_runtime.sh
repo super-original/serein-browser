@@ -42,6 +42,7 @@ for i in $(seq 1 2400); do
       prepare-save-download)
         osascript - "$ROOT" <<'APPLESCRIPT'
 on run arguments
+  with timeout of 5 seconds
   tell application "System Events" to tell process "Serein"
     keystroke "g" using {command down, shift down}
     delay 0.5
@@ -51,6 +52,7 @@ on run arguments
     keystroke "a" using command down
     keystroke "native-save-result.txt"
   end tell
+  end timeout
 end run
 APPLESCRIPT
         ;;
@@ -76,6 +78,7 @@ APPLESCRIPT
       folder-toggle|folder-context)
         if osascript - "$KEYBOARD_NAME" > "$ROOT/$KEYBOARD_NAME-point" 2> "$ROOT/$KEYBOARD_NAME-input.log" <<'APPLESCRIPT'
 on run arguments
+  with timeout of 5 seconds
   tell application "System Events" to tell process "Serein"
     set controls to entire contents of window 1
     repeat with uiElement in controls
@@ -95,6 +98,7 @@ on run arguments
     end repeat
     error "Research notes folder button was not found"
   end tell
+  end timeout
 end run
 APPLESCRIPT
         then
@@ -113,36 +117,17 @@ APPLESCRIPT
         NATIVE_MANIFEST=$(cat "$ROOT/native-host-manifest-path")
         osascript - "$NATIVE_MANIFEST" > "$ROOT/native-host-picker-input.log" 2>&1 <<'APPLESCRIPT' || touch "$ROOT/native-host-registration-file.keyboard-failed"
 on run arguments
+  with timeout of 5 seconds
   tell application "System Events" to tell process "Serein"
+    delay 0.4
     keystroke "g" using {command down, shift down}
     delay 0.4
     keystroke item 1 of arguments
     key code 36
     delay 0.6
     key code 36
-    repeat 15 times
-      repeat with candidateWindow in windows
-        set controls to entire contents of candidateWindow
-        repeat with uiElement in controls
-          try
-            if role of uiElement is "AXButton" and enabled of uiElement then
-              if name of uiElement is "Open" then
-                perform action "AXPress" of uiElement
-                log "Activated native Open button"
-                return
-              end if
-              if name of uiElement is "Allow" then
-                log "Native consent already visible"
-                return
-              end if
-            end if
-          end try
-        end repeat
-      end repeat
-      delay 0.2
-    end repeat
-    error "Native Open button or consent was not found"
   end tell
+  end timeout
 end run
 APPLESCRIPT
         ;;

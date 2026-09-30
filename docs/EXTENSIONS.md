@@ -10,7 +10,7 @@
 | Firefox Manifest V2 | Partial | XPI/unpacked loading; Firefox-specific semantics and APIs not implemented universally. |
 | Chrome Manifest V3 | Partial | Controlled service-worker fixture passes limited semantics. Lifetime, wakeup, DNR, offscreen and full Chrome API conformance not established. |
 | Firefox Manifest V3 | Untested semantics | Manifest number is accepted, which is not proof of Firefox MV3 lifecycle behavior. |
-| Safari Web Extensions | Partial | Shared manifest resources can load through public WebKit; packaged `.appex`/App Store installation is not implemented. |
+| Safari Web Extensions | Partial | Shared manifest resources load through public WebKit; intact Safari Web Extension `.appex` installation is implemented pending CI. App Store acquisition and Safari native handlers remain unsupported. |
 | Native Safari App Extensions | Blocked / unsupported | No documented third-party hosting entry point found for arbitrary SafariServices native extension handlers. |
 | Legacy Safari `.safariextz` and earlier | Unsupported | No loader or compatibility runtime. |
 
@@ -217,3 +217,9 @@ The current continuation wires public WebKit native-message delegates to explici
 At `029feec`, [run 36780698616](https://github.com/super-original/serein-browser/actions/runs/36780698616) passes all 40 actual production native-host scenarios across options pages, MV2 backgrounds and MV3 workers, plus the independent live-port quit/child-reaping scenario. Consent and management captures were inspected ([images](evidence/2026-09-30/native-hosts/README.md)). Permission/registration revocation, regrant, disable/removal and scoped identity checks are exercised. These results supersede earlier pending integration notes for this limited CRX3/Chrome-format path. No Firefox host, native Safari format, arbitrary real native application, native-initiated reconnect or universal compatibility result is implied. All seven pinned real extensions still reject their separate missing API requirements.
 
 Native tab folders do not implement the missing `browser.tabGroups` namespace. Folder hierarchy and controls are a browser feature; extension group APIs and exhaustive ordering/event semantics remain separate unfinished work.
+
+### Packaged Safari Web Extensions (pending verification)
+
+The installer recognizes a selected `.appex` with `NSExtensionPointIdentifier = com.apple.Safari.web-extension`, `CFBundlePackageType = XPC!`, a bundle identifier, and a manifest under `Contents/Resources`. It retains the complete bundle and calls public `WKWebExtension(appExtensionBundle:)`, including WebKit’s resource validation. It does not flatten the bundle or normalize signed manifest bytes. Existing permission review, private exclusion, enable/disable and removal apply. Named native Safari App Extensions (`com.apple.Safari.extension`) and enclosing application packages receive an explicit unsupported-format error. Package copying additionally rejects nonregular/non-directory entries.
+
+An original ad-hoc signed fixture tests actual installation/cancellation, options, MV3 worker messaging, storage after disable/reload, unchanged manifest bytes, removal, and tampered-bundle rejection. These checks are pending macOS CI; no real Safari extension or App Store package has yet been verified. The fixture includes an inert native executable only to form a signable bundle; Serein does not load that executable. Safari `NSExtensionRequestHandling`, Safari-specific native messaging/containing-app integration, publisher trust/notarization policy, updates and runtime-ID equivalence remain unfinished or unsupported. Merely accepting a bundle is not full Safari compatibility.

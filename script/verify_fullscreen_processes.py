@@ -10,6 +10,10 @@ root = pathlib.Path('evidence/fullscreen-processes').resolve()
 root.mkdir(parents=True, exist_ok=True)
 app = pathlib.Path('dist/Serein.app/Contents/MacOS/Serein').resolve()
 combined = []
+# This scenario must also run when the main browser harness fails before setup.
+pointer = root / 'pointer-input'
+subprocess.run(['xcrun', 'swiftc', '-target', 'arm64-apple-macos27.0',
+                'script/PointerInput.swift', '-o', str(pointer)], check=True)
 
 def stop(process):
     if process.poll() is None:
@@ -48,7 +52,7 @@ with (root / 'server.log').open('w') as server_log:
                             if name == 'fullscreen-enter':
                                 coordinates = (directory / 'fullscreen-click-point').read_text().split()
                                 assert len(coordinates) == 2
-                                subprocess.run(['/tmp/serein-pointer', *coordinates, 'plain'], check=True)
+                                subprocess.run([str(pointer), *coordinates, 'plain'], check=True)
                             elif name == 'fullscreen-exit':
                                 subprocess.run(['osascript', '-e', 'tell application "System Events" to tell process "Serein" to key code 53'], check=True)
                             else:

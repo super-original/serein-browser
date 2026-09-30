@@ -29,6 +29,11 @@ cp -R Fixtures "$APP/Contents/Resources/Fixtures"
 xcrun swiftc -target arm64-apple-macos27.0 script/NativeHostFixture.swift -o "$APP/Contents/Resources/Fixtures/NativeHosts/NativeEcho"
 codesign --force --sign - --options runtime "$APP/Contents/Resources/Fixtures/NativeHosts/NativeEcho"
 xcrun vtool -show-build "$APP/Contents/Resources/Fixtures/NativeHosts/NativeEcho" > evidence/build/native-host-macho.txt
+SAFARI_FIXTURE="$APP/Contents/Resources/Fixtures/SafariWebExtension.appex"
+mkdir -p "$SAFARI_FIXTURE/Contents/MacOS"
+cp "$APP/Contents/Resources/Fixtures/NativeHosts/NativeEcho" "$SAFARI_FIXTURE/Contents/MacOS/SafariFixture"
+codesign --force --sign - --options runtime "$SAFARI_FIXTURE"
+codesign --verify --deep --strict --verbose=2 "$SAFARI_FIXTURE"
 codesign --force --sign - --options runtime "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
 xcrun vtool -show-build "$APP/Contents/MacOS/Serein" | tee evidence/build/macho.txt

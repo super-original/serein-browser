@@ -65,9 +65,9 @@ struct InstalledExtension: Identifiable, Codable {
     func load(_ record: InstalledExtension) async throws {
         guard contexts[record.id] == nil else { return }
         let directory=record.directory(in: root)
-        let manifest=try ExtensionManifest(data:Data(contentsOf:directory.appendingPathComponent("manifest.json")))
+        let manifest=try ExtensionManifest(data:Data(contentsOf:ExtensionPackageLoader.manifest(directory)))
         try manifest.validateNativeMessagingIdentity(record.packageIdentity)
-        let ext=try await WKWebExtension(resourceBaseURL:directory)
+        let ext=try await ExtensionPackageLoader.load(directory)
         if let current = records.first(where: { $0.id == record.id }), current.packageVersionID != record.packageVersionID {
             throw ExtensionValidationError.invalid("The extension package changed while loading.")
         }
@@ -98,7 +98,7 @@ struct InstalledExtension: Identifiable, Codable {
     func chooseInstall(in session: BrowserSession) {
         guard !session.state.isPrivate,let window=session.dialogWindow else{return}
         let panel=NSOpenPanel();panel.canChooseFiles=true;panel.canChooseDirectories=true;panel.allowsMultipleSelection=false
-        panel.message="Choose an unpacked WebExtension folder, ZIP, XPI, or signed CRX3. Native Safari App Extensions and legacy CRX2 are not supported."
+        panel.message="Choose an unpacked WebExtension folder, ZIP, XPI, signed CRX3, or Safari Web Extension .appex bundle. Native Safari App Extensions and legacy CRX2 are not supported."
         panel.beginSheetModal(for:window){[weak self,weak session] response in
             guard response == .OK,let url=panel.url,let self,let session else{return}
             Task {await self.install(url,in:session)}
@@ -113,15 +113,16 @@ struct InstalledExtension: Identifiable, Codable {
             if let identity, records.contains(where: { $0.packageIdentity?.extensionID == identity.extensionID }) {
                 throw ExtensionValidationError.invalid("This CRX3 developer identity is already installed. Use Update Signed Package on its existing entry.")
             }
-            let manifestURL=destination.appendingPathComponent("manifest.json")
+            let manifestURL=try ExtensionPackageLoader.manifest(destination)
             let manifest=try ExtensionManifest(data:Data(contentsOf:manifestURL))
             try manifest.validateNativeMessagingIdentity(identity)
-            let ext=try await WKWebExtension(resourceBaseURL:destination)
+            let ext=try await ExtensionPackageLoader.load(destination)
             guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
             try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
             let permissions=ext.requestedPermissions.map(\.rawValue).sorted(),hosts=ext.requestedPermissionMatchPatterns.map(\.string).sorted()
             let provenance = identity.map { "Original CRX3 archive signature verified. Developer ID: \($0.extensionID). This is self-signed integrity, not Chrome Web Store approval. Normalized installed files are not the signed archive." } ?? "The package publisher signature has not been verified."
-            let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\n\nEmpty reserved action-command metadata is normalized for WebKit when needed. The original source package is unchanged.\n\n\(provenance) Install only if you trust its source. Private browsing access is disabled."
+            let formatNote=try ExtensionPackageLayout.inspect(destination).isSafariBundle ? "\n\nSafari native handlers and containing-app integration are not supported." : ""
+            let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\(formatNote)\n\n\(provenance) Install only if you trust its source. Private browsing access is disabled."
             let allowed=await withCheckedContinuation{continuation in session.confirm("Install \(ext.displayName ?? "extension")?",detail:details,yes:"Install"){continuation.resume(returning:$0)}}
             guard allowed else {try FileManager.default.removeItem(at:destination);return}
             if let identity, records.contains(where: { $0.packageIdentity?.extensionID == identity.extensionID }) {
@@ -139,11 +140,14 @@ struct InstalledExtension: Identifiable, Codable {
         let values=try source.resourceValues(forKeys:[.isDirectoryKey,.isSymbolicLinkKey,.isRegularFileKey])
         guard values.isSymbolicLink != true else{throw ExtensionValidationError.invalid("Symbolic-link packages are not accepted.")}
         if values.isDirectory==true {
-            let enumerator=FileManager.default.enumerator(at:source,includingPropertiesForKeys:[.isSymbolicLinkKey,.fileSizeKey])
+            let enumerator=FileManager.default.enumerator(at:source,includingPropertiesForKeys:[.isSymbolicLinkKey,.fileSizeKey,.isRegularFileKey,.isDirectoryKey])
             var size=0,count=0
             while let file=enumerator?.nextObject() as? URL {
-                let info=try file.resourceValues(forKeys:[.isSymbolicLinkKey,.fileSizeKey]);size+=info.fileSize ?? 0;count+=1
-                guard info.isSymbolicLink != true,size<128*1024*1024,count<10_000 else{throw ExtensionValidationError.invalid("The package contains links or exceeds the resource limit.")}
+                let info=try file.resourceValues(forKeys:[.isSymbolicLinkKey,.fileSizeKey,.isRegularFileKey,.isDirectoryKey]);size+=info.fileSize ?? 0;count+=1
+                guard info.isSymbolicLink != true,(info.isRegularFile==true || info.isDirectory==true),size<128*1024*1024,count<10_000 else{throw ExtensionValidationError.invalid("The package contains links, special files, or exceeds the resource limit.")}
+            }
+            if source.pathExtension.lowercased()=="appex" {
+                guard try ExtensionPackageLayout.inspect(source).isSafariBundle else{throw ExtensionValidationError.invalid("Select an intact Safari Web Extension bundle.")}
             }
             try FileManager.default.copyItem(at:source,to:destination)
         } else {
@@ -169,7 +173,9 @@ struct InstalledExtension: Identifiable, Codable {
                 }
             }
         }
-        let manifestURL=destination.appendingPathComponent("manifest.json")
+        let manifestURL=try ExtensionPackageLoader.manifest(destination)
+        // A Safari bundle must stay byte-for-byte intact for resource validation.
+        if try ExtensionPackageLayout.inspect(destination).isSafariBundle {return identity}
         let original=try Data(contentsOf:manifestURL)
         let normalized=try ExtensionCommandNormalization.normalize(original)
         if normalized != original {try normalized.write(to:manifestURL,options:.atomic)}

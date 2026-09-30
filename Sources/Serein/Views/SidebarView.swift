@@ -118,8 +118,8 @@ private struct TabRow: View {
             }
             if !compact,hovering,tab.kind == .regular {Button("Close Tab",systemImage:"xmark"){session.close(tab.id)}.labelStyle(.iconOnly).font(.system(size:10)).buttonStyle(.plain)}
         }
-        .padding(.horizontal,10).frame(height:36)
-        .background(session.state.sidebarSelectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
+        .padding(.horizontal,10).frame(height:tab.kind == .essential ? 44 : 36)
+        .background(session.state.sidebarSelectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : tab.kind == .essential ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
         .onHover{hovering=$0}.help(tab.title+"\n"+tab.url)
         .contextMenu {
             if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {

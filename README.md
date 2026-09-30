@@ -52,3 +52,5 @@ Firefox host registrations, unsigned package identities, automatic discovery of 
 ## Tab folders
 
 Use File → New Folder, or a tab's context menu → New Folder with Tab. Folders pin their contents and belong to one workspace. Drag a tab onto a folder to move it inside; drag a folder onto another to nest it, up to five levels. Collapsing keeps the active tab visible. Folder menus offer rename, new subfolder, ordering, workspace moves, Unpack Folder (keep pages) and Delete Folder (confirm closing its pages). Live folders, sharing and custom folder icons remain unfinished; current verification is recorded in the [parity checklist](docs/ZEN_PARITY.md).
+
+Safari Web Extension `.appex` bundles have an installation path under development. Native Safari App Extensions, Safari native handlers, and automatic App Store acquisition remain unsupported; see [the compatibility matrix](docs/EXTENSIONS.md) for verification status.

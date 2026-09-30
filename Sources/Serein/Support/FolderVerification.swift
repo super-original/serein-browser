@@ -23,9 +23,14 @@ import SereinCore
             check("capture-"+name,FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".png").path))
         }
         session.window?.setFrame(NSRect(x:10,y:61,width:1000,height:677),display:true)
-        if let essential=session.state.selectedTabID {session.setKind(essential,.essential)}
+        if let essential=session.state.selectedTabID {
+            session.runtime(essential).load(URL(string:"http://127.0.0.1:8765/index.html")!)
+            session.setKind(essential,.essential)
+        }
         session.addWorkspace(name:"Folder reference")
-        let empty=session.state.selectedTabID!
+        // Essentials remain selected when entering an otherwise empty workspace.
+        // Create our own disposable placeholder instead of closing that essential.
+        let empty=session.newTab()
         let a=session.newTab(url:"http://127.0.0.1:8765/index.html"),b=session.newTab(url:"http://127.0.0.1:8765/second.html",select:false)
         session.close(empty,ask:false)
         let first=session.runtime(a),second=session.runtime(b);_=second.webView

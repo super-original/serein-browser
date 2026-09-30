@@ -306,6 +306,7 @@ import SereinCore
         results += await PortMessagingVerification.run(manager:manager)
         results += await NativeHostVerification.run(manager:manager,root:root)
         results += await FolderVerification.run(manager:manager,root:root)
+        results += await SafariBundleVerification.run(manager:manager,root:root)
         ExtensionSelectionTrace.save(to:root)
         await RealExtensionAudit.run(manager:manager,root:root)
         do {try JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)} catch {print(error)}
