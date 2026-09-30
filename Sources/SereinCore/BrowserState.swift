@@ -10,6 +10,7 @@ public struct BrowserTab: Identifiable, Codable, Equatable, Sendable {
     public var kind: TabKind
     public var homeURL: String?
     public var glanceParentID: UUID?
+    public var folderID: UUID?
     public init(id: UUID = UUID(), workspaceID: UUID, url: String = "about:blank", title: String = "New Tab", kind: TabKind = .regular) {
         self.id=id; self.workspaceID=workspaceID; self.url=url; self.title=title; self.kind=kind
         homeURL = kind == .regular ? nil : url
@@ -36,6 +37,9 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     public var sidebarWidth: Double = 230
     public var closedTabs: [BrowserTab] = []
     public var windowFrame:[Double]?
+    // Optional to decode sessions created before folder support.
+    public var folders:[TabFolder]?
+    public var pinnedOrder:[UUID]?
     public init(isPrivate: Bool = false) {
         self.isPrivate=isPrivate
         let space=Workspace();workspaces=[space];activeWorkspaceID=space.id
@@ -44,7 +48,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     public var selectedTab: BrowserTab? { tabs.first { $0.id == selectedTabID } }
     public var visibleTabs: [BrowserTab] {
         let relevant=tabs.filter { $0.glanceParentID == nil && ($0.kind == .essential || $0.workspaceID == activeWorkspaceID) }
-        return relevant.filter{$0.kind == .essential} + relevant.filter{$0.kind == .pinned} + relevant.filter{$0.kind == .regular}
+        return relevant.filter{$0.kind == .essential} + orderedPinnedTabs + relevant.filter{$0.kind == .regular}
     }
     @discardableResult public mutating func newTab(url: String = "about:blank", select: Bool = true) -> UUID {
         let tab=BrowserTab(workspaceID:activeWorkspaceID,url:url);tabs.append(tab)
@@ -66,7 +70,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         guard let index=tabs.firstIndex(where:{$0.id==id}) else{return}
         let parent=tabs[index].glanceParentID
         let oldOrder=visibleTabs.map(\.id);let selectedIndex=oldOrder.firstIndex(of:id) ?? 0
-        let removed=tabs.remove(at:index)
+        let removed=tabs.remove(at:index);forgetPinnedPosition(id)
         if remember {var closed=removed;closed.glanceParentID=nil;closedTabs.append(contentsOf:previews);closedTabs.append(closed);closedTabs=Array(closedTabs.suffix(25))}
         removeSplitTab(id)
         if selectedTabID==id {
@@ -81,6 +85,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         let preview=closedTabs.last?.glanceParentID==previousID ? closedTabs.popLast() : nil
         if !workspaces.contains(where:{$0.id==tab.workspaceID}) {tab.workspaceID=activeWorkspaceID}
         if tabs.contains(where:{$0.id==tab.id}) {tab.id=UUID()};tab.glanceParentID=nil
+        if let folderID=tab.folderID,folder(folderID)?.workspaceID != tab.workspaceID {tab.folderID=nil}
         tabs.append(tab)
         if var child=preview {
             if tabs.contains(where:{$0.id==child.id}) {child.id=UUID()}
@@ -95,19 +100,26 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public mutating func setKind(_ id: UUID, _ kind: TabKind) {
         guard let i=tabs.firstIndex(where:{$0.id==id}) else{return}
+        if kind != .pinned || tabs[i].folderID.flatMap({folder($0)?.workspaceID}).map({$0 != activeWorkspaceID})==true {forgetPinnedPosition(id);tabs[i].folderID=nil}
         tabs[i].glanceParentID=nil;tabs[i].kind=kind;tabs[i].workspaceID=activeWorkspaceID
         for child in tabs.indices where tabs[child].glanceParentID==id {tabs[child].workspaceID=activeWorkspaceID}
         tabs[i].homeURL=kind == .regular ? nil : tabs[i].url
     }
     public mutating func move(_ id: UUID, before target: UUID) {
         guard id != target, let a=tabs.firstIndex(where:{$0.id==id}),let b=tabs.firstIndex(where:{$0.id==target}),tabs[a].kind==tabs[b].kind else{return}
+        if tabs[a].kind == .pinned {
+            guard tabs[a].workspaceID==tabs[b].workspaceID else{return}
+            reorderPinnedTab(id,before:target)
+        }
         let tab=tabs.remove(at:a)
         if let insertion=tabs.firstIndex(where:{$0.id==target}) {tabs.insert(tab,at:insertion)}
     }
     public mutating func moveToWorkspace(_ id: UUID, _ space: UUID) {
         guard workspaces.contains(where:{$0.id==space}),let i=tabs.firstIndex(where:{$0.id==id}) else{return}
+        guard tabs[i].workspaceID != space || tabs[i].kind == .essential else{return}
         let wasSelected=sidebarSelectedTabID==id || selectedTabID==id
-        tabs[i].glanceParentID=nil;tabs[i].workspaceID=space
+        forgetPinnedPosition(id)
+        tabs[i].glanceParentID=nil;tabs[i].folderID=nil;tabs[i].workspaceID=space
         for child in tabs.indices where tabs[child].glanceParentID==id {tabs[child].workspaceID=space}
         if tabs[i].kind == .essential {tabs[i].kind = .pinned}
         if space != activeWorkspaceID {removeSplitTab(id)}
@@ -128,6 +140,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         guard workspaces.count>1,workspaces.contains(where:{$0.id==id}) else{return}
         let destination=workspaces.first{$0.id != id}!.id
         for i in tabs.indices where tabs[i].workspaceID==id {tabs[i].workspaceID=destination}
+        for index in (folders ?? []).indices where folders?[index].workspaceID==id {folders?[index].workspaceID=destination}
         workspaces.removeAll{$0.id==id};if activeWorkspaceID==id {switchWorkspace(destination)}
     }
     public var splitTabIDs:[UUID] {
@@ -164,7 +177,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         for i in tabs.indices {
             if !workspaces.contains(where:{$0.id==tabs[i].workspaceID}) {tabs[i].workspaceID=activeWorkspaceID}
         }
-        repairGlances()
+        repairGlances();repairFolders()
         sidebarWidth=min(500,max(180,sidebarWidth.isFinite ? sidebarWidth : 240))
         if !visibleTabs.contains(where:{$0.id==sidebarSelectedTabID}) {selectedTabID=visibleTabs.first?.id}
         if selectedTabID==nil {newTab()}

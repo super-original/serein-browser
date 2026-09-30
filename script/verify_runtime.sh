@@ -55,9 +55,28 @@ APPLESCRIPT
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
         /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" plain > "$ROOT/glance-external-pointer-input.log" 2>&1
         ;;
+      folder-name)
+        osascript -e 'tell application "System Events" to tell process "Serein"' -e 'delay 0.3' -e 'keystroke "a" using command down' -e 'keystroke "Research notes"' -e 'key code 36' -e 'end tell'
+        ;;
+      folder-toggle)
+        osascript > "$ROOT/folder-toggle-input.log" 2>&1 <<'APPLESCRIPT' || touch "$ROOT/folder-toggle.keyboard-failed"
+tell application "System Events" to tell process "Serein"
+  set controls to entire contents of window 1
+  repeat with control in controls
+    try
+      if role of control is "AXButton" and name of control is "Research notes" then
+        perform action "AXPress" of control
+        return
+      end if
+    end try
+  end repeat
+  error "Research notes folder button was not found"
+end tell
+APPLESCRIPT
+        ;;
       native-host-registration-file)
         NATIVE_MANIFEST=$(cat "$ROOT/native-host-manifest-path")
-        osascript - "$NATIVE_MANIFEST" <<'APPLESCRIPT'
+        osascript - "$NATIVE_MANIFEST" > "$ROOT/native-host-picker-input.log" 2>&1 <<'APPLESCRIPT' || touch "$ROOT/native-host-registration-file.keyboard-failed"
 on run arguments
   tell application "System Events" to tell process "Serein"
     keystroke "g" using {command down, shift down}
@@ -66,6 +85,28 @@ on run arguments
     key code 36
     delay 0.6
     key code 36
+    repeat 15 times
+      repeat with candidateWindow in windows
+        set controls to entire contents of candidateWindow
+        repeat with control in controls
+          try
+            if role of control is "AXButton" and enabled of control then
+              if name of control is "Open" then
+                perform action "AXPress" of control
+                log "Activated native Open button"
+                return
+              end if
+              if name of control is "Allow" then
+                log "Native consent already visible"
+                return
+              end if
+            end if
+          end try
+        end repeat
+      end repeat
+      delay 0.2
+    end repeat
+    error "Native Open button or consent was not found"
   end tell
 end run
 APPLESCRIPT
@@ -108,6 +149,10 @@ APPLESCRIPT
   fi
   sleep 0.1
 done
+if ! test -s "$ROOT/results.json"; then
+  screencapture -x "$ROOT/diagnostic-timeout.png" || true
+  sample "$APP_PID" 3 -file "$ROOT/diagnostic-timeout-stack.txt" || true
+fi
 python3 - "$ROOT" <<'PYCRASH'
 import pathlib,shutil,sys,time
 root=pathlib.Path(sys.argv[1])

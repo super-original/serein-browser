@@ -40,9 +40,11 @@ import SereinCore
         func keyboard() async -> Bool {
             let name="native-host-registration-file",done=root.appendingPathComponent(name+".keyboard-finished")
             try? FileManager.default.removeItem(at:done)
+            let failed=root.appendingPathComponent(name+".keyboard-failed")
+            try? FileManager.default.removeItem(at:failed)
             try? name.write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
             await wait{FileManager.default.fileExists(atPath:done.path)}
-            return FileManager.default.fileExists(atPath:done.path)
+            return FileManager.default.fileExists(atPath:done.path) && !FileManager.default.fileExists(atPath:failed.path)
         }
         func containsConsent(_ window:NSWindow?)->Bool {
             func text(_ view:NSView)->Bool {
@@ -53,7 +55,12 @@ import SereinCore
         }
         for version in [2,3] {
             let id=UUID(),prefix="mv\(version)-native-host-"
-            func check(_ name:String,_ passed:Bool,_ detail:String=""){results.append(.init(name:prefix+name,passed:passed,detail:detail))}
+            func stage(_ name:String){try? (prefix+name).write(to:root.appendingPathComponent("native-host-stage.txt"),atomically:true,encoding:.utf8)}
+            func check(_ name:String,_ passed:Bool,_ detail:String=""){
+                results.append(.init(name:prefix+name,passed:passed,detail:detail))
+                try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("native-host-results.json"),options:.atomic)
+                stage(name)
+            }
             do {
                 let fixtures=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/NativeHosts")
                 let destination=host.root.appendingPathComponent(id.uuidString)
@@ -73,14 +80,11 @@ import SereinCore
                 session.libraryPanel = .extensions
                 await wait{session.window?.attachedSheet != nil}
                 for approve in [false,true] {
+                    stage(approve ? "opening-allow-picker" : "opening-cancel-picker")
                     host.nativeMessaging.chooseRegistration(for:record,in:session)
                     await wait{session.dialogWindow?.attachedSheet != nil}
                     let picked=await keyboard()
-                    await wait{containsConsent(session.dialogWindow?.attachedSheet) || (session.dialogWindow?.attachedSheet as? NSOpenPanel)?.url?.standardizedFileURL==manifestFile.standardizedFileURL}
-                    if let panel=session.dialogWindow?.attachedSheet as? NSOpenPanel,panel.url?.standardizedFileURL==manifestFile.standardizedFileURL {
-                        check("chooser-selected-manifest",picked)
-                        panel.ok(nil)
-                    }
+                    stage("picker-input-returned")
                     await wait{containsConsent(session.dialogWindow?.attachedSheet)}
                     let alert=session.dialogWindow?.attachedSheet
                     let consent=containsConsent(alert)

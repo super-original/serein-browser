@@ -13,6 +13,7 @@ import SereinCore
     var findResult=""
     @ObservationIgnored var findRequestID=UUID()
     var libraryPanel: LibraryPanel?
+    var folderEditor:FolderEditorRequest?
     var compactRevealed=false
     var error: String?
     @ObservationIgnored weak var manager: BrowserManager?
@@ -74,7 +75,7 @@ import SereinCore
         if !modifiers.intersection([.command,.shift]).isEmpty,let preview=state.activeGlance {state.expandGlance(preview.id)}
         if modifiers.contains(.shift) {
             let previous=state.selectedTabID,highlighted=tabSelection.ids
-            tabSelection.range(to:id,in:state.visibleTabs.map(\.id),additive:modifiers.contains(.command))
+            tabSelection.range(to:id,in:state.sidebarTabIDs,additive:modifiers.contains(.command))
             state.select(id);publishSelection(previousActive:previous,previousHighlighted:highlighted)
         } else if modifiers.contains(.command) {
             let previous=tabSelection.ids;tabSelection.toggle(id)
@@ -186,7 +187,7 @@ import SereinCore
         guard let old=state.tabs.firstIndex(where:{$0.id==id}) else{return}
         state.move(id,before:other);extensions?.controller.didMoveTab(bridge(id),from:old,in:extensionWindow)
     }
-    private func changeWorkspace(_ change:(inout BrowserWindowState)->Void) {
+    func changeWorkspace(_ change:(inout BrowserWindowState)->Void) {
         let previous=state.selectedTabID,highlighted=tabSelection.ids
         let oldTabs=Set(state.tabs.map(\.id))
         change(&state)
@@ -213,10 +214,10 @@ import SereinCore
         guard let tab=state.selectedTab else{return}
         manager?.library.bookmark(title:tab.title,url:tab.url)
     }
-    // Library panels are sheets. Their dialogs must be attached to that sheet,
+    // Library and folder editors are sheets. Attach their dialogs to that sheet,
     // otherwise AppKit queues them behind the library until it is dismissed.
     var dialogWindow: NSWindow? {
-        if libraryPanel != nil,let sheet=window?.attachedSheet {return sheet}
+        if libraryPanel != nil || folderEditor != nil,let sheet=window?.attachedSheet {return sheet}
         return window
     }
     func confirm(_ title: String, detail: String, yes: String = "Continue", completion: @escaping @MainActor (Bool)->Void) {

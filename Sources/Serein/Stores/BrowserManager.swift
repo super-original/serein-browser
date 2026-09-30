@@ -60,7 +60,7 @@ import SereinCore
         source.state.close(id,remember:false)
         for added in source.state.tabs where oldIndices[added.id]==nil {extensions.controller.didOpenTab(source.bridge(added.id))}
         for tab in moving {
-            var moved=tab;moved.workspaceID=target.state.activeWorkspaceID
+            var moved=tab;moved.folderID=nil;moved.workspaceID=target.state.activeWorkspaceID
             if let parent=moved.glanceParentID,!movingIDs.contains(parent){moved.glanceParentID=nil}
             target.state.tabs.append(moved)
             if let runtime=source.runtimes.removeValue(forKey:tab.id) {runtime.session=target;runtime.webView.removeFromSuperview();target.runtimes[tab.id]=runtime}

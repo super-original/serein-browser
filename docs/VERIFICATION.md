@@ -42,3 +42,9 @@ Native window placement/fullscreen/persistence/exit checks pass; the inspected e
 | P2 | Visual/accessibility/distribution | Dark/inactive/AX inspection, remaining focus/menu semantics, installation validation, signing/notarization. |
 
 Most browser checks are in-process integration scenarios. Actual keyboard input and separately supervised quit are labeled. Screenshots are retrieved and inspected. Early performance samples include WebKit subprocesses, but failed rendering prevents representative performance claims. Only standard free runners are used; no user-Mac work.
+
+## Current follow-up
+
+`3787bc1` ([run 36781898641](https://github.com/super-original/serein-browser/actions/runs/36781898641)) built but did not finish its combined browser suite: the native-picker stage stalled before final results. Independent quit/download checks still passed. No final browser pass count is assigned. The synchronous test-side `NSOpenPanel.ok` fallback is removed in favor of an external AX press; incremental native-host stages/results and a timeout screenshot/process sample will localize any recurrence. This is a diagnostic correction, not a claim that the stall's root cause is proven.
+
+The next revision also adds nested pinned folders with nine core cases and actual editor/AX/persistence/deletion scenarios. The pinned Zen folder reference succeeded and all four captures were inspected; browser folder runtime verification is pending. The full original-spec goal and all retained rendering/compatibility failures remain unchanged.

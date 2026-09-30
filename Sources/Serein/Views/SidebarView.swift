@@ -34,7 +34,12 @@ struct SidebarView: View {
             }
             ScrollView {
                 LazyVStack(spacing:4) {
-                    ForEach(session.state.visibleTabs.filter{$0.kind == .pinned}){tab in tabRow(tab)}
+                    ForEach(session.state.pinnedSidebarRows){row in
+                        Group {
+                            if row.isFolder,let folder=session.state.folder(row.id) {FolderRow(session:session,folder:folder,compact:collapsed)}
+                            else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
+                        }.padding(.leading,collapsed ? 0 : CGFloat(row.depth)*14)
+                    }
                     Divider().padding(.vertical,8)
                     Button {session.newTab()} label:{HStack(spacing:10){Image(systemName:"plus");if !collapsed {Text("New Tab");Spacer()}}.frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,10).frame(height:36)}
                         .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityIdentifier("new-tab")
@@ -48,6 +53,8 @@ struct SidebarView: View {
             }
             HStack(spacing:6) {
                 Menu {
+                    Button("New Folder…"){session.folderEditor = .init()}
+                    Divider()
                     Button("Bookmarks"){session.libraryPanel = .bookmarks}
                     Button("History"){session.libraryPanel = .history}
                     Button("Downloads"){session.libraryPanel = .downloads}
@@ -74,6 +81,7 @@ struct SidebarView: View {
         .padding(.horizontal,8).padding(.bottom,6)
         .opacity(active ? 1 : 0.65)
         .glassEffect(.regular,in:.rect(cornerRadius:12))
+        .sheet(item:$session.folderEditor){request in FolderEditorView(session:session,request:request)}
         .sheet(isPresented:$creatingWorkspace) {
             VStack(alignment:.leading,spacing:18) {
                 Text("Workspace").font(.headline)
@@ -120,6 +128,18 @@ private struct TabRow: View {
                 Menu("Move Selected Tabs to Workspace") {
                     ForEach(session.state.workspaces){space in Button(space.name){session.moveHighlightedToWorkspace(space.id)}}
                 }
+                Divider()
+            }
+            if tab.kind != .essential {
+                let targets=session.tabSelection.ids.contains(tab.id) && session.tabSelection.ids.count>1 ? session.state.visibleTabs.filter{session.tabSelection.ids.contains($0.id)}.map(\.id) : [tab.id]
+                Button(targets.count>1 ? "New Folder with Selected Tabs…" : "New Folder with Tab…"){session.folderEditor = .init(tabIDs:targets)}
+                    .disabled(targets.contains{id in session.state.tabs.first{$0.id==id}?.kind == .essential})
+                Menu("Move to Folder") {
+                    ForEach((session.state.folders ?? []).filter{$0.workspaceID==tab.workspaceID}){folder in
+                        Button(session.state.folderPath(folder.id)){session.moveTabIntoFolder(tab.id,folder.id)}.disabled(tab.folderID==folder.id)
+                    }
+                }.disabled(!(session.state.folders ?? []).contains{$0.workspaceID==tab.workspaceID})
+                if tab.folderID != nil {Button("Remove from Folder"){session.moveTabIntoFolder(tab.id,nil)}}
                 Divider()
             }
             Button("Duplicate Tab"){session.duplicate(tab.id)}
