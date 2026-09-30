@@ -15,8 +15,7 @@ public enum NativeMessageTransportError:LocalizedError {
 }
 
 /// Transport only: callers must authorize a registered executable and extension
-/// identity before constructing this object. No production extension delegate
-/// currently calls it. Mutable queue state is protected by lock; process/pipe
+/// identity before constructing this object. Mutable queue state is protected by lock; process/pipe
 /// objects and decoder are confined to one worker thread.
 public final class NativeMessageTransport:@unchecked Sendable {
     public let messages:AsyncThrowingStream<Data,Error>

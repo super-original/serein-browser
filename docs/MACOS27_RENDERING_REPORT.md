@@ -30,3 +30,7 @@ These controls do not establish the root cause, prove all machines are affected,
 ## Request
 
 Is there a supported standard free-runner image update or public-framework workaround for system WebKit desktop surface composition on this macOS 27 preview? Additional public diagnostics can be added to the standalone probe. The project must retain macOS 27 runtime validation and WebKit without private flags, security weakening, paid runners or using the user's computer.
+
+## Free-runner recheck, September 30 continuation
+
+The official [runner catalog](https://github.com/actions/runner-images/blob/main/README.md) and [image inventory](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md) still list image `20260921.0210.1`, macOS 27.0 `26A428`, Safari 27.0 `22625.1.29.11.27`. The free standard label is `xcode-27`; the listed `xcode-27-xlarge` is outside this task's free-standard constraint. Xcode 27.2 beta is available on the same runtime; choosing another compiler is not a second macOS runtime or proof of a compositor fix. No supported second free macOS 27 runtime was identified. The `a1dea358` run's captures 35 and 38 were retrieved and inspected again: ordinary content blank, GPU-primed fullscreen black.

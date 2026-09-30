@@ -37,3 +37,9 @@ The browser application is not yet App Sandbox constrained. WebKit process isola
 All browser/UI mutations are main-actor isolated. WebKit performs rendering in its system subprocesses. Views are created lazily; restoring a tab does not deliberately launch its renderer until selected (extension inspection may request a view). Package extraction and some persistence still use synchronous filesystem operations and must be moved off the main actor before a performance-sensitive production release.
 
 All build dependencies are system frameworks. Actions are pinned to immutable commits. The GitHub runner label is a moving public-preview image, so a reproducible source recipe does not imply bit-for-bit identical results on future images. Every run records OS, Xcode, Swift, SDK, architecture and minimum target. See research for observed image drift.
+
+## Registered native applications
+
+`NativeMessagingManager` is the production WKWebExtension native delegate adapter. Registrations bind a browser record, verified CRX3 extension ID and developer-key fingerprint to a validated Chrome host manifest. Explicit UI consent precedes persistence. Every open, outgoing port message and incoming delivery rechecks the live context and nativeMessaging permission. Unknown host names never become filesystem paths.
+
+`NativeMessageTransport` owns one direct `Process` launch, framed pipes and its own child lifetime on a worker thread. Bounded queues isolate WebKit's main-actor callbacks from blocking IO. A wake pipe makes idle connections event-driven. Cancellation closes the owned process; awaitable close returns after reaping. The quit delegate waits for native cleanup before confirming termination and rechecks the open-document snapshot before saving. Runtime tests separately cover options pages, background execution worlds, permission/registration revocation and supervised process exit; their passing status is tracked in VERIFICATION.md rather than inferred here.

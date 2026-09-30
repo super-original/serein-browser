@@ -42,3 +42,9 @@ Camera, microphone and location choices are available under Browser Menu → Set
 Serein has original branding and source code. Zen's name and reference captures identify the comparison target; no affiliation or endorsement is claimed. See [licenses](docs/LICENSES.md).
 
 Select two to four tabs with Command-click or Shift-click, then use **Split Selected Tabs** in a selected tab’s context menu. This creates a grid; **Exit Split View** returns to one page. Incremental Zen split layout preservation is still incomplete.
+
+## Native applications used by extensions
+
+Experimental native messaging is available for signed CRX3 packages. Install the native application separately, then open Browser Menu → Extensions → **Register Native Application…** for that extension. Select the application's Chrome-format JSON host manifest and review the executable path before choosing Allow. The manifest must explicitly allow the extension's verified Chrome identity. Registration does not grant a missing extension permission. Use the host's menu → **Revoke Access** to stop its connections and remove access. Disabling or removing the extension stops its native connections.
+
+Firefox host registrations, unsigned package identities, automatic discovery of other browsers' registrations and Safari App Extensions are not supported. See the [compatibility matrix](docs/EXTENSIONS.md) for protocol/resource limits and actual verification status. Full extension compatibility remains unfinished.

@@ -1,8 +1,31 @@
 import AppKit
+import Darwin
 import WebKit
 import SereinCore
 
 @MainActor enum NativeHostVerification {
+    /// Controlled setup only: production registration still requires user consent.
+    static func prepareQuit(manager:BrowserManager,root:URL) async throws {
+        let host=manager.extensions,id=UUID(),fixtures=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/NativeHosts")
+        guard let session=manager.active,let identity=try host.prepare(fixtures.appendingPathComponent("mv3.crx"),at:host.root.appendingPathComponent(id.uuidString)) else{throw NativeMessageTransportError.unavailable}
+        let record=InstalledExtension(id:id,name:"Native quit fixture",version:"1.0",enabled:true,permissions:["nativeMessaging"],hosts:[],packageIdentity:identity,contextIdentifier:identity.extensionID)
+        host.records.append(record);try await host.load(record)
+        let manifest:[String:Any] = ["name":"org.serein.fixture","description":"Controlled quit fixture","path":fixtures.appendingPathComponent("NativeEcho").path,"type":"stdio","allowed_origins":["chrome-extension://"+identity.extensionID+"/"]]
+        try host.nativeMessaging.register(NativeHostManifest(data:JSONSerialization.data(withJSONObject:manifest)),for:record)
+        guard let options=host.contexts[id]?.optionsPageURL else{throw NativeMessageTransportError.unavailable}
+        let tab=session.newTab(url:options.absoluteString),view=session.runtime(tab).webView
+        for _ in 0..<160 {if view.title=="Native host fixture" && !view.isLoading{break};try await Task.sleep(for:.milliseconds(50))}
+        let value=try await view.callAsyncJavaScript("""
+        return await new Promise((resolve,reject)=>{
+          const port=browser.runtime.connectNative('org.serein.fixture');window.nativeQuitPort=port;
+          const timer=setTimeout(()=>reject(new Error('native quit setup timeout')),4000);
+          port.onMessage.addListener(value=>{clearTimeout(timer);resolve(value.pid);});
+          port.postMessage({quit:true});
+        });
+        """,arguments:[:],in:nil,contentWorld:.page)
+        guard let pid=value as? Int,pid>0,host.nativeMessaging.activeConnectionCount(for:id)==1 else{throw NativeMessageTransportError.unavailable}
+        try String(pid).write(to:root.appendingPathComponent("native-child-pid"),atomically:true,encoding:.utf8)
+    }
     static func run(manager:BrowserManager,root:URL) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
         let session=manager.newWindow(),host=manager.extensions
@@ -53,13 +76,18 @@ import SereinCore
                     host.nativeMessaging.chooseRegistration(for:record,in:session)
                     await wait{session.dialogWindow?.attachedSheet != nil}
                     let picked=await keyboard()
+                    await wait{containsConsent(session.dialogWindow?.attachedSheet) || (session.dialogWindow?.attachedSheet as? NSOpenPanel)?.url?.standardizedFileURL==manifestFile.standardizedFileURL}
+                    if let panel=session.dialogWindow?.attachedSheet as? NSOpenPanel,panel.url?.standardizedFileURL==manifestFile.standardizedFileURL {
+                        check("chooser-selected-manifest",picked)
+                        panel.ok(nil)
+                    }
                     await wait{containsConsent(session.dialogWindow?.attachedSheet)}
                     let alert=session.dialogWindow?.attachedSheet
                     let consent=containsConsent(alert)
                     check(approve ? "registration-consent" : "registration-cancel-prompt",picked && consent && host.nativeMessaging.registrations(for:id).isEmpty)
                     if version==2,!approve {await capture("42-native-host-consent")}
                     if consent,let alert {session.dialogWindow?.endSheet(alert,returnCode:approve ? .alertFirstButtonReturn : .alertSecondButtonReturn)}
-                    else {throw ExtensionValidationError.invalid("Native-host consent sheet did not appear.")}
+                    else {throw ExtensionValidationError.invalid("Native-host consent sheet did not appear. \(host.error ?? "No host error")")}
                     await wait{session.dialogWindow?.attachedSheet==nil}
                     if approve {await wait{!host.nativeMessaging.registrations(for:id).isEmpty}}
                     else {check("cancel-keeps-host-unregistered",host.nativeMessaging.registrations(for:id).isEmpty)}
@@ -76,9 +104,17 @@ import SereinCore
                 check("one-shot-actual-process",echo?["text"] as? String=="雪" && (response?["pid"] as? Int ?? 0)>0 && response?["origin"] as? String=="chrome-extension://"+identity.extensionID+"/",String(describing:response))
                 await wait{host.nativeMessaging.activeConnectionCount(for:id)==0}
                 check("one-shot-child-cleanup",host.nativeMessaging.activeConnectionCount(for:id)==0)
+                for operation in ["native-one-shot","native-background-port"] {
+                    let background=try await call("return await browser.runtime.sendMessage({operation:'\(operation)'});") as? [String:Any]
+                    let response=background?["response"] as? [String:Any],echo=response?["echo"] as? [String:Any]
+                    let key=operation=="native-one-shot" ? "background" : "backgroundPort"
+                    check(operation+"-execution-world",echo?[key] as? Bool==true && background?["worker"] as? Bool==(version==3) && (response?["pid"] as? Int ?? 0)>0,String(describing:background))
+                    await wait{host.nativeMessaging.activeConnectionCount(for:id)==0}
+                    check(operation+"-cleanup",host.nativeMessaging.activeConnectionCount(for:id)==0)
+                }
                 let unknown=try await call("try{await browser.runtime.sendNativeMessage('org.serein.unregistered',{});return false;}catch(error){return true;}") as? Bool
                 check("unknown-host-denied",unknown==true)
-                let port=try await call("""
+                func openPort() async throws -> [[String:Any]]? {try await call("""
                 window.nativeDisconnected=false;
                 return await new Promise((resolve,reject)=>{
                   const received=[],port=browser.runtime.connectNative('org.serein.fixture');window.nativeFixturePort=port;
@@ -87,8 +123,23 @@ import SereinCore
                   port.onMessage.addListener(value=>{received.push(value);if(received.length===3){clearTimeout(timer);resolve(received);}});
                   for(let sequence=0;sequence<3;sequence++)port.postMessage({sequence});
                 });
-                """) as? [[String:Any]]
+                """) as? [[String:Any]]}
+                let port=try await openPort()
                 check("persistent-port-order-and-origin",port?.compactMap{($0["echo"] as? [String:Any])?["sequence"] as? Int}==[0,1,2] && port?.allSatisfy{$0["origin"] as? String=="chrome-extension://"+identity.extensionID+"/"}==true,String(describing:port))
+                let permission=WKWebExtension.Permission(rawValue:"nativeMessaging")
+                context.setPermissionStatus(.deniedExplicitly,for:permission)
+                await wait{host.nativeMessaging.activeConnectionCount(for:id)==0}
+                var permissionDisconnected=false
+                for _ in 0..<100 {
+                    permissionDisconnected=(try? await call("return window.nativeDisconnected===true;") as? Bool)==true
+                    if permissionDisconnected{break};try? await Task.sleep(for:.milliseconds(50))
+                }
+                check("permission-revocation-stops-host",permissionDisconnected && host.nativeMessaging.activeConnectionCount(for:id)==0)
+                let permissionDenied=try await call("try{await browser.runtime.sendNativeMessage('org.serein.fixture',{});return false;}catch(error){return true;}") as? Bool
+                check("permission-revocation-denies-new-call",permissionDenied==true)
+                context.setPermissionStatus(.grantedExplicitly,for:permission)
+                let reopened=try await openPort()
+                check("permission-regrant-reconnects",reopened?.count==3 && host.nativeMessaging.activeConnectionCount(for:id)==1)
                 host.nativeMessaging.revoke(registration.id)
                 var disconnected=false
                 for _ in 0..<100 {
@@ -99,7 +150,15 @@ import SereinCore
                 check("revoke-disconnects-and-reaps-child",disconnected && host.nativeMessaging.activeConnectionCount(for:id)==0 && host.nativeMessaging.registrations(for:id).isEmpty)
                 let revoked=try await call("try{await browser.runtime.sendNativeMessage('org.serein.fixture',{});return false;}catch(error){return true;}") as? Bool
                 check("revoked-host-denied",revoked==true)
+                // Controlled re-registration reuses the manifest already approved above.
+                try host.nativeMessaging.register(NativeHostManifest(data:JSONSerialization.data(withJSONObject:manifest)),for:record)
+                let disablePort=try await openPort(),child=disablePort?.first?["pid"] as? Int
+                await host.setEnabled(id,false)
+                await wait{host.nativeMessaging.activeConnectionCount(for:id)==0}
+                let gone=child.map{kill(pid_t($0),0) == -1 && errno==ESRCH} ?? false
+                check("disable-reaps-native-child",child != nil && gone && host.contexts[id]==nil && host.nativeMessaging.activeConnectionCount(for:id)==0)
                 session.close(tab,ask:false);await host.remove(id)
+                check("remove-clears-registration",host.nativeMessaging.registrations(for:id).isEmpty)
             } catch {
                 check("scenario",false,error.localizedDescription)
                 if let panel=session.dialogWindow?.attachedSheet {session.dialogWindow?.endSheet(panel,returnCode:.cancel)}

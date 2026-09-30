@@ -29,7 +29,17 @@ import SwiftUI
         manager.restore()
         NSApp.activate(ignoringOtherApps:true)
         if args.contains("--quit-consent-test"),testRoot != nil {
-            QuitConsentVerification.run(manager:manager,root:root)
+            if args.contains("--native-host-quit-test") {
+                Task {
+                    do {
+                        try await NativeHostVerification.prepareQuit(manager:manager,root:root)
+                        QuitConsentVerification.run(manager:manager,root:root)
+                    } catch {
+                        try? error.localizedDescription.write(to:root.appendingPathComponent("native-setup-error"),atomically:true,encoding:.utf8)
+                        NSApp.terminate(nil)
+                    }
+                }
+            } else {QuitConsentVerification.run(manager:manager,root:root)}
             return
         }
         if args.contains("--download-restart-prepare") || args.contains("--download-restart-resume"),testRoot != nil {
