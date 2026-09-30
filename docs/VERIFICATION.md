@@ -1,5 +1,10 @@
 # Verification and continuation backlog
 
+## Exact-head recovery and consent results
+
+`f9a4959eff9bff7221368b26367a443c0f82c815`, [run 36750626123](https://github.com/super-original/serein-browser/actions/runs/36750626123), builds and passes 52 unit tests, **232/240 browser checks** and all 12 bridge checks. Releasing old extension views does not fix the five recovery failures. Two zoom-event failures remain. Four window-consent checks pass, but the final accepted close does not remove the window; the follow-up closes directly after validated consent instead of issuing another close action during sheet dismissal. The separate quit test times out before producing results: its awaiting task cannot answer a modal termination loop. Its follow-up driver explicitly runs in modal and default run-loop modes. These fixes and Find query/tab/focus regression checks are pending. The exact-source Close Tab sheet and final recovery-error screenshots were inspected; desktop content still fails with zero glyph pixels. [App](https://github.com/super-original/serein-browser/actions/runs/36750626123/artifacts/11114697304), [evidence](https://github.com/super-original/serein-browser/actions/runs/36750626123/artifacts/11114921921).
+
+
 Build follow-up: `8280880`, [run 36750196341](https://github.com/super-original/serein-browser/actions/runs/36750196341), failed compilation because the saved optional `pageZoom` is `CGFloat`, not `Double`. No runtime claims or app download are made for that commit. The type is corrected; downstream launch/render checks now require a successful build, while retaining their independent execution after runtime-scenario failures.
 
 ## Subframe boundaries verified; old-view lifecycle under test

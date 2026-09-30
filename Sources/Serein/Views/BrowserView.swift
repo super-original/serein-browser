@@ -118,11 +118,11 @@ private struct FindBar: View {
     @FocusState private var focused: Bool
     var body: some View {
         HStack {
-            TextField("Find in page",text:$session.findText).textFieldStyle(.bordered).focused($focused).onSubmit{session.find()}.accessibilityIdentifier("find-field")
+            TextField("Find in page",text:Binding(get:{session.findText},set:{session.findText=$0;session.find()})).textFieldStyle(.bordered).focused($focused).onSubmit{session.find()}.accessibilityIdentifier("find-field")
             Text(session.findResult).foregroundStyle(.secondary)
             Button("Previous",systemImage:"chevron.up"){session.find(backwards:true)}.labelStyle(.iconOnly)
             Button("Next",systemImage:"chevron.down"){session.find()}.labelStyle(.iconOnly)
-            Button("Close Find",systemImage:"xmark"){session.findVisible=false}.labelStyle(.iconOnly)
-        }.padding(8).onAppear{focused=true}.onExitCommand{session.findVisible=false}
+            Button("Close Find",systemImage:"xmark"){session.closeFind()}.labelStyle(.iconOnly)
+        }.padding(8).onAppear{focused=true}.onExitCommand{session.closeFind()}
     }
 }

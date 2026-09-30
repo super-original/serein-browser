@@ -11,6 +11,7 @@ import SereinCore
     var findVisible=false
     var findText=""
     var findResult=""
+    @ObservationIgnored var findRequestID=UUID()
     var libraryPanel: LibraryPanel?
     var compactRevealed=false
     var error: String?
@@ -42,6 +43,7 @@ import SereinCore
     }
     private func publishSelection(previousActive:UUID?,previousHighlighted:Set<UUID>,refreshActive:Bool=true) {
         let valid=Set(state.tabs.map(\.id));tabSelection.retain(valid)
+        if previousActive != state.selectedTabID {findRequestID=UUID();findResult=""}
         if refreshActive {address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? "";addressFocused=false}
         if let id=state.selectedTabID,refreshActive {
             _=runtime(id).webView
@@ -51,6 +53,7 @@ import SereinCore
         let added=tabSelection.ids.subtracting(previousHighlighted)
         if !removed.isEmpty {extensions?.controller.didDeselectTabs(state.tabs.filter{removed.contains($0.id)}.map{bridge($0.id)})}
         if !added.isEmpty {extensions?.controller.didSelectTabs(state.tabs.filter{added.contains($0.id)}.map{bridge($0.id)})}
+        if findVisible,previousActive != state.selectedTabID {find()}
     }
     func select(_ id:UUID,preservingSelection:Bool=false) {
         guard state.tabs.contains(where:{$0.id==id}) else{return}
@@ -183,10 +186,6 @@ import SereinCore
     }
     func removeWorkspace(_ id: UUID) {changeWorkspace{$0.removeWorkspace(id)}}
     func moveTabToWorkspace(_ id: UUID,_ workspace: UUID) {changeWorkspace{$0.moveToWorkspace(id,workspace)}}
-    func find(backwards: Bool = false) {
-        let config=WKFindConfiguration();config.backwards=backwards;config.wraps=true
-        current?.webView.find(findText,configuration:config) {[weak self] result in self?.findResult=result.matchFound ? "" : "No matches"}
-    }
     func update(_ id: UUID, url: String?, title: String?) {
         guard let i=state.tabs.firstIndex(where:{$0.id==id}) else{return}
         if let url {state.tabs[i].url=url}

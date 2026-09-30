@@ -29,7 +29,7 @@ import SwiftUI
         manager.restore()
         NSApp.activate(ignoringOtherApps:true)
         if args.contains("--quit-consent-test"),testRoot != nil {
-            Task {await QuitConsentVerification.run(manager:manager,root:root)}
+            QuitConsentVerification.run(manager:manager,root:root)
             return
         }
         Task {await manager.extensions.restore()}
