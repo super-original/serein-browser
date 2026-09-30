@@ -13,6 +13,9 @@ struct InstalledExtension: Identifiable, Codable {
     var permissionState: ExtensionPermissionState? = nil
     var packageIdentity: SignedExtensionIdentity? = nil
     var contextIdentifier: String? = nil
+    var packageVersionID: UUID? = nil
+    var resourceBaseURL: URL? = nil
+    func directory(in root: URL) -> URL { ExtensionPackageStorage.directory(root: root, recordID: id, versionID: packageVersionID) }
     var runtimeIdentifier: String { contextIdentifier ?? id.uuidString }
 }
 @MainActor @Observable final class ExtensionHost: NSObject {
@@ -20,6 +23,7 @@ struct InstalledExtension: Identifiable, Codable {
     var records: [InstalledExtension] = []
     var error: String?
     var actionRevision=0
+    var busyIDs: Set<UUID> = []
     @ObservationIgnored var contexts: [UUID:WKWebExtensionContext] = [:]
     @ObservationIgnored weak var manager: BrowserManager?
     let root: URL
@@ -58,17 +62,31 @@ struct InstalledExtension: Identifiable, Codable {
     }
     func load(_ record: InstalledExtension) async throws {
         guard contexts[record.id] == nil else { return }
-        let directory=root.appendingPathComponent(record.id.uuidString)
+        let directory=record.directory(in: root)
         let manifest=try ExtensionManifest(data:Data(contentsOf:directory.appendingPathComponent("manifest.json")))
         let ext=try await WKWebExtension(resourceBaseURL:directory)
+        if let current = records.first(where: { $0.id == record.id }), current.packageVersionID != record.packageVersionID {
+            throw ExtensionValidationError.invalid("The extension package changed while loading.")
+        }
+        guard contexts[record.id] == nil else { return }
         try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
         guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
         let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=record.runtimeIdentifier
+        if let base = record.resourceBaseURL ?? records.first(where: { $0.id == record.id })?.resourceBaseURL {
+            guard base.scheme == "webkit-extension", let host = base.host, !host.isEmpty,
+                  base.user == nil, base.password == nil, base.port == nil else {
+                throw ExtensionValidationError.invalid("The saved extension resource origin is invalid.")
+            }
+            context.baseURL = base
+        }
         context.hasAccessToPrivateData=false
         for permission in ext.requestedPermissions where record.permissions.contains(permission.rawValue) {context.setPermissionStatus(.grantedExplicitly,for:permission)}
         for pattern in ext.requestedPermissionMatchPatterns where record.hosts.contains(pattern.string) {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
         if let state=record.permissionState {try state.apply(to:context)}
         try controller.load(context);contexts[record.id]=context;actionRevision += 1
+        if let index = records.firstIndex(where: { $0.id == record.id }), records[index].resourceBaseURL == nil {
+            records[index].resourceBaseURL = context.baseURL; save()
+        }
         for window in manager?.windows ?? [] where !window.session.state.isPrivate {
             if let bridge=window.session.extensionWindow {context.didOpenWindow(bridge)}
         }
@@ -89,7 +107,7 @@ struct InstalledExtension: Identifiable, Codable {
         do {
             let identity = try prepare(source,at:destination)
             if let identity, records.contains(where: { $0.packageIdentity?.extensionID == identity.extensionID }) {
-                throw ExtensionValidationError.invalid("This CRX3 developer identity is already installed. Signed updates are not implemented.")
+                throw ExtensionValidationError.invalid("This CRX3 developer identity is already installed. Use Update Signed Package on its existing entry.")
             }
             let manifestURL=destination.appendingPathComponent("manifest.json")
             let manifest=try ExtensionManifest(data:Data(contentsOf:manifestURL))
@@ -105,8 +123,8 @@ struct InstalledExtension: Identifiable, Codable {
                 throw ExtensionValidationError.invalid("This CRX3 developer identity was installed while consent was pending.")
             }
             let final=root.appendingPathComponent(id.uuidString);try FileManager.default.moveItem(at:destination,to:final)
-            let record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID)
-            do {try await load(record);records.append(record);save()}
+            var record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID)
+            do {try await load(record);record.resourceBaseURL = contexts[id]?.baseURL;records.append(record);save()}
             catch {try? FileManager.default.removeItem(at:final);throw error}
         } catch {try? FileManager.default.removeItem(at:destination);self.error=error.localizedDescription}
     }
@@ -153,12 +171,14 @@ struct InstalledExtension: Identifiable, Codable {
         return identity
     }
     func setEnabled(_ id: UUID,_ enabled: Bool) async {
-        guard let i=records.firstIndex(where:{$0.id==id}) else{return}
+        guard !busyIDs.contains(id), let record = records.first(where: { $0.id == id }) else { return }
+        busyIDs.insert(id); defer { busyIDs.remove(id) }
         do {
-            if enabled {try await load(records[i])}
-            else if let context=contexts[id] {rememberPermissions(context);try controller.unload(context);contexts[id]=nil}
-            records[i].enabled=enabled;save()
-        } catch {self.error=error.localizedDescription}
+            if enabled { try await load(record) }
+            else if let context = contexts[id] { rememberPermissions(context); try controller.unload(context); contexts[id] = nil }
+            guard let index = records.firstIndex(where: { $0.id == id && $0.packageVersionID == record.packageVersionID }) else { return }
+            records[index].enabled = enabled; save()
+        } catch { self.error = error.localizedDescription }
     }
     func confirmRemoval(_ record: InstalledExtension,in session: BrowserSession) {
         session.confirm("Remove \(record.name)?",detail:"The package and extension settings will be removed. Some extension website data may remain; use Clear Website Data in Settings to remove it.",yes:"Remove") { [weak self] yes in
@@ -166,6 +186,8 @@ struct InstalledExtension: Identifiable, Codable {
         }
     }
     func remove(_ id: UUID) async {
+        guard !busyIDs.contains(id), let record = records.first(where: { $0.id == id }) else { return }
+        busyIDs.insert(id); defer { busyIDs.remove(id) }
         do {
             if let context=contexts[id] {
                 try controller.unload(context)
@@ -184,7 +206,7 @@ struct InstalledExtension: Identifiable, Codable {
             guard removalErrors.isEmpty else {
                 throw ExtensionValidationError.invalid("Extension data could not be removed: " + removalErrors.map(\.localizedDescription).joined(separator:"; "))
             }
-            try FileManager.default.removeItem(at:root.appendingPathComponent(id.uuidString));records.removeAll{$0.id==id};save()
+            try FileManager.default.removeItem(at:record.directory(in: root));records.removeAll{$0.id==id};save()
         } catch {self.error=error.localizedDescription}
     }
     func actionEnabled(_ id: UUID,in session: BrowserSession) -> Bool {

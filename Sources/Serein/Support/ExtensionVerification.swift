@@ -200,6 +200,7 @@ import SereinCore
                     if runtimeID != nil { break }
                 }
                 check("crx3-developer-runtime-identity", runtimeID == installed.packageIdentity?.extensionID, runtimeID ?? "no identity")
+                results += await ExtensionUpdateVerification.run(id: installed.id, host: host, session: session, root: root)
                 await host.remove(installed.id)
                 check("crx3-removal", !host.records.contains { $0.id == installed.id } && host.contexts[installed.id] == nil)
             }

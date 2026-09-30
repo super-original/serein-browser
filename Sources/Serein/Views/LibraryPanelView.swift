@@ -72,9 +72,10 @@ private struct ExtensionListView: View {
                         if let context=host.contexts[record.id],let url=context.optionsPageURL {Button("Options"){session.newTab(url:url.absoluteString);session.libraryPanel=nil}}
                         Menu("Current Site") {Button("Allow on This Site"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny on This Site"){host.setCurrentSite(record.id,in:session,allow:false)}}.disabled(!record.enabled || host.contexts[record.id] == nil || !["http","https"].contains(session.current?.webView.url?.scheme?.lowercased() ?? ""))
                         Spacer()
+                        if record.packageIdentity != nil { Button("Update Signed Package…") { host.chooseUpdate(record.id, in: session) } }
                         Button("Remove…"){host.confirmRemoval(record,in:session)}
                     }.font(.caption)
-                }.padding(.vertical,4)
+                }.padding(.vertical,4).disabled(host.busyIDs.contains(record.id))
             }
             Button("Install Extension…"){host.chooseInstall(in:session)}
             if let error=host.error {Text(error).foregroundStyle(.red).font(.caption).textSelection(.enabled)}

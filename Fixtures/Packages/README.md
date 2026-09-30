@@ -1,11 +1,13 @@
-# Signed package fixture
+# Signed package fixtures
 
-`signed-fixture.crx` contains a minimal MV3 manifest and a content script that reports `browser.runtime.id` through a DOM test attribute. Its original RSA-2048
-CRX3 signature was generated with Python cryptography 50.0.0 using an ephemeral
-key that was discarded. The public key and signature are embedded in CRX3; no
-private key or third-party package is included. Identical bytes are embedded in
-`CRXPackageTests.swift` alongside independent P-256, incorrect-ID and extra-bad-proof
-fixtures. The key identity is a test identity, not a store publisher endorsement.
+These original controlled CRX3 fixtures are signed with ephemeral test keys using Python cryptography 50.0.0. Private keys are discarded and never stored. Public keys and signatures are embedded in CRX3; there are no third-party packages or publisher endorsements.
 
-Tests mutate signed bytes without resigning and require rejection. Runtime checks
-install the bundled original through Serein's actual consent/load/persistence path.
+- `signed-fixture.crx`: version 1.0 with storage and local fixture access.
+- `signed-update.crx`: version 1.1, same developer key, adds tabs permission.
+- `signed-update-disabled.crx`: version 1.2, same developer key and permissions.
+- `signed-update-unsupported.crx`: same-key version 2.0 requiring unavailable production native messaging; must be rejected.
+- `wrong-developer.crx`: independently signed by a different key; must not update the RSA fixture.
+
+The content script reports runtime ID/version and writes a stable storage marker to verify preservation across updates. The matching independently generated RSA/P-256, tampering and invalid-proof unit fixtures are embedded in `CRXPackageTests.swift`.
+
+To regenerate in the cloud development environment, run `python3 script/generate_signed_fixtures.py` from the repository root with Python cryptography installed. Regeneration changes test keys/identities and all related bytes together. Building the checked-in application does not require Python cryptography or any fixture generation.

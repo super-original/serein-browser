@@ -160,3 +160,12 @@ ZIP/XPI/CRX extraction uses a private snapshot of validated bytes. Streaming zli
 
 
 The archive extractor now writes only checked UTF-8 central/local names and file payloads into an exclusively created private directory, using public Darwin file creation and streaming zlib. It ignores alternate-name extras and filesystem metadata rather than passing them to a different parser; legacy-encoded archives relying on those extras remain unsupported. The [PKWARE ZIP specification, section 4.6.9](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) defines an alternate Unicode path field, motivating an explicit single-parser boundary. Tests cover alternate-path metadata and preservation of existing destinations. This follow-up is pending CI.
+
+
+### Manual signed updates (verification pending)
+
+The manager now offers a local CRX3 update for an existing signed extension. Proofs must bind to the same developer key and ID, and the numeric [Chrome manifest version](https://developer.chrome.com/docs/extensions/reference/manifest/version) must increase. Required unsupported APIs still reject the candidate before consent. The native review lists new and total requested permissions/sites. Existing denials and revoked old grants remain; new required permissions are granted only after this review. Disabled extensions stay disabled. Unsigned/XPI updates and automatic store update protocols remain unsupported.
+
+A candidate moves to its own immutable version directory before the extension registry is atomically replaced. The old directory remains until activation/cleanup succeeds. A process interruption can leave an unused directory, but the registry points to one complete package; full power-loss durability and process-kill fault injection are not established. If post-commit activation fails, the new version is disabled and previous package files are retained. This does not roll back extension-authored storage migrations.
+
+The record UUID, runtime ID and WebKit resource origin are preserved. Existing loaded extension pages reload after a successful update; unloaded pages stay unloaded. Origins are now persisted for future reloads; legacy records without a saved origin capture their current origin when next loaded, and older unidentifiable extension-page URLs may need reopening. Tests cover version/key rejection, failed registry writes, immutable package replacement, chooser/consent cancellation, added permissions, storage and open options pages, disabled updates, and retained revocation/site denial. Results pending macOS 27 CI.
