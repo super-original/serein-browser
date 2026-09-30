@@ -199,6 +199,8 @@ extension BrowserWindowState {
         }
         let all=Set(tabs.filter{$0.kind == .pinned && $0.folderID==nil}.map(\.id)+(folders ?? []).filter{$0.parentID==nil}.map(\.id))
         seen=[];pinnedOrder=pinnedOrder?.filter{all.contains($0) && seen.insert($0).inserted}
-        for index in (folders ?? []).indices {if let id=folders?[index].id {folders?[index].order=pinnedItemIDs(in:id)}}
+        for index in (folders ?? []).indices {
+            if let id=folders?[index].id {let order=pinnedItemIDs(in:id);folders?[index].order=order}
+        }
     }
 }

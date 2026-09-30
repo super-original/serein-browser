@@ -49,6 +49,7 @@ import SereinCore
         await wait{session.state.folder(folder.id)?.collapsed==false}
         let child=session.createFolder(name:"Reading list",parentID:folder.id)
         if let child {for _ in 0..<2 {_=session.state.shiftPinnedItem(child,by:-1)}}
+        session.select(a)
         check("nested-folder",child.flatMap{session.state.folder($0)?.parentID}==folder.id)
         await capture("46-folder-nested")
         session.state.renameFolder(folder.id,to:"Research archive")
