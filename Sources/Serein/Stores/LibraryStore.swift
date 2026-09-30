@@ -16,7 +16,7 @@ struct PageRecord: Identifiable, Codable, Equatable {
     init(root: URL) {
         self.root=root
         do {
-            try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+            try PrivateFileStore.prepareDirectory(root)
             bookmarks=try read("bookmarks.json") ?? []
             history=try read("history.json") ?? []
             let oldBookmarks = bookmarks, oldHistory = history
@@ -38,7 +38,7 @@ struct PageRecord: Identifiable, Codable, Equatable {
         return try JSONDecoder().decode(T.self,from:Data(contentsOf:url))
     }
     func write<T: Encodable>(_ object: T, name: String) {
-        do {try JSONEncoder().encode(object).write(to:root.appendingPathComponent(name),options:.atomic)}
+        do {try PrivateFileStore.write(JSONEncoder().encode(object),to:root.appendingPathComponent(name))}
         catch {self.error="Could not save \(name): \(error.localizedDescription)"}
     }
     func visit(title: String, url: String, isPrivate: Bool) {

@@ -2,6 +2,7 @@
 """Prove download recovery across two actual app processes on the runner."""
 import json
 import pathlib
+import stat
 import subprocess
 import sys
 import time
@@ -45,9 +46,13 @@ with (root / 'server.log').open('w') as log:
             assert code == 0, f'{stage} app exited with {code}'
             stage_results = json.loads((root / f'{stage}-results.json').read_text())
             results.extend(stage_results)
+            modes = {name: stat.S_IMODE((root / name).stat().st_mode) for name in ['.', 'session.json', 'downloads.json']}
+            protected = modes == {'.': 0o700, 'session.json': 0o600, 'downloads.json': 0o600}
+            results.append({'name': f'{stage}-private-storage-permissions', 'passed': protected, 'detail': str(modes)})
             (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
             print(json.dumps(stage_results, indent=2), flush=True)
             assert len(stage_results) == expected and all(item['passed'] for item in stage_results), stage_results
+            assert protected, modes
         results.append({'name':'download-resumed-after-process-exit','passed':True,'detail':'Two independent launches exited with status 0; full byte-integrity assertion passed.'})
         (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
     finally:

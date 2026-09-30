@@ -10,6 +10,9 @@ import WebKit
         let webgpu=await scenario(manager:manager,root:root,preview:false,gpuProbe:.webgpu)
         return ordinary+glance+webgl+webgpu
     }
+    static func isolated(manager:BrowserManager,root:URL,probe:String) async -> [RuntimeVerification.Result] {
+        await scenario(manager:manager,root:root,preview:false,gpuProbe:GPUProbe(rawValue:probe))
+    }
     private static func scenario(manager:BrowserManager,root:URL,preview:Bool,gpuProbe:GPUProbe?=nil) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
         func check(_ name:String,_ passed:Bool,_ detail:String="") {results.append(.init(name:(gpuProbe.map{"fullscreen-"+$0.rawValue+"-"} ?? (preview ? "fullscreen-glance-" : "fullscreen-page-"))+name,passed:passed,detail:detail))}

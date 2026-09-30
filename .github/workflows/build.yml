@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/check_signed_fixtures.py', 'script/generate_signed_fixtures.py', 'script/verify_runtime.sh', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/fixture_server.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', 'script/PointerInput.swift', '.github/workflows/build.yml']
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/check_signed_fixtures.py', 'script/generate_signed_fixtures.py', 'script/verify_runtime.sh', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/verify_fullscreen_processes.py', 'script/fixture_server.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', 'script/PointerInput.swift', '.github/workflows/build.yml']
   pull_request:
 permissions:
   contents: read
@@ -24,6 +24,9 @@ jobs:
         run: bash script/build.sh
       - name: Run actual macOS 27 application and integration scenarios
         run: bash script/verify_runtime.sh
+      - name: Isolate public GPU fullscreen probes in fresh app processes
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: python3 script/verify_fullscreen_processes.py
       - name: Verify native quit consent and process exit
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: python3 script/verify_quit_consent.py

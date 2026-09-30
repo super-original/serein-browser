@@ -13,7 +13,11 @@ import SereinCore
     @ObservationIgnored lazy var menu=BrowserMenu(manager:self)
     let root: URL
     init(root: URL) {
+        var storageError:String?
+        do {try PrivateFileStore.prepareDirectory(root)}
+        catch {storageError="Browser storage could not be secured: \(error.localizedDescription)"}
         self.root=root;sitePermissions=SitePermissionStore(file:root.appendingPathComponent("site-permissions.json"));library=LibraryStore(root:root);downloads=DownloadStore(root:root);extensions=ExtensionHost(root:root.appendingPathComponent("Extensions"));extensions.manager=self
+        restorationError=storageError
     }
     var active: BrowserSession? {windows.first{$0.window?.isKeyWindow==true}?.session ?? windows.last?.session}
     func restore() {
@@ -73,7 +77,7 @@ import SereinCore
         saveTask?.cancel();saveTask=Task {try? await Task.sleep(for:.milliseconds(350));guard !Task.isCancelled else{return};saveNow()}
     }
     func saveNow() {
-        do {try SavedSession(windows:windows.map{$0.session.state}).encoded().write(to:root.appendingPathComponent("session.json"),options:.atomic)}
+        do {try PrivateFileStore.write(SavedSession(windows:windows.map{$0.session.state}).encoded(),to:root.appendingPathComponent("session.json"))}
         catch {restorationError="Session could not be saved: \(error.localizedDescription)"}
     }
 }

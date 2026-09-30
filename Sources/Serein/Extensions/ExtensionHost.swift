@@ -30,7 +30,7 @@ struct InstalledExtension: Identifiable, Codable {
     init(root: URL) {
         self.root=root;super.init();controller.delegate=self
         do {
-            try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+            try PrivateFileStore.prepareDirectory(root)
             let url=root.appendingPathComponent("extensions.json")
             if FileManager.default.fileExists(atPath:url.path) {records=try JSONDecoder().decode([InstalledExtension].self,from:Data(contentsOf:url))}
         } catch {self.error=error.localizedDescription}
@@ -58,7 +58,7 @@ struct InstalledExtension: Identifiable, Codable {
         }
     }
     func save() {
-        do {try JSONEncoder().encode(records).write(to:root.appendingPathComponent("extensions.json"),options:.atomic)} catch {self.error=error.localizedDescription}
+        do {try PrivateFileStore.write(JSONEncoder().encode(records),to:root.appendingPathComponent("extensions.json"))} catch {self.error=error.localizedDescription}
     }
     func load(_ record: InstalledExtension) async throws {
         guard contexts[record.id] == nil else { return }

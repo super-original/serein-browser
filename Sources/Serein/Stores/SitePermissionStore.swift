@@ -25,8 +25,7 @@ import SereinCore
     private func save() {
         guard let file else { return }
         do {
-            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(policy).write(to: file, options: .atomic)
+            try PrivateFileStore.write(JSONEncoder().encode(policy),to:file)
             error = nil
         } catch { self.error = "Site permissions could not be saved: \(error.localizedDescription)" }
     }

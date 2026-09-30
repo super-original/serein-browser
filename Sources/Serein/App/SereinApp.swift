@@ -36,6 +36,14 @@ import SwiftUI
             Task {await DownloadRestartVerification.run(manager:manager,root:root,prepare:args.contains("--download-restart-prepare"))}
             return
         }
+        if let index=args.firstIndex(of:"--fullscreen-probe"),args.indices.contains(index+1),testRoot != nil {
+            Task {
+                let results=await FullscreenVerification.isolated(manager:manager,root:root,probe:args[index+1])
+                try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)
+                NSApp.terminate(nil)
+            }
+            return
+        }
         Task {await manager.extensions.restore()}
         if args.contains("--integration-test"),testRoot != nil {Task {await RuntimeVerification.run(manager:manager,root:root)}}
     }

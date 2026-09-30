@@ -120,14 +120,10 @@ import SereinCore
         do {
             for item in items where !item.privateMode {
                 if let data=item.resumeData {
-                    try FileManager.default.createDirectory(at:resumeDirectory,withIntermediateDirectories:true,attributes:[.posixPermissions:0o700])
-                    try FileManager.default.setAttributes([.posixPermissions:0o700],ofItemAtPath:resumeDirectory.path)
-                    let destination=resumeFile(item.id)
-                    try data.write(to:destination,options:.atomic)
-                    try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:destination.path)
+                    try PrivateFileStore.write(data,to:resumeFile(item.id))
                 } else {try discardResume(item.id)}
             }
-            try DownloadRecord.encodedHistory(items.map(\.record)).write(to:file,options:.atomic)
+            try PrivateFileStore.write(DownloadRecord.encodedHistory(items.map(\.record)),to:file)
         }
         catch {self.error="Could not save downloads: \(error.localizedDescription)"}
     }
