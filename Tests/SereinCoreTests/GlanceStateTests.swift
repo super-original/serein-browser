@@ -63,4 +63,13 @@ final class GlanceStateTests:XCTestCase {
         XCTAssertEqual(state.sidebarSelectedTabID,owner)
     }
 
+    func testTabCyclingUsesThePreviewOwnersSidebarPosition() throws {
+        var state=BrowserWindowState();let first=try XCTUnwrap(state.selectedTabID)
+        let owner=state.newTab(),last=state.newTab();state.select(owner)
+        let preview=try XCTUnwrap(state.openGlance(url:"https://example.com",from:owner))
+        XCTAssertEqual(state.adjacentVisibleTab(-1),first);XCTAssertEqual(state.adjacentVisibleTab(1),last)
+        state.select(last);XCTAssertEqual(state.adjacentVisibleTab(1),first)
+        state.select(owner);XCTAssertEqual(state.selectedTabID,preview)
+    }
+
 }

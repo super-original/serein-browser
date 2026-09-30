@@ -3,6 +3,11 @@ import Foundation
 extension BrowserWindowState {
     public var activeGlance:BrowserTab? {selectedTab.flatMap{$0.glanceParentID == nil ? nil : $0}}
     public var sidebarSelectedTabID:UUID? {activeGlance?.glanceParentID ?? selectedTabID}
+    public func adjacentVisibleTab(_ offset:Int)->UUID? {
+        let visible=visibleTabs
+        guard !visible.isEmpty,let index=visible.firstIndex(where:{$0.id==sidebarSelectedTabID}) else{return nil}
+        return visible[(index+offset%visible.count+visible.count)%visible.count].id
+    }
     public func glance(for parent:UUID)->BrowserTab? {tabs.first{$0.glanceParentID==parent}}
     /// Children precede their owner so native adapters can close both safely.
     public func closingTabIDs(_ id:UUID)->[UUID] {

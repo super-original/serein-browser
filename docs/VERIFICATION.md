@@ -18,7 +18,7 @@ Downloads and extension-management screenshots from this exact commit were retri
 
 ## Current work under verification
 
-Glance implementation awaits exact-head build/runtime/visual checks: Option-click activation, parent-linked hidden preview tabs, native close/expand/split controls, live-view preservation, edit consent, movement and private isolation. The pinned Zen capture was retrieved and inspected; preview geometry is 80% content width, full height, with a 56-point control column. Native tabs-grant diagnostics and the signed-fixture freshness guard pass. Full original-spec completion remains the goal.
+The first Glance build (`f4bd2b5`, run 36762573432) failed because a test attempted to mutate a private document-identity setter. The corrected test performs real navigation. Glance still awaits exact-head build/runtime/visual checks: Option-click activation, parent-linked hidden preview tabs, native close/expand/split controls, live-view preservation, edit consent, movement and private isolation. The pinned Zen capture was retrieved and inspected; preview geometry is 80% content width, full height, with a 56-point control column. Native tabs-grant diagnostics and the signed-fixture freshness guard pass. Full original-spec completion remains the goal.
 
 ## Prioritized remaining work
 

@@ -40,7 +40,6 @@ import WebKit
         check("loads-with-parent-store",view.url==target && view.configuration.websiteDataStore === parent.webView.configuration.websiteDataStore)
         check("owner-preserved-and-preview-hidden",parent.webView.url?.query=="glance-owner" && session.state.visibleTabs.map(\.id)==[owner] && session.state.sidebarSelectedTabID==owner)
         check("visible-owner-cannot-unload",!session.canUnload(owner) && !session.canUnload(preview.id))
-        _=try? await view.evaluateJavaScript("window.sereinGlanceSentinel='retained'")
         try? "32-glance".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("32-glance.capture-finished").path)}
         let rect=view.convert(view.bounds,to:nil)
@@ -53,14 +52,24 @@ import WebKit
         try? "33-glance-minimum".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("33-glance-minimum.capture-finished").path)}
         window.setFrame(originalFrame,display:true)
+        let neighbor=session.newTab(select:false)
+        let advanced=await keyboard("glance-next-tab")
+        check("native-cycle-leaves-preview",advanced && session.state.selectedTabID==neighbor)
+        let returned=await keyboard("glance-previous-tab")
+        check("native-cycle-returns-preview",returned && session.state.activeGlance?.id==preview.id && runtime.loadedWebView === view)
+        session.close(neighbor,ask:false)
         runtime.hasUserEdits=true
         session.close(owner)
         check("owner-close-prompts-for-preview-edits",window.attachedSheet != nil,"Native sheet; edit flag injected for consent testing")
-        runtime.documentID=UUID()
+        let changedTarget=URL(string:target.absoluteString+"?changed-consent")!
+        runtime.load(changedTarget)
         if let sheet=window.attachedSheet {window.endSheet(sheet,returnCode:.alertFirstButtonReturn)}
         try? await Task.sleep(for:.milliseconds(200))
         check("changed-preview-invalidates-owner-consent",session.state.tabs.contains{$0.id==preview.id} && session.state.tabs.contains{$0.id==owner})
+        await wait{view.url==changedTarget && !view.isLoading}
+        check("changed-preview-loads",view.url==changedTarget && !view.isLoading)
         runtime.hasUserEdits=false
+        _=try? await view.evaluateJavaScript("window.sereinGlanceSentinel='retained'")
         session.expandGlance()
         try? await Task.sleep(for:.milliseconds(150))
         let retained=try? await view.evaluateJavaScript("window.sereinGlanceSentinel") as? String

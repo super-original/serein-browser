@@ -62,7 +62,7 @@ import AppKit
     @objc func minimize(){manager?.active?.window?.miniaturize(nil)}
     @objc func nextTab(){cycle(1)}
     @objc func previousTab(){cycle(-1)}
-    private func cycle(_ direction:Int){guard let s=manager?.active,let i=s.state.visibleTabs.firstIndex(where:{$0.id==s.state.selectedTabID}) else{return};let tabs=s.state.visibleTabs;s.select(tabs[(i+direction+tabs.count)%tabs.count].id)}
+    private func cycle(_ direction:Int){guard let s=manager?.active,let id=s.state.adjacentVisibleTab(direction) else{return};s.select(id)}
     @objc func hide(){NSApp.hide(nil)}
     @objc func quit(){NSApp.terminate(nil)}
     @objc func about(){NSApp.orderFrontStandardAboutPanel(options:[.applicationName:"Serein",.applicationVersion:"0.1.0",.credits:NSAttributedString(string:"Native WebKit browser for macOS 27. Development build. Extension compatibility is incomplete.")])}

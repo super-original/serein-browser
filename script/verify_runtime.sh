@@ -65,6 +65,8 @@ on run arguments
 end run
 APPLESCRIPT
         ;;
+      glance-next-tab) osascript -e 'tell application "System Events" to tell process "Serein" to key code 48 using control down' ;;
+      glance-previous-tab) osascript -e 'tell application "System Events" to tell process "Serein" to key code 48 using {control down, shift down}' ;;
       glance-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
       find-query) osascript -e 'tell application "System Events" to tell process "Serein"' -e 'keystroke "f" using command down' -e 'delay 0.3' -e 'keystroke "a" using command down' -e 'keystroke "Workspaces"' -e 'end tell' ;;
       find-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
