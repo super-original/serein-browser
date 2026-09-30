@@ -75,6 +75,24 @@ final class GlanceStateTests:XCTestCase {
         state.select(owner);XCTAssertEqual(state.selectedTabID,preview)
     }
 
+    func testAutomaticPreviewRequiresOptInPinnedOwnerAndDifferentHost() throws {
+        var state=BrowserWindowState();let owner=try XCTUnwrap(state.selectedTabID)
+        state.tabs[0].url="https://example.com/owner"
+        let external=URL(string:"https://other.example/preview")!
+        XCTAssertFalse(state.shouldPreviewNewTab(external,from:owner,enabled:true))
+        for kind in [TabKind.pinned,.essential] {
+            state.setKind(owner,kind)
+            XCTAssertFalse(state.shouldPreviewNewTab(external,from:owner,enabled:false))
+            XCTAssertTrue(state.shouldPreviewNewTab(external,from:owner,enabled:true))
+            XCTAssertFalse(state.shouldPreviewNewTab(URL(string:"http://EXAMPLE.com:8080/path")!,from:owner,enabled:true))
+            XCTAssertFalse(state.shouldPreviewNewTab(URL(string:"file:///tmp/page.html")!,from:owner,enabled:true))
+            XCTAssertFalse(state.shouldPreviewNewTab(URL(string:"javascript:alert(1)")!,from:owner,enabled:true))
+        }
+        let preview=try XCTUnwrap(state.openGlance(url:external.absoluteString,from:owner))
+        XCTAssertFalse(state.shouldPreviewNewTab(external,from:owner,enabled:true))
+        XCTAssertFalse(state.shouldPreviewNewTab(external,from:preview,enabled:true))
+    }
+
     func testReopenParentRestoresItsPreviewAndSanitizesBothURLs() throws {
         var state=BrowserWindowState();let owner=try XCTUnwrap(state.selectedTabID)
         state.tabs[0].url="https://owner:secret@example.com/owner"

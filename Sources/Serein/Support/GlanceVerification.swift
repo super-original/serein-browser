@@ -121,6 +121,31 @@ import WebKit
             session.reopen()
             check("reopen-restores-preview-relationship",session.state.activeGlance?.id==reopenPreview.id && session.state.sidebarSelectedTabID==owner && session.tabSelection.ids==[reopenPreview.id])
         }
+        // Exercise the enabled preference through an actual unmodified pointer click. The
+        // created WKWebView receives WebKit's configuration and original request.
+        if let active=session.state.activeGlance {session.close(active.id,ask:false)}
+        session.select(owner);session.state.setKind(owner,.essential)
+        let previousPreference=UserDefaults.standard.object(forKey:"previewExternalPinnedLinks")
+        UserDefaults.standard.set(true,forKey:"previewExternalPinnedLinks")
+        defer {
+            if let previousPreference {UserDefaults.standard.set(previousPreference,forKey:"previewExternalPinnedLinks")}
+            else {UserDefaults.standard.removeObject(forKey:"previewExternalPinnedLinks")}
+        }
+        let currentParent=session.runtime(owner).webView
+        await wait{currentParent.url?.query=="glance-owner" && !currentParent.isLoading}
+        let externalPoint=try? await currentParent.evaluateJavaScript("(()=>{const a=document.querySelector('a[target]');a.href='http://localhost:8765/second.html?external-glance';a.scrollIntoView({block:'center'});const r=a.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()") as? [String:Double]
+        if let externalPoint,let x=externalPoint["x"],let y=externalPoint["y"],let screen=NSScreen.screens.first {
+            window.makeKeyAndOrderFront(nil)
+            let local=NSPoint(x:x,y:currentParent.isFlipped ? y : currentParent.bounds.height-y)
+            let location=window.convertPoint(toScreen:currentParent.convert(local,to:nil))
+            try? "\(Int(location.x.rounded())) \(Int((screen.frame.maxY-location.y).rounded()))\n".write(to:root.appendingPathComponent("glance-click-point"),atomically:true,encoding:.utf8)
+            let sent=await keyboard("glance-external-link")
+            await wait{session.state.activeGlance != nil && session.current?.webView.url?.query=="external-glance" && session.current?.webView.isLoading==false}
+            check("native-essential-external-link-preview",sent && session.state.activeGlance?.glanceParentID==owner && session.current?.webView.url?.host=="localhost" && session.current?.webView.url?.query=="external-glance")
+            check("external-link-preserves-owner-and-store",currentParent.url?.query=="glance-owner" && session.current?.webView.configuration.websiteDataStore === session.dataStore && session.state.visibleTabs.contains{$0.id==owner} && !session.state.visibleTabs.contains{$0.id==session.state.activeGlance?.id})
+            try? "34-essential-preview".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+            await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("34-essential-preview.capture-finished").path)}
+        } else {check("native-essential-external-link-preview",false,"Could not locate controlled external link")}
         window.close()
         return results
     }

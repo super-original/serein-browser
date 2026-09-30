@@ -9,6 +9,15 @@ extension BrowserWindowState {
         return visible[(index+offset%visible.count+visible.count)%visible.count].id
     }
     public func glance(for parent:UUID)->BrowserTab? {tabs.first{$0.glanceParentID==parent}}
+    /// Zen's optional automatic preview applies to new external-host tabs from
+    /// pinned/essential owners. Existing previews and ordinary links stay intact.
+    public func shouldPreviewNewTab(_ target:URL,from parent:UUID,enabled:Bool)->Bool {
+        guard enabled,["http","https"].contains(target.scheme?.lowercased() ?? ""),
+              let targetHost=target.host?.lowercased(),!targetHost.isEmpty,
+              let owner=visibleTabs.first(where:{$0.id==parent}),owner.kind != .regular,
+              glance(for:parent)==nil else{return false}
+        return URL(string:owner.url)?.host?.lowercased() != targetHost
+    }
     /// Children precede their owner so native adapters can close both safely.
     public func closingTabIDs(_ id:UUID)->[UUID] {
         guard tabs.contains(where:{$0.id==id}) else{return []}

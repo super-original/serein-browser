@@ -6,6 +6,7 @@ struct LibraryPanelView: View {
     let panel: LibraryPanel
     @State private var query=""
     @AppStorage("appearance") private var appearance="system"
+    @AppStorage("previewExternalPinnedLinks") private var previewExternalPinnedLinks=true
     var body: some View {
         VStack(alignment:.leading,spacing:16) {
             HStack {Text(panel.rawValue.capitalized).font(.title2.bold());Spacer();Button("Done"){session.libraryPanel=nil}.keyboardShortcut(.cancelAction)}
@@ -36,6 +37,7 @@ struct LibraryPanelView: View {
                     Form {
                         Picker("Appearance",selection:$appearance){Text("System").tag("system");Text("Light").tag("light");Text("Dark").tag("dark")}
                         Picker("Sidebar",selection:$session.state.sidebar){Text("Expanded").tag(SidebarMode.expanded);Text("Collapsed").tag(SidebarMode.collapsed);Text("Compact").tag(SidebarMode.compact)}
+                        Toggle("Preview external links opened by pinned and essential tabs",isOn:$previewExternalPinnedLinks)
                         Text("Tabs restore when you reopen Serein. Private windows use a separate, nonpersistent website data store and are excluded from saved sessions.").font(.callout).foregroundStyle(.secondary)
                         Button("Clear Website Data…") {
                             session.confirm("Clear cookies and website data?",detail:"This signs you out of websites in this browsing mode.",yes:"Clear") {yes in

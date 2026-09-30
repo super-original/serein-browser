@@ -1,4 +1,5 @@
 import Foundation
+import WebKit
 
 extension BrowserSession {
     func openGlance(_ url:URL,from owner:UUID) {
@@ -13,6 +14,20 @@ extension BrowserSession {
         guard let id=state.openGlance(url:url.absoluteString,from:owner) else{return}
         extensions?.controller.didOpenTab(bridge(id));tabSelection.selectOnly(id)
         publishSelection(previousActive:previous,previousHighlighted:highlighted)
+    }
+    func newPopup(_ target:URL?,from owner:UUID,configuration:WKWebViewConfiguration)->WKWebView {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        guard let target,state.shouldPreviewNewTab(target,from:owner,enabled:UserDefaults.standard.object(forKey:"previewExternalPinnedLinks") as? Bool ?? true),
+              let id=state.openGlance(url:"about:blank",from:owner) else {
+            return runtime(newTab(configuration:configuration)).webView
+        }
+        // Return a view built from WebKit's supplied configuration. WebKit loads
+        // the original request, preserving POST bodies and window relationships.
+        runtimes[id]=TabRuntime(id:id,session:self,configuration:configuration)
+        extensions?.controller.didOpenTab(bridge(id))
+        tabSelection.selectOnly(id)
+        publishSelection(previousActive:previous,previousHighlighted:highlighted)
+        return runtime(id).webView
     }
     func expandGlance() {
         guard let preview=state.activeGlance else{return}

@@ -4,9 +4,8 @@ import SereinCore
 
 extension TabRuntime: WKUIDelegate {
     func webView(_ webView: WKWebView,createWebViewWith configuration: WKWebViewConfiguration,for action: WKNavigationAction,windowFeatures: WKWindowFeatures) -> WKWebView? {
-        guard let session,action.targetFrame==nil else{return nil}
-        let id=session.newTab(configuration:configuration)
-        return session.runtime(id).webView
+        guard webView === loadedWebView,let session,action.targetFrame==nil else{return nil}
+        return session.newPopup(action.request.url,from:id,configuration:configuration)
     }
     func webViewDidClose(_ webView: WKWebView) {session?.close(id)}
     func webView(_ webView: WKWebView,runJavaScriptAlertPanelWithMessage message: String,initiatedByFrame frame: WKFrameInfo,completionHandler: @escaping @MainActor @Sendable ()->Void) {

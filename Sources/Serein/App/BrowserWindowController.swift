@@ -57,23 +57,25 @@ import SwiftUI
 
 @MainActor final class SereinWindow:NSWindow {
     weak var session:BrowserSession?
+    private func handleBrowserShortcut(_ event:NSEvent)->Bool {
+        guard let session,event.type == .keyDown,attachedSheet==nil else{return false}
+        let modifiers=event.modifierFlags.intersection([.command,.option,.control,.shift])
+        if event.keyCode==48,(modifiers == .control || modifiers == [.control,.shift]),
+           let id=session.state.adjacentVisibleTab(modifiers.contains(.shift) ? -1 : 1) {
+            session.select(id);return true
+        }
+        if event.keyCode==53,modifiers.isEmpty,session.state.activeGlance != nil,
+           !session.findVisible,!session.addressFocused {session.closeGlance();return true}
+        return false
+    }
     override func sendEvent(_ event:NSEvent) {
-        if ProcessInfo.processInfo.arguments.contains("--integration-test"),[NSEvent.EventType.leftMouseDown,.keyDown].contains(event.type),
-           let session,session.state.activeGlance != nil || event.modifierFlags.contains(.option) {
-            print("GLANCE_INPUT window=\(session.state.id) type=\(event.type.rawValue) modifiers=\(event.modifierFlags.rawValue) key=\(event.type == .keyDown ? Int(event.keyCode) : -1) selected=\(String(describing:session.state.selectedTabID)) point=\(event.locationInWindow)")
-        }
-        if let session,event.type == .keyDown,attachedSheet==nil {
-            let modifiers=event.modifierFlags.intersection([.command,.option,.control,.shift])
-            if event.keyCode==48,(modifiers == .control || modifiers == [.control,.shift]),
-               let id=session.state.adjacentVisibleTab(modifiers.contains(.shift) ? -1 : 1) {
-                session.select(id);return
-            }
-            if event.keyCode==53,modifiers.isEmpty,session.state.activeGlance != nil,
-               !session.findVisible,!session.addressFocused {session.closeGlance();return}
-        }
+        if handleBrowserShortcut(event){return}
         super.sendEvent(event)
     }
     override func performKeyEquivalent(with event:NSEvent)->Bool {
+        // AppKit can dispatch Control-Tab as a key equivalent before sendEvent.
+        // Handle it here as well so WebKit/focus traversal cannot consume it.
+        if handleBrowserShortcut(event){return true}
         if super.performKeyEquivalent(with:event){return true}
         guard let session,!session.state.isPrivate else{return false}
         for context in session.extensions?.contexts.values ?? Dictionary<UUID,WebKit.WKWebExtensionContext>().values {
