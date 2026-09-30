@@ -66,7 +66,7 @@ private struct ExtensionListView: View {
                         if let context=host.contexts[record.id],let url=context.optionsPageURL {Button("Options"){session.newTab(url:url.absoluteString);session.libraryPanel=nil}}
                         Menu("Current Site") {Button("Allow Until Quit"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny Until Quit"){host.setCurrentSite(record.id,in:session,allow:false)}}.disabled(!record.enabled)
                         Spacer()
-                        Button("Remove…"){session.confirm("Remove \(record.name)?",detail:"Its extension data will be deleted.",yes:"Remove"){yes in if yes{Task{await host.remove(record.id)}}}}
+                        Button("Remove…"){session.confirm("Remove \(record.name)?",detail:"The package and browser.storage settings will be removed. Extension page website data may remain; use Clear Website Data in Settings to remove website data.",yes:"Remove"){yes in if yes{Task{await host.remove(record.id)}}}}
                     }.font(.caption)
                 }.padding(.vertical,4)
             }

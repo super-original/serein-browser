@@ -83,3 +83,9 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Full extension compatibility | U | See detailed matrix; target remains unmet |
 
 This checklist is intentionally not a claim of complete Zen parity.
+
+## Refreshed baseline, September 30
+
+[Run 36705707876](https://github.com/super-original/serein-browser/actions/runs/36705707876) reproduced all 14 captures with the same pinned Zen 1.22.2b binary and settings on macOS 27. All 14 screenshots were retrieved and visually inspected. Light/dark, essentials/pins, address focus, context menu, workspace labels, split panes, compact overlay/hide, collapsed toolbar, settings and restricted-port error states are visible. The context menu is taller than the available area and scrolls; it is not a full-menu inventory. Workspace captures retain the fixture page while changing workspace labels; they do not prove cookie/container isolation.
+
+The measured sidebar remains 230 points and regular tab layout boxes 224×40. Full-window light captures match 1000×677 outer bounds and 1× scale. Serein's content starts at the same x≈246, but its bordered native address field is visually shorter than Zen's address surface. Essentials lack favicons and have different cell sizing; split-group tab representation and compact toolbar variants remain gaps. Zen shows a 2-point accent outline on the focused split pane; the continuation adopts that focus indicator using the native accent color. Native system traffic lights/materials intentionally differ. Serein's blank WebKit area remains a rendering defect/blocker, never a deliberate glass adaptation.

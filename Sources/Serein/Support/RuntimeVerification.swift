@@ -93,7 +93,11 @@ import SereinCore
         session.navigate(fixture);_=await wait{session.current?.webView.title=="Field Notes"};await capture("06-workspace")
         let normalWorkspace=session.state.tabs.first{$0.id==third}!.workspaceID
         session.switchWorkspace(normalWorkspace);session.select(third);session.state.split(with:second)
-        await capture("07-split");session.state.secondaryTabID=nil
+        await capture("07-split")
+        session.select(second)
+        check("split-secondary-focus-keeps-panes",session.state.primarySplitTabID==third && session.state.secondaryTabID==second && session.state.selectedTabID==second)
+        await capture("07-split-secondary-focused")
+        session.select(third);session.state.secondaryTabID=nil;session.state.primarySplitTabID=nil
         session.state.sidebar = .compact;session.compactRevealed=false;await capture("08-compact-hidden")
         session.compactRevealed=true;await capture("09-compact-revealed")
         session.state.sidebar = .collapsed;await capture("10-collapsed")

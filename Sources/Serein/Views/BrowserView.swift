@@ -72,7 +72,10 @@ private struct PagePane: View {
             }
         }
         .overlay(alignment:.top){if runtime.isLoading {ProgressView(value:runtime.progress).progressViewStyle(.linear).tint(.accentColor).frame(height:2)}}
-        .overlay(RoundedRectangle(cornerRadius:8).strokeBorder(.primary.opacity(0.08),lineWidth:1))
+        .overlay(RoundedRectangle(cornerRadius:8).strokeBorder(
+            session.state.secondaryTabID != nil && session.state.selectedTabID == id ? Color.accentColor : Color.primary.opacity(0.08),
+            lineWidth:session.state.secondaryTabID != nil && session.state.selectedTabID == id ? 2 : 1
+        ).allowsHitTesting(false))
         .accessibilityIdentifier("page-\(id)")
     }
 }

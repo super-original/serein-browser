@@ -46,9 +46,10 @@ import SereinCore
                 let disabled=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 check("\(name)-disable-stops-injection",disabled is NSNull)
                 await host.remove(id)
-                let remaining=await host.controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
+                let remaining=await host.controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes.subtracting([.session]))
                 check("\(name)-remove-disabled-data-errors",remaining.filter{$0.uniqueIdentifier==id.uuidString}.allSatisfy{$0.errors.isEmpty},"WebKit can retain an empty metadata record after removing storage.")
-                check("\(name)-remove-package-and-record",!FileManager.default.fileExists(atPath:target.path) && !host.records.contains{$0.id==id})
+                check("\(name)-remove-package-and-record",!FileManager.default.fileExists(atPath:target.path) && !host.records.contains{$0.id==id},host.error ?? "")
+                guard !FileManager.default.fileExists(atPath:target.path) else {throw ExtensionValidationError.invalid(host.error ?? "Removal left package installed") }
                 // Metadata presence is not stored-value persistence. Reinstall with
                 // the same identity and prove the old storage counter is gone.
                 try FileManager.default.copyItem(at:source,to:target)

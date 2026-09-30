@@ -123,9 +123,12 @@ struct InstalledExtension: Identifiable, Codable {
             contexts[id]=nil
             // Disabled extensions have no live context, but retain storage. Removal
             // must erase their data by the durable identity as well.
-            let dataRecords=await controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
+            // Session storage belongs to the unloaded context, not an on-disk
+            // record. Querying it after unload produces WebKit storage errors.
+            let persistentTypes=WKWebExtensionController.allExtensionDataTypes.subtracting([.session])
+            let dataRecords=await controller.dataRecords(ofTypes:persistentTypes)
             let matching=dataRecords.filter{$0.uniqueIdentifier==id.uuidString}
-            await controller.removeData(ofTypes:WKWebExtensionController.allExtensionDataTypes,from:matching)
+            await controller.removeData(ofTypes:persistentTypes,from:matching)
             let removalErrors=matching.flatMap(\.errors)
             guard removalErrors.isEmpty else {
                 throw ExtensionValidationError.invalid("Extension data could not be removed: " + removalErrors.map(\.localizedDescription).joined(separator:"; "))
