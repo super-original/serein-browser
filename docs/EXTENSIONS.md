@@ -103,3 +103,23 @@ These are capabilities requested by the exact packages, not a claim that every p
 ### Host-side permissions continuation
 
 Explicit runtime API and website permission grants, denials, and removals are now captured through public `WKWebExtensionContext` change notifications. Snapshots retain expiration dates and replace initial install grants on reload so revocation cannot silently become a grant again. Old installed records without a snapshot keep their original migration behavior. Tab-scoped `activeTab` gestures are not persisted. Per-site menu changes save immediately; private browsing remains excluded. Controlled tests exercise disk round-trip, revoked API access, restored site denial, and denied content-script injection. CI verification for this follow-up is pending.
+
+### Resolving the three command-parser failures
+
+Inspection of the hash-verified original uBlock Firefox 1.75.0, Stylus 2.4.13 and Violentmonkey 2.49.0 manifests found empty `_execute_browser_action` or `_execute_action` objects. [Chrome commands documentation](https://developer.chrome.com/docs/extensions/reference/api/commands) and [Firefox manifest documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/commands) make descriptions optional for reserved action commands. [WebKit's parser](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/Extensions/WebExtension.cpp) rejects empty objects before classifying reserved action names.
+
+Serein now adds only `description: "Activate extension"` to empty, version-appropriate reserved action commands in the extracted installation copy. It preserves executable code, permissions, shortcuts and ordinary commands; original archives/directories remain unchanged. The installation dialog discloses this normalization and the lack of publisher-signature verification. Both controlled fixture generations use this preparation path. This is a parser compatibility adjustment, not a claim that any of the three real packages is functionally compatible. All three also request engine capabilities outside the observed permission set.
+
+### Where missing capabilities can be implemented
+
+| Gap | Feasibility / next implementation boundary |
+|---|---|
+| Empty reserved action-command metadata | Host-side normalization implemented; no permissions removed. Runtime and real-package re-audit pending. |
+| Durable permissions and per-site revocation | Public context dictionaries/notifications permit host implementation; implemented, runtime verification pending. |
+| Downloads, history, sessions, tabGroups, theme | Browser models can supply much of the underlying behavior, but the inspected macOS 27 public `WKWebExtensionControllerDelegate` exposes no namespace-registration or corresponding API dispatch hook. A complete isolated extension execution/compatibility bridge or custom WebKit integration is needed; adding native browser buttons is insufficient. These are substantial implementation gaps, not proven impossible. |
+| Identity, idle, clipboard access | Potential host services with explicit consent, OAuth/clipboard/privacy semantics and event handling; same missing dispatch boundary. No blanket native access granted. |
+| Offscreen / sidebar / notifications | Current upstream namespace code has build/runtime gates; observed system permission omission cannot be repaired merely by implementing a delegate. A public system API path or a measured custom-WebKit plan must be established first. |
+| Blocking webRequest / auth interception / privacy | Requires engine-level request ordering, credentials and settings semantics; a page script or ordinary WKNavigationDelegate cannot supply equivalent interception. No public equivalent established for arbitrary extension requests. |
+| Native Safari / legacy Safari / signed Chrome packages | Separate format/hosting/signature work, still unsupported; unrelated to manifest normalization. |
+
+Sources: captured SDK `WKWebExtensionControllerDelegate.h` in [platform run 36705841148](https://github.com/super-original/serein-browser/actions/runs/36705841148), and [WebKit namespace implementation](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/WebProcess/Extensions/API/WebExtensionAPINamespace.cpp). Upstream source is a diagnostic reference, not proof that an API is enabled in the shipped system framework. A complete custom extension execution bridge would require MV2/MV3 lifecycle, isolated worlds, permissions, messaging, and API semantics; no partial shim is being presented as full support.

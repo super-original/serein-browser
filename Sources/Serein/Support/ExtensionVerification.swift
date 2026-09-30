@@ -12,7 +12,7 @@ import SereinCore
             let target=host.root.appendingPathComponent(id.uuidString)
             let key="sereinMV\(generation)"
             do {
-                try FileManager.default.copyItem(at:source,to:target)
+                try host.prepare(source,at:target)
                 let manifest=try ExtensionManifest(data:Data(contentsOf:target.appendingPathComponent("manifest.json")))
                 let record=InstalledExtension(id:id,name:name,version:manifest.version,enabled:true,permissions:["storage","tabs"],hosts:[])
                 try await host.load(record)
@@ -68,7 +68,7 @@ import SereinCore
                 guard !FileManager.default.fileExists(atPath:target.path) else {throw ExtensionValidationError.invalid(host.error ?? "Removal left package installed") }
                 // Metadata presence is not stored-value persistence. Reinstall with
                 // the same identity and prove the old storage counter is gone.
-                try FileManager.default.copyItem(at:source,to:target)
+                try host.prepare(source,at:target)
                 try await host.load(granted);host.records.append(granted)
                 session.current!.webView.reload()
                 var resetCount:Int?

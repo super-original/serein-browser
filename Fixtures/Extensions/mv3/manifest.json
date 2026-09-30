@@ -26,5 +26,8 @@
   "action": {
     "default_popup": "popup.html"
   },
-  "description": "Controlled Serein integration fixture for extension lifecycle, permissions, storage and messaging."
+  "description": "Controlled Serein integration fixture for extension lifecycle, permissions, storage and messaging.",
+  "commands": {
+    "_execute_action": {}
+  }
 }

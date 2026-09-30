@@ -1,6 +1,22 @@
 import XCTest
 @testable import SereinCore
 final class ExtensionValidationTests: XCTestCase {
+    func testActionCommandNormalizationPreservesCapabilities() throws {
+        for (version,action) in [(2,"_execute_browser_action"),(3,"_execute_action")] {
+            let original=Data("{\"manifest_version\":\(version),\"permissions\":[\"webRequestBlocking\"],\"commands\":{\"\(action)\":{},\"ordinary\":{}}}".utf8)
+            let normalized=try ExtensionCommandNormalization.normalize(original)
+            let json=try XCTUnwrap(JSONSerialization.jsonObject(with:normalized) as? [String:Any])
+            let commands=try XCTUnwrap(json["commands"] as? [String:[String:Any]])
+            XCTAssertEqual(commands[action]?["description"] as? String,"Activate extension")
+            XCTAssertEqual(commands["ordinary"]?.count,0)
+            XCTAssertEqual(json["permissions"] as? [String],["webRequestBlocking"])
+            XCTAssertEqual(try ExtensionCommandNormalization.normalize(normalized),normalized)
+        }
+    }
+    func testNonemptyActionAndOrdinaryCommandsAreUntouched() throws {
+        let original=Data(#"{"manifest_version":3,"commands":{"_execute_action":{"suggested_key":{"default":"Ctrl+Shift+Y"}},"ordinary":{}}}"#.utf8)
+        XCTAssertEqual(try ExtensionCommandNormalization.normalize(original),original)
+    }
     func testUnsupportedManifestsDoNotLoadAsPartialSuccess() {
         for value in ["{\"manifest_version\":4,\"name\":\"A\",\"version\":\"1\"}","{\"manifest_version\":3,\"name\":\"A\",\"version\":\"1\",\"permissions\":[\"nativeMessaging\"]}"] {XCTAssertThrowsError(try ExtensionManifest(data:Data(value.utf8)))}
     }

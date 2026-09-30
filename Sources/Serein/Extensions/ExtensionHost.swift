@@ -90,7 +90,7 @@ struct InstalledExtension: Identifiable, Codable {
             guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
             try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
             let permissions=ext.requestedPermissions.map(\.rawValue).sorted(),hosts=ext.requestedPermissionMatchPatterns.map(\.string).sorted()
-            let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\n\nThe package's publisher signature has not been verified. Install only if you trust its source. Private browsing access is disabled."
+            let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\n\nEmpty reserved action-command metadata is normalized for WebKit when needed. The original source package is unchanged.\n\nThe package's publisher signature has not been verified. Install only if you trust its source. Private browsing access is disabled."
             let allowed=await withCheckedContinuation{continuation in session.confirm("Install \(ext.displayName ?? "extension")?",detail:details,yes:"Install"){continuation.resume(returning:$0)}}
             guard allowed else {try FileManager.default.removeItem(at:destination);return}
             let final=root.appendingPathComponent(id.uuidString);try FileManager.default.moveItem(at:destination,to:final)
@@ -125,6 +125,10 @@ struct InstalledExtension: Identifiable, Codable {
                 }
             }
         }
+        let manifestURL=destination.appendingPathComponent("manifest.json")
+        let original=try Data(contentsOf:manifestURL)
+        let normalized=try ExtensionCommandNormalization.normalize(original)
+        if normalized != original {try normalized.write(to:manifestURL,options:.atomic)}
     }
     func setEnabled(_ id: UUID,_ enabled: Bool) async {
         guard let i=records.firstIndex(where:{$0.id==id}) else{return}
