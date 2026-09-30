@@ -135,16 +135,9 @@ struct InstalledExtension: Identifiable, Codable {
                 let package = try CRXPackage.verify(input)
                 archive = package.archive; identity = package.identity
             } else { try ExtensionArchive.validate(input); archive = input }
-            // Extract the checked bytes, never reopen the user-controlled source path.
-            let snapshotRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-            try FileManager.default.createDirectory(at: snapshotRoot, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
-            defer { try? FileManager.default.removeItem(at: snapshotRoot) }
-            let snapshot = snapshotRoot.appendingPathComponent("verified.zip")
-            try archive.write(to: snapshot, options: .atomic)
-            try FileManager.default.createDirectory(at:destination,withIntermediateDirectories:true)
-            let process=Process();process.executableURL=URL(fileURLWithPath:"/usr/bin/ditto");process.arguments=["-x","-k",snapshot.path,destination.path]
-            try process.run();process.waitUntilExit()
-            guard process.terminationStatus==0 else{throw ExtensionValidationError.invalid("The system could not extract the extension.")}
+            // Read from the same in-memory bytes we verified. Never give another
+            // archive parser an opportunity to reinterpret names or filesystem metadata.
+            try ExtensionArchive.extract(archive, to: destination)
             if !FileManager.default.fileExists(atPath:destination.appendingPathComponent("manifest.json").path) {
                 let children=try FileManager.default.contentsOfDirectory(at:destination,includingPropertiesForKeys:[.isDirectoryKey]).filter{!$0.lastPathComponent.hasPrefix(".") && $0.lastPathComponent != "__MACOSX"}
                 if children.count==1,let wrapper=children.first,FileManager.default.fileExists(atPath:wrapper.appendingPathComponent("manifest.json").path) {

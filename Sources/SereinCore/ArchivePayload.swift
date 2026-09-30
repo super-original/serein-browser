@@ -1,15 +1,16 @@
 import Foundation
 import zlib
 
-/// Check actual decoded size and CRC before invoking the system ZIP extractor.
+/// Check actual decoded size and CRC before creating extension resource files.
 /// A signed package can still contain a malicious archive authored by its signer.
 enum ArchivePayload {
-    static func validate(_ bytes: ArraySlice<UInt8>, method: Int, size: Int, checksum: UInt32) throws {
+    static func validate(_ bytes: ArraySlice<UInt8>, method: Int, size: Int, checksum: UInt32, consume: ((UnsafeBufferPointer<UInt8>) throws -> Void)? = nil) throws {
         func invalid() -> ExtensionValidationError { .invalid("Archive payload checksum, size, or compression is invalid.") }
         if method == 0 {
             guard bytes.count == size else { throw invalid() }
             let actual = Array(bytes).withUnsafeBufferPointer { crc32(0, $0.baseAddress, uInt($0.count)) }
             guard UInt32(actual) == checksum else { throw invalid() }
+            try Array(bytes).withUnsafeBufferPointer { try consume?($0) }
             return
         }
         var stream = z_stream()
@@ -21,11 +22,13 @@ enum ArchivePayload {
             var decoded = 0, checksumValue: uLong = 0
             while true {
                 let before = stream.avail_in
-                let (status, produced): (Int32, Int) = output.withUnsafeMutableBufferPointer { destination in
+                let (status, produced): (Int32, Int) = try output.withUnsafeMutableBufferPointer { destination in
                     stream.next_out = destination.baseAddress; stream.avail_out = uInt(destination.count)
                     let result = inflate(&stream, Z_NO_FLUSH)
                     let count = destination.count - Int(stream.avail_out)
+                    guard decoded + count <= size else { throw invalid() }
                     checksumValue = crc32(checksumValue, destination.baseAddress, uInt(count))
+                    try consume?(UnsafeBufferPointer(start: destination.baseAddress, count: count))
                     return (result, count)
                 }
                 decoded += produced

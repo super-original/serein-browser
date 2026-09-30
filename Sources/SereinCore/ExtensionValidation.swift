@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public enum ExtensionValidationError: LocalizedError {
     case invalid(String)
@@ -39,11 +40,46 @@ public struct ExtensionManifest: Sendable {
         guard !path.isEmpty,!path.hasPrefix("/"),!path.contains("\\"),!path.contains("\0"),!path.contains(":"),!path.split(separator:"/",omittingEmptySubsequences:false).contains("..") else {throw ExtensionValidationError.invalid("Unsafe extension resource path: \(path)")}
     }
 }
-/// Validate both central and local ZIP names before passing an archive to the OS extractor.
+/// Validate central/local names and payloads, then extract only those validated entries.
 /// ZIP64, encrypted entries, Unix links, unsupported methods, and bombs fail closed.
 public enum ExtensionArchive {
-    public static func validate(_ data: Data) throws {
+    private struct Entry {
+        let name: String
+        let method: Int
+        let size: Int
+        let checksum: UInt32
+        let payload: Range<Int>
+    }
+    public static func validate(_ data: Data) throws { _ = try checkedEntries(data) }
+    /// Restore file bytes only. ZIP filesystem attributes, alternate-name extras,
+    /// ownership, resource forks and symlinks never reach another extractor.
+    public static func extract(_ data: Data, to destination: URL) throws {
+        let entries = try checkedEntries(data), bytes = Array(data)
+        let manager = FileManager.default
+        guard mkdir(destination.path, 0o700) == 0 else { throw ExtensionValidationError.invalid("Extension destination must be a new private directory.") }
+        do {
+            for entry in entries {
+                let target = destination.appendingPathComponent(entry.name)
+                if entry.name.hasSuffix("/") {
+                    try manager.createDirectory(at: target, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                    continue
+                }
+                try manager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                let descriptor = open(target.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
+                guard descriptor >= 0 else { throw ExtensionValidationError.invalid("Could not create an exclusive extension resource file.") }
+                let file = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+                do {
+                    try ArchivePayload.validate(bytes[entry.payload], method: entry.method, size: entry.size, checksum: entry.checksum) {
+                        try file.write(contentsOf: Data(buffer: $0))
+                    }
+                    try file.close()
+                } catch { try? file.close(); throw error }
+            }
+        } catch { try? manager.removeItem(at: destination); throw error }
+    }
+    private static func checkedEntries(_ data: Data) throws -> [Entry] {
         let b=[UInt8](data)
+        var entries: [Entry] = []
         func u16(_ i: Int) throws -> Int {guard i>=0,i+2<=b.count else{throw ExtensionValidationError.invalid("Truncated archive.")};return Int(b[i]) | Int(b[i+1])<<8}
         func u32(_ i: Int) throws -> Int {try u16(i) | u16(i+2)<<16}
         guard b.count>=22,b.count<=64*1024*1024 else{throw ExtensionValidationError.invalid("Archive must be smaller than 64 MiB.")}
@@ -80,8 +116,10 @@ public enum ExtensionArchive {
             }
             let payload = local+30+ln+le
             try ArchivePayload.validate(b[payload..<(payload+packed)], method: method, size: unpacked, checksum: UInt32(checksum))
+            entries.append(Entry(name: name, method: method, size: unpacked, checksum: UInt32(checksum), payload: payload..<(payload+packed)))
             cursor+=46+n+extra+comment
         }
         guard cursor==e else{throw ExtensionValidationError.invalid("Unexpected archive directory content.")}
+        return entries
     }
 }
