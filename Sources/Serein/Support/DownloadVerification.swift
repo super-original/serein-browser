@@ -32,7 +32,10 @@ import SereinCore
         check("private-download-owner-isolation",manager.downloads.visible(in:privateA).map(\.id)==[a.id] && manager.downloads.visible(in:privateB).map(\.id)==[b.id] && !manager.downloads.visible(in:session).contains{$0.id==a.id || $0.id==b.id})
         let disk=DownloadStore(root:root)
         check("private-download-not-persisted",!disk.items.contains{$0.id==a.id || $0.id==b.id})
+        let privateActive=await start("slow-download.bin",in:privateA,destination:"private-active-download.bin")
+        _=await wait{privateActive.fraction>0.01 || privateActive.finished}
         privateA.window?.performClose(nil)
+        check("private-close-retires-active-download",privateActive.record.phase == .cancelled && !manager.downloads.items.contains{$0.id==privateActive.id})
         check("private-download-close-preserves-other-window",!manager.downloads.items.contains{$0.id==a.id} && manager.downloads.items.contains{$0.id==b.id})
 
         session.window?.makeKeyAndOrderFront(nil)
@@ -48,6 +51,13 @@ import SereinCore
         check("download-resume-completes",resumable.record.phase == .complete,resumable.status)
         let data=resumable.destination.flatMap{try? Data(contentsOf:$0)}
         check("download-resume-byte-integrity",data?.count==8*1024*1024 && data?.enumerated().allSatisfy{UInt8($0.offset%256)==$0.element} == true)
+        let cancelled=await start("slow-download.bin",in:session,destination:"cancelled-download.bin")
+        _=await wait{cancelled.fraction>0.01 || cancelled.finished}
+        cancelled.cancel(pause:true)
+        _=await wait{!cancelled.isActive}
+        check("download-cancel-fixture-paused",cancelled.canResume)
+        cancelled.cancel()
+        check("download-paused-cancel-discards-resume",cancelled.record.phase == .cancelled && !cancelled.canResume)
         privateB.window?.performClose(nil)
         check("private-download-close-clears-records",!manager.downloads.items.contains{$0.privateMode})
         session.window?.makeKeyAndOrderFront(nil)

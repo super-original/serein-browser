@@ -6,7 +6,7 @@ import SereinCore
 @MainActor @Observable final class DownloadItem: NSObject, Identifiable, WKDownloadDelegate {
     var record:DownloadRecord
     var fraction=0.0
-    var id:UUID {record.id}
+    nonisolated let id:UUID
     var name:String {record.name}
     var destination:URL? {record.destination}
     var privateMode:Bool {record.privateWindowID != nil}
@@ -33,7 +33,7 @@ import SereinCore
     @ObservationIgnored weak var store:DownloadStore?
     @ObservationIgnored weak var session:BrowserSession?
     init(record:DownloadRecord,store:DownloadStore,session:BrowserSession?=nil) {
-        self.record=record;self.store=store;self.session=session;super.init()
+        self.id=record.id;self.record=record;self.store=store;self.session=session;super.init()
     }
     func attach(_ download:WKDownload) {
         guard !retired else{download.cancel(nil);return}
@@ -67,6 +67,7 @@ import SereinCore
         record.phase = .failed;record.detail=error.localizedDescription;self.resumeData=resumeData;self.download=nil;observation=nil;changed()
     }
     func cancel(pause:Bool=false) {
+        if !pause,canResume {resumeData=nil;record.phase = .cancelled;record.detail="";changed();return}
         guard let download,isActive,record.phase != .cancelling else{return}
         record.phase = .cancelling;changed()
         download.cancel { [weak self] data in

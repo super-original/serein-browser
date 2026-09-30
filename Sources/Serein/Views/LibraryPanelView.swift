@@ -24,7 +24,7 @@ struct LibraryPanelView: View {
                     if panel == .history {Button("Clear History…"){session.confirm("Clear browsing history?",detail:"This removes the saved history from Serein.",yes:"Clear"){if $0{manager.library.clearHistory()}}}}
                 case .downloads:
                     List(manager.downloads.visible(in:session)) {item in
-                        HStack {VStack(alignment:.leading){Text(item.name);Text(item.status).font(.caption).foregroundStyle(.secondary)};Spacer();if item.isActive {ProgressView(value:item.fraction).frame(width:70);Button("Pause"){item.cancel(pause:true)};Button("Cancel"){item.cancel()}};if item.canResume {Button("Resume"){item.resume(in:session)}};if item.destination != nil,item.finished {Button("Show in Finder"){item.reveal()}.disabled(item.destination.map{!FileManager.default.fileExists(atPath:$0.path)} ?? true)}}
+                        HStack {VStack(alignment:.leading){Text(item.name);Text(item.status).font(.caption).foregroundStyle(.secondary)};Spacer();if item.isActive {ProgressView(value:item.fraction).frame(width:70);Button("Pause"){item.cancel(pause:true)};Button("Cancel"){item.cancel()}};if item.canResume {Button("Resume"){item.resume(in:session)};Button("Cancel"){item.cancel()}};if item.destination != nil,item.finished {Button("Show in Finder"){item.reveal()}.disabled(item.destination.map{!FileManager.default.fileExists(atPath:$0.path)} ?? true)}}
                     }
                     Button("Clear Finished"){manager.downloads.clearFinished(in:session)}
                     Text("Paused downloads can resume while Serein stays open. Private download history stays in this window; downloaded files remain where you saved them.").font(.caption).foregroundStyle(.secondary)
