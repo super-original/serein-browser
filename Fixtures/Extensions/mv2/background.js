@@ -20,7 +20,9 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       const copied = await browser.tabs.get(duplicate.id);
       // This system WebKit omits tabs.highlight. Exercise the supported
       // per-tab update path separately, without claiming that API exists.
-      await browser.tabs.update(sender.tab.id, {highlighted:false});
+      const allTabs = await browser.tabs.query({windowId:queried.windowId});
+      for (const tab of allTabs) if (tab.id !== created.id && tab.id !== duplicate.id)
+        await browser.tabs.update(tab.id, {highlighted:false,active:false});
       await browser.tabs.update(created.id, {highlighted:true,active:true});
       await browser.tabs.update(duplicate.id, {highlighted:true,active:false});
       const highlighted = await browser.tabs.query({windowId:queried.windowId,highlighted:true});

@@ -11,7 +11,7 @@ python3 script/fetch_extension_fixtures.py /tmp/serein-extension-audit
 ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-baseline.txt"
 open -n dist/Serein.app --stdout "$ROOT/application.log" --stderr "$ROOT/application-error.log" --args --test-root "$ROOT" --integration-test --real-extension-catalog /tmp/serein-extension-audit/catalog.json
 sleep 2
-APP_PID=$(pgrep -x Serein | head -1)
+APP_PID=$(pgrep -x Serein | head -1 || true)
 osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' || true
 for i in $(seq 1 2400); do
   if test -s "$ROOT/results.json"; then break; fi
@@ -23,6 +23,21 @@ for i in $(seq 1 2400); do
     KEYBOARD_NAME=$(cat "$ROOT/keyboard-request")
     rm "$ROOT/keyboard-request"
     case "$KEYBOARD_NAME" in
+      prepare-save-download)
+        osascript - "$ROOT" <<'APPLESCRIPT'
+on run arguments
+  tell application "System Events" to tell process "Serein"
+    keystroke "g" using {command down, shift down}
+    delay 0.5
+    keystroke item 1 of arguments
+    key code 36
+    delay 0.7
+    keystroke "a" using command down
+    keystroke "native-save-result.txt"
+  end tell
+end run
+APPLESCRIPT
+        ;;
       save-download) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
       address) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "l" using command down' ;;
       new-tab) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "t" using command down' ;;

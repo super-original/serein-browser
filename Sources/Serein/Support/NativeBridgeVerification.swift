@@ -31,10 +31,12 @@ import SereinCore
             let prefix="mv\(version)-native-bridge"
             do {
                 stage(prefix+"-creating-controller")
-                let controller=WKWebExtensionController(),delegate=NativeBridgeProbeDelegate()
+                let controller=WKWebExtensionController(configuration:WKWebExtensionController.Configuration(identifier:UUID())),delegate=NativeBridgeProbeDelegate()
                 controller.delegate=delegate
                 let source=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/NativeBridge/mv\(version)")
+                stage(prefix+"-reading-fixture")
                 let ext=try await WKWebExtension(resourceBaseURL:source)
+                stage(prefix+"-fixture-loaded")
                 guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"; "))}
                 check(prefix+"-permission-recognized",ext.requestedPermissions.contains{ $0.rawValue=="nativeMessaging" })
                 let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=UUID().uuidString

@@ -140,7 +140,7 @@ import SereinCore
 
         session.select(third)
         if let edited=session.current {
-            _=try? await edited.webView.evaluateJavaScript("document.querySelector('textarea')?.dispatchEvent(new Event('input',{bubbles:true}))")
+            _=try? await edited.webView.evaluateJavaScript("document.querySelector('input')?.dispatchEvent(new Event('input',{bubbles:true}))")
             check("navigation-edit-detected",await wait{edited.hasUserEdits})
             session.navigate("http://127.0.0.1:8765/second.html?stale-confirmation")
             let sheet=session.window?.attachedSheet

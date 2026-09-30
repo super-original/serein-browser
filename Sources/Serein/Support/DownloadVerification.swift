@@ -24,8 +24,8 @@ import SereinCore
         let presented=await wait{session.window?.attachedSheet is NSSavePanel}
         check("download-save-panel-visible",presented)
         if let panel=session.window?.attachedSheet as? NSSavePanel {
-            panel.directoryURL=root;panel.nameFieldStringValue="native-save-result.txt"
-            try? await Task.sleep(for:.milliseconds(300))
+            try? "prepare-save-download".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+            _=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("prepare-save-download.keyboard-finished").path)}
             let capture="21-download-save-panel"
             try? capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
             let captured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path)}
@@ -33,7 +33,7 @@ import SereinCore
             try? "save-download".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
             _=await wait{native.finished}
             check("download-native-save-completes",native.record.phase == .complete,native.status)
-            check("download-native-save-destination",native.destination?.standardizedFileURL == root.appendingPathComponent("native-save-result.txt").standardizedFileURL)
+            check("download-native-save-destination",native.destination?.resolvingSymlinksInPath().standardizedFileURL == root.appendingPathComponent("native-save-result.txt").resolvingSymlinksInPath().standardizedFileURL,String(describing:native.destination))
             check("download-native-save-content",native.destination.flatMap{try? String(contentsOf:$0,encoding:.utf8)} == "Serein deterministic download fixture v1.\n")
             if !native.finished {panel.cancel(nil)}
         }
