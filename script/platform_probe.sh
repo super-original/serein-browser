@@ -40,11 +40,13 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory Fixtures > evidence/pla
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
 osascript <<'APPLESCRIPT' > evidence/platform/safari-automation.log 2>&1 || true
+with timeout of 15 seconds
 tell application "Safari"
     activate
     make new document with properties {URL:"http://127.0.0.1:8765/index.html"}
     set bounds of front window to {10, 30, 1010, 707}
 end tell
+end timeout
 APPLESCRIPT
 sleep 5
 screencapture -x evidence/platform/safari-desktop.png

@@ -36,7 +36,11 @@ struct InstalledExtension: Identifiable, Codable {
         do {try JSONEncoder().encode(records).write(to:root.appendingPathComponent("extensions.json"),options:.atomic)} catch {self.error=error.localizedDescription}
     }
     func load(_ record: InstalledExtension) async throws {
-        let ext=try await WKWebExtension(resourceBaseURL:root.appendingPathComponent(record.id.uuidString))
+        guard contexts[record.id] == nil else { return }
+        let directory=root.appendingPathComponent(record.id.uuidString)
+        let manifest=try ExtensionManifest(data:Data(contentsOf:directory.appendingPathComponent("manifest.json")))
+        let ext=try await WKWebExtension(resourceBaseURL:directory)
+        try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
         guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
         let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=record.id.uuidString
         context.hasAccessToPrivateData=false
@@ -62,9 +66,10 @@ struct InstalledExtension: Identifiable, Codable {
         do {
             try prepare(source,at:destination)
             let manifestURL=destination.appendingPathComponent("manifest.json")
-            _=try ExtensionManifest(data:Data(contentsOf:manifestURL))
+            let manifest=try ExtensionManifest(data:Data(contentsOf:manifestURL))
             let ext=try await WKWebExtension(resourceBaseURL:destination)
             guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
+            try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
             let permissions=ext.requestedPermissions.map(\.rawValue).sorted(),hosts=ext.requestedPermissionMatchPatterns.map(\.string).sorted()
             let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\n\nThe package's publisher signature has not been verified. Install only if you trust its source. Private browsing access is disabled."
             let allowed=await withCheckedContinuation{continuation in session.confirm("Install \(ext.displayName ?? "extension")?",detail:details,yes:"Install"){continuation.resume(returning:$0)}}
@@ -114,11 +119,14 @@ struct InstalledExtension: Identifiable, Codable {
         do {
             if let context=contexts[id] {
                 try controller.unload(context)
-                let records=await controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
-                let matching=records.filter{$0.uniqueIdentifier==context.uniqueIdentifier}
-                await controller.removeData(ofTypes:WKWebExtensionController.allExtensionDataTypes,from:matching)
             }
-            contexts[id]=nil;try FileManager.default.removeItem(at:root.appendingPathComponent(id.uuidString));records.removeAll{$0.id==id};save()
+            contexts[id]=nil
+            // Disabled extensions have no live context, but retain storage. Removal
+            // must erase their data by the durable identity as well.
+            let dataRecords=await controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
+            let matching=dataRecords.filter{$0.uniqueIdentifier==id.uuidString}
+            await controller.removeData(ofTypes:WKWebExtensionController.allExtensionDataTypes,from:matching)
+            try FileManager.default.removeItem(at:root.appendingPathComponent(id.uuidString));records.removeAll{$0.id==id};save()
         } catch {self.error=error.localizedDescription}
     }
     func perform(_ id: UUID,in session: BrowserSession) {

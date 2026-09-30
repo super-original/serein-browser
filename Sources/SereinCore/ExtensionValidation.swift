@@ -15,11 +15,25 @@ public struct ExtensionManifest: Sendable {
               let name=manifest["name"] as? String,!name.isEmpty,let version=manifest["version"] as? String,!version.isEmpty,
               let mv=manifest["manifest_version"] as? Int,[2,3].contains(mv) else {throw ExtensionValidationError.invalid("A valid Manifest V2 or V3 manifest.json is required.")}
         self.name=name;self.version=version;manifestVersion=mv
+        for field in ["permissions", "host_permissions", "optional_permissions", "optional_host_permissions"] {
+            if let value = manifest[field], !(value is [String]) {
+                throw ExtensionValidationError.invalid("Manifest \(field) must be an array of strings.")
+            }
+        }
         permissions=manifest["permissions"] as? [String] ?? []
         hosts=manifest["host_permissions"] as? [String] ?? []
         if permissions.contains("nativeMessaging") {throw ExtensionValidationError.invalid("Native messaging is not implemented. This extension cannot be installed with its requested capabilities.")}
         if manifest["externally_connectable"] != nil {throw ExtensionValidationError.invalid("External messaging semantics are not verified. Installation is blocked for this manifest.")}
         if manifest["devtools_page"] != nil {throw ExtensionValidationError.invalid("Developer-tools extensions are not hosted yet.")}
+    }
+    /// WebKit can omit unknown required permissions without returning a manifest
+    /// error. Never present a reduced capability list as a successful install.
+    public func validateRequiredPermissions(recognized: Set<String>) throws {
+        let required = Set(permissions.filter { !$0.contains("://") && $0 != "<all_urls>" })
+        let missing = required.subtracting(recognized).sorted()
+        guard missing.isEmpty else {
+            throw ExtensionValidationError.invalid("This system WebKit does not recognize required permissions: " + missing.joined(separator: ", ") + ". The extension cannot be installed with its requested capabilities.")
+        }
     }
     public static func validateResourcePath(_ path: String) throws {
         guard !path.isEmpty,!path.hasPrefix("/"),!path.contains("\\"),!path.contains("\0"),!path.contains(":"),!path.split(separator:"/",omittingEmptySubsequences:false).contains("..") else {throw ExtensionValidationError.invalid("Unsafe extension resource path: \(path)")}

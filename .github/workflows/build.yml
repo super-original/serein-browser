@@ -2,6 +2,7 @@ name: Build and exercise Serein on macOS 27
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/verify_runtime.sh', 'script/VisualGate.swift', 'script/ScreenCapture.swift', '.github/workflows/build.yml']
   pull_request:
 permissions:

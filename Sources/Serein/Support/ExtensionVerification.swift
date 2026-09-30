@@ -16,6 +16,7 @@ import SereinCore
                 let manifest=try ExtensionManifest(data:Data(contentsOf:target.appendingPathComponent("manifest.json")))
                 let record=InstalledExtension(id:id,name:name,version:manifest.version,enabled:true,permissions:["storage","tabs"],hosts:[])
                 try await host.load(record)
+                host.records.append(record)
                 session.navigate("http://127.0.0.1:8765/index.html?extension=\(name)-denied")
                 try await Task.sleep(for:.seconds(2))
                 let before=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
@@ -39,11 +40,15 @@ import SereinCore
                 let value=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 let after=(value as? String).flatMap{$0.data(using:.utf8)}.flatMap{try? JSONSerialization.jsonObject(with:$0) as? [String:Any]}
                 check("\(name)-storage-persists-reload",(after?["count"] as? Int ?? 0)>firstCount && firstCount>0)
-                if let loaded=host.contexts[id] {try host.controller.unload(loaded);host.contexts[id]=nil}
+                await host.setEnabled(id,false)
+                check("\(name)-disable-record",host.records.first{$0.id==id}?.enabled == false && host.contexts[id] == nil)
                 session.current!.webView.reload();try await Task.sleep(for:.seconds(1))
                 let disabled=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 check("\(name)-disable-stops-injection",disabled is NSNull)
-                try FileManager.default.removeItem(at:target)
+                await host.remove(id)
+                let remaining=await host.controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
+                check("\(name)-remove-disabled-data",!remaining.contains{$0.uniqueIdentifier==id.uuidString})
+                check("\(name)-remove-package-and-record",!FileManager.default.fileExists(atPath:target.path) && !host.records.contains{$0.id==id})
             } catch {check("\(name)-lifecycle",false,error.localizedDescription);if let context=manager.extensions.contexts[id]{try? manager.extensions.controller.unload(context);manager.extensions.contexts[id]=nil}}
         }
         return results
