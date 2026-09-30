@@ -24,6 +24,13 @@ final class ExtensionResourceAccessTests:XCTestCase {
         XCTAssertTrue(ExtensionResourceAccess.allows(path:"shared.html",manifest:manifest,sourceExtensionID:"trusted-id"){_ in false})
         XCTAssertFalse(ExtensionResourceAccess.allows(path:"shared.html",manifest:manifest,sourceExtensionID:"other-id"){_ in true})
     }
+    func testRepeatedWildcardsAndLiteralRegexCharacters() {
+        let manifest:[String:Any] = ["manifest_version":2,"web_accessible_resources":[String(repeating:"*a",count:80)+"b", "folder/(literal).html", "*tail"]]
+        XCTAssertFalse(ExtensionResourceAccess.allows(path:String(repeating:"a",count:2000)+"c",manifest:manifest,sourceExtensionID:nil){_ in true})
+        XCTAssertTrue(ExtensionResourceAccess.allows(path:"folder/(literal).html",manifest:manifest,sourceExtensionID:nil){_ in false})
+        XCTAssertFalse(ExtensionResourceAccess.allows(path:"folder/literal.html",manifest:manifest,sourceExtensionID:nil){_ in true})
+        XCTAssertTrue(ExtensionResourceAccess.allows(path:"*nested/tail",manifest:manifest,sourceExtensionID:nil){_ in false})
+    }
     func testStaticOriginsDoNotSatisfyDynamicResourceRules() {
         let manifest:[String:Any] = ["manifest_version":3,"web_accessible_resources":[["resources":["*"],"matches":["<all_urls>"],"use_dynamic_url":true]]]
         XCTAssertFalse(ExtensionResourceAccess.allows(path:"public.html",manifest:manifest,sourceExtensionID:nil){_ in true})

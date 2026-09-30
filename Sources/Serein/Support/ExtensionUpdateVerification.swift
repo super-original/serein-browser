@@ -186,6 +186,7 @@ import SereinCore
                 restored=latest
                 check("repeat-options-recovery-\(cycle)",await waitForOptions("Version 1.2"),diagnostic(optionsRuntime))
             }
+            results += await ExtensionReloadProbe.inspectHost(context:restored,dataStore:session.dataStore,version:"1.2")
             session.close(optionsTab,ask:false);session.close(restoredOptionsTab,ask:false)
             check("revocation-and-site-denial-preserved", !restored.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) && restored.permissionStatus(for: site) == .deniedExplicitly)
             restored.setPermissionStatus(.grantedExplicitly, for: site)

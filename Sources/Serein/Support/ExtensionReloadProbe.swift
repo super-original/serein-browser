@@ -3,6 +3,31 @@ import WebKit
 /// Controlled engine diagnostic, using a distinct controller and storage identity.
 /// This does not alter production permission admission or claim compatibility.
 @MainActor enum ExtensionReloadProbe {
+    static func inspectHost(context:WKWebExtensionContext, dataStore:WKWebsiteDataStore, version:String) async -> [RuntimeVerification.Result] {
+        var results:[RuntimeVerification.Result]=[]
+        for customize in [false,true] {
+            guard let configuration=context.webViewConfiguration,let url=context.optionsPageURL else{return results}
+            if customize {
+                configuration.websiteDataStore=dataStore
+                let content=WKUserContentController()
+                for script in configuration.userContentController.userScripts {content.addUserScript(script)}
+                configuration.userContentController=content
+                configuration.preferences.isElementFullscreenEnabled=true
+                configuration.preferences.javaScriptCanOpenWindowsAutomatically=false
+            }
+            let view=WKWebView(frame:.zero,configuration:configuration)
+            view.load(url)
+            var body=""
+            for _ in 0..<50 {
+                body=(try? await view.evaluateJavaScript("document.body?.innerText ?? ''") as? String) ?? ""
+                if body=="Version "+version {break}
+                try? await Task.sleep(for:.milliseconds(100))
+            }
+            results.append(.init(name:"host-extension-"+(customize ? "customized" : "raw")+"-options",passed:body=="Version "+version,detail:"url=\(String(describing:view.url)) body=\(body) ownOriginPermission=\(context.permissionStatus(for:url).rawValue)"))
+            view.stopLoading()
+        }
+        return results
+    }
     static func run(directory:URL,version:String) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
         let controller=WKWebExtensionController(configuration:.init(identifier:UUID()))
