@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import WebKit
 import SereinCore
 
@@ -54,6 +54,30 @@ import SereinCore
                         try await Task.sleep(for:.milliseconds(100))
                     }
                     check("extension-management-capture",FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".png").path))
+                    let librarySheet=session.window?.attachedSheet
+                    host.confirmRemoval(record,in:session)
+                    try await Task.sleep(for:.milliseconds(300))
+                    let removalSheet=librarySheet?.attachedSheet
+                    check("extension-remove-dialog-visible",librarySheet != nil && removalSheet != nil)
+                    if let removalSheet {
+                        let name="17-extension-removal-confirmation"
+                        try name.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                        for _ in 0..<100 {
+                            if FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".capture-finished").path){break}
+                            try await Task.sleep(for:.milliseconds(100))
+                        }
+                        check("extension-remove-dialog-capture",FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".png").path))
+                        librarySheet?.endSheet(removalSheet,returnCode:.alertSecondButtonReturn)
+                    }
+                    try await Task.sleep(for:.milliseconds(300))
+                    check("extension-remove-cancel-keeps-record",host.records.contains{$0.id==id} && host.contexts[id] != nil)
+                    host.chooseInstall(in:session)
+                    try await Task.sleep(for:.seconds(1))
+                    let installPanel=librarySheet?.attachedSheet as? NSOpenPanel
+                    check("extension-install-dialog-visible",installPanel != nil)
+                    installPanel?.cancel(nil)
+                    try await Task.sleep(for:.milliseconds(300))
+                    check("extension-install-cancel-keeps-record",host.records.count==1 && host.records.first?.id==id)
                     session.libraryPanel=nil
                     try await Task.sleep(for:.milliseconds(500))
                 }

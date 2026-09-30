@@ -119,9 +119,15 @@ import SereinCore
         guard let tab=state.selectedTab else{return}
         manager?.library.bookmark(title:tab.title,url:tab.url)
     }
+    // Library panels are sheets. Their dialogs must be attached to that sheet,
+    // otherwise AppKit queues them behind the library until it is dismissed.
+    var dialogWindow: NSWindow? {
+        if libraryPanel != nil,let sheet=window?.attachedSheet {return sheet}
+        return window
+    }
     func confirm(_ title: String, detail: String, yes: String = "Continue", completion: @escaping @MainActor (Bool)->Void) {
         let alert=NSAlert();alert.messageText=title;alert.informativeText=detail;alert.addButton(withTitle:yes);alert.addButton(withTitle:"Cancel")
-        if let window {alert.beginSheetModal(for:window){r in completion(r == .alertFirstButtonReturn)}}
+        if let window=dialogWindow {alert.beginSheetModal(for:window){r in completion(r == .alertFirstButtonReturn)}}
         else {completion(false)}
     }
     func canUnload(_ id: UUID) -> Bool {

@@ -71,7 +71,7 @@ struct InstalledExtension: Identifiable, Codable {
         }
     }
     func chooseInstall(in session: BrowserSession) {
-        guard !session.state.isPrivate,let window=session.window else{return}
+        guard !session.state.isPrivate,let window=session.dialogWindow else{return}
         let panel=NSOpenPanel();panel.canChooseFiles=true;panel.canChooseDirectories=true;panel.allowsMultipleSelection=false
         panel.message="Choose an unpacked WebExtension folder, ZIP, or XPI. Native Safari App Extensions and CRX signatures are not supported."
         panel.beginSheetModal(for:window){[weak self,weak session] response in
@@ -137,6 +137,11 @@ struct InstalledExtension: Identifiable, Codable {
             else if let context=contexts[id] {rememberPermissions(context);try controller.unload(context);contexts[id]=nil}
             records[i].enabled=enabled;save()
         } catch {self.error=error.localizedDescription}
+    }
+    func confirmRemoval(_ record: InstalledExtension,in session: BrowserSession) {
+        session.confirm("Remove \(record.name)?",detail:"The package and extension settings will be removed. Some extension website data may remain; use Clear Website Data in Settings to remove it.",yes:"Remove") { [weak self] yes in
+            if yes {Task {await self?.remove(record.id)}}
+        }
     }
     func remove(_ id: UUID) async {
         do {
