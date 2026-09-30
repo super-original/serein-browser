@@ -19,9 +19,11 @@ import SereinCore
     @ObservationIgnored var extensionWindow: ExtensionWindow?
     @ObservationIgnored var extensionTabs: [UUID:ExtensionTab] = [:]
     @ObservationIgnored var actionAnchors:[UUID:WeakActionAnchor]=[:]
+    let sitePermissions: SitePermissionStore
     @ObservationIgnored let dataStore: WKWebsiteDataStore
     init(state: BrowserWindowState, manager: BrowserManager) {
         self.state=state;self.manager=manager
+        sitePermissions=state.isPrivate ? SitePermissionStore() : manager.sitePermissions
         dataStore=state.isPrivate ? .nonPersistent() : .default()
         address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? ""
     }

@@ -128,6 +128,22 @@ import SereinCore
         let downloadFinished=await wait{downloadVerifier.completed}
         check("download-completes",downloadFinished && downloadVerifier.error==nil,downloadVerifier.error ?? "")
         check("download-content",(try? String(contentsOf:downloadVerifier.destination,encoding:.utf8))=="Serein deterministic download fixture v1.\n")
+        // Exercise the actual permission stores used by delegate decisions and settings.
+        let permissionOrigin=SiteOrigin(url:URL(string:fixture)!)!
+        let permissionKey=SitePermissionKey(topLevel:permissionOrigin,requesting:permissionOrigin,capability:.camera)
+        session.sitePermissions.set(.deny,for:[permissionKey])
+        let reloadedPermissions=SitePermissionStore(file:root.appendingPathComponent("site-permissions.json"))
+        check("site-permission-persistence",reloadedPermissions.policy.decision(for:[permissionKey]) == .deny)
+        let permissionPrivate=manager.newWindow(isPrivate:true)
+        check("private-permission-normal-isolation",permissionPrivate.sitePermissions.policy.decision(for:[permissionKey]) == .ask)
+        permissionPrivate.sitePermissions.set(.allow,for:[permissionKey])
+        let otherPrivate=manager.newWindow(isPrivate:true)
+        check("private-permission-window-isolation",otherPrivate.sitePermissions.policy.decision(for:[permissionKey]) == .ask)
+        check("private-permission-no-disk-write",SitePermissionStore(file:root.appendingPathComponent("site-permissions.json")).policy.decision(for:[permissionKey]) == .deny)
+        permissionPrivate.window?.performClose(nil);otherPrivate.window?.performClose(nil)
+        session.sitePermissions.reset()
+        check("site-permission-reset-persists",SitePermissionStore(file:root.appendingPathComponent("site-permissions.json")).policy.records.isEmpty)
+        session.window?.makeKeyAndOrderFront(nil)
         let count=session.state.tabs.count;session.close(third,ask:false);session.reopen()
         check("close-reopen",session.state.tabs.count==count && session.state.selectedTab?.url==fixture)
         var switchSamples:[Double]=[]

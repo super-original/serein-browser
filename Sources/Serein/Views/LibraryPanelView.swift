@@ -40,6 +40,7 @@ struct LibraryPanelView: View {
                                 if yes {session.dataStore.removeData(ofTypes:WKWebsiteDataStore.allWebsiteDataTypes(),modifiedSince:.distantPast){}}
                             }
                         }
+                        SitePermissionSettings(session: session)
                         Text("Serein 0.1 — development build\nRequires macOS 27.0. Extension compatibility is incomplete. This build is not notarized.").font(.caption).foregroundStyle(.secondary)
                     }.formStyle(.grouped)
                 }
@@ -71,6 +72,45 @@ private struct ExtensionListView: View {
             }
             Button("Install Extension…"){host.chooseInstall(in:session)}
             if let error=host.error {Text(error).foregroundStyle(.red).font(.caption).textSelection(.enabled)}
+        }
+    }
+}
+
+private struct SitePermissionSettings: View {
+    let session: BrowserSession
+    var body: some View {
+        Section("Site Permissions") {
+            Text(session.state.isPrivate ? "Choices stay in this private window and are discarded when it closes." : "Choices are saved for the exact requesting site and top-level site.")
+                .font(.caption).foregroundStyle(.secondary)
+            if let url = session.current?.webView.url, let origin = SiteOrigin(url: url) {
+                Text(origin.key).font(.caption).textSelection(.enabled)
+                ForEach(SiteCapability.allCases, id: \.self) { capability in
+                    let key = SitePermissionKey(topLevel: origin, requesting: origin, capability: capability)
+                    Picker(capability.rawValue.capitalized, selection: Binding(
+                        get: { session.sitePermissions.policy.decision(for: [key]) },
+                        set: { session.sitePermissions.set($0, for: [key]) }
+                    )) {
+                        Text("Ask").tag(SitePermissionDecision.ask)
+                        Text("Allow").tag(SitePermissionDecision.allow)
+                        Text("Deny").tag(SitePermissionDecision.deny)
+                    }
+                }
+            }
+            ForEach(session.sitePermissions.policy.records) { record in
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("\(record.key.capability.rawValue.capitalized): \(record.decision.rawValue)")
+                        Text("\(record.key.requesting.key) on \(record.key.topLevel.key)").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Reset") { session.sitePermissions.set(.ask, for: [record.key]) }
+                }
+            }
+            Button("Reset All Site Permissions") { session.sitePermissions.reset() }
+                .disabled(session.sitePermissions.policy.records.isEmpty)
+            Text("Changes apply to future requests. Reload a page to end an existing grant. macOS privacy controls still apply.")
+                .font(.caption).foregroundStyle(.secondary)
+            if let error = session.sitePermissions.error { Text(error).foregroundStyle(.red) }
         }
     }
 }

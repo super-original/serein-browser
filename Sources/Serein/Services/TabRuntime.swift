@@ -13,6 +13,7 @@ import SereinCore
     var failure: String?
     var hasUserEdits=false
     var crashed=false
+    private(set) var documentID=UUID()
     @ObservationIgnored weak var session: BrowserSession?
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private let initialConfiguration: WKWebViewConfiguration?
@@ -48,6 +49,7 @@ import SereinCore
         session?.update(id,url:view.url?.absoluteString,title:view.title)
     }
     func dispose() {
+        documentID=UUID()
         observations=[];storedView?.stopLoading();storedView?.navigationDelegate=nil;storedView?.uiDelegate=nil
         storedView?.configuration.userContentController.removeScriptMessageHandler(forName:"edited",contentWorld:.world(name:"SereinPageState"))
         storedView?.removeFromSuperview();storedView=nil;editBridge=nil
@@ -59,7 +61,7 @@ import SereinCore
     func userContentController(_ userContentController: WKUserContentController,didReceive message: WKScriptMessage) {runtime?.hasUserEdits=true}
 }
 extension TabRuntime: WKNavigationDelegate {
-    func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {failure=nil;crashed=false;synchronize()}
+    func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {documentID=UUID();failure=nil;crashed=false;synchronize()}
     func webView(_ webView: WKWebView,didCommit navigation: WKNavigation!) {hasUserEdits=false;synchronize()}
     func webView(_ webView: WKWebView,didFinish navigation: WKNavigation!) {
         synchronize()
