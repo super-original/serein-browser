@@ -147,7 +147,7 @@ import SereinCore
             let saved = try JSONDecoder().decode([InstalledExtension].self, from: Data(contentsOf: host.root.appendingPathComponent("extensions.json")))
             check("version-pointer-persists", saved.first(where: { $0.id == id })?.packageVersionID != nil && saved.first(where: { $0.id == id })?.version == "1.2")
             await host.setEnabled(id, true)
-            guard let restored = host.contexts[id] else { throw ExtensionValidationError.invalid("Disabled update did not re-enable") }
+            guard var restored = host.contexts[id] else { throw ExtensionValidationError.invalid("Disabled update did not re-enable") }
             let refreshed=await waitForOptions("Version 1.2")
             func diagnostic(_ runtime:TabRuntime)->String {
                 "url=\(String(describing:runtime.loadedWebView?.url)) saved=\(session.state.tabs.first{$0.id==runtime.id}?.url ?? "missing") title=\(runtime.title) failure=\(runtime.failure ?? "none") loading=\(runtime.isLoading) revision=\(runtime.viewRevision)"
@@ -160,6 +160,13 @@ import SereinCore
                 try await Task.sleep(for:.milliseconds(100))
             }
             check("unavailable-options-retry-after-context-load",restoredText=="Version 1.2",(restoredText ?? "no document")+" "+diagnostic(restoredOptionsRuntime))
+            for cycle in 1...3 {
+                await host.setEnabled(id,false)
+                await host.setEnabled(id,true)
+                guard let latest=host.contexts[id] else{throw ExtensionValidationError.invalid("Context did not return during reload cycle")}
+                restored=latest
+                check("repeat-options-recovery-\(cycle)",await waitForOptions("Version 1.2"),diagnostic(optionsRuntime))
+            }
             session.close(optionsTab,ask:false);session.close(restoredOptionsTab,ask:false)
             check("revocation-and-site-denial-preserved", !restored.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) && restored.permissionStatus(for: site) == .deniedExplicitly)
             restored.setPermissionStatus(.grantedExplicitly, for: site)

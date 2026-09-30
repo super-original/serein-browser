@@ -95,7 +95,7 @@ Public [WKWebView.interactionState](https://developer.apple.com/documentation/we
 
 ### Address suggestion keyboard interaction
 
-Local suggestion selection uses SwiftUI’s public [onKeyPress](https://developer.apple.com/documentation/swiftui/view/onkeypress(_:phases:action:)) handlers and explicit view-local selection, while retaining the native text field and popover. Down/Up select results, Return submits the selection, and Escape dismisses suggestions before exiting address entry. Native System Events key input and a desktop capture are required verification; state-only tests would not establish responder-chain behavior. No external search-suggestion service is contacted. Verification is pending.
+Local suggestion selection uses SwiftUI’s public [onKeyPress](https://developer.apple.com/documentation/swiftui/view/onkeypress(_:phases:action:)) handlers and explicit view-local selection, while retaining the native text field and popover. Down/Up select results, Return submits the selection, and Escape dismisses suggestions before exiting address entry. Native System Events key input and a desktop capture are required verification; state-only tests would not establish responder-chain behavior. No external search-suggestion service is contacted. Native Command-L/type/Down/Up/Escape/Down/Return verification passes in run 36737582637, and the highlighted suggestion screenshot was inspected. This is not a VoiceOver or exhaustive keyboard-navigation claim.
 
 ### Resource-origin handoff preflight
 
