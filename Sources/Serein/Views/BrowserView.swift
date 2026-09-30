@@ -89,7 +89,7 @@ struct WebContentView: NSViewRepresentable {
         let gesture=NSClickGestureRecognizer(target:context.coordinator,action:#selector(Coordinator.focus))
         gesture.delaysPrimaryMouseButtonEvents=false;gesture.delegate=context.coordinator
         view.addGestureRecognizer(gesture);context.coordinator.gesture=gesture;context.coordinator.view=view
-        let container=NSView(frame:NSRect(x:0,y:0,width:800,height:600))
+        let container=WebContentContainer(frame:NSRect(x:0,y:0,width:800,height:600));container.runtime=runtime
         view.frame=container.bounds;view.autoresizingMask=[.width,.height]
         container.addSubview(view)
         return container
@@ -105,6 +105,13 @@ struct WebContentView: NSViewRepresentable {
         func gestureRecognizer(_ gestureRecognizer:NSGestureRecognizer,shouldRecognizeSimultaneouslyWith other:NSGestureRecognizer)->Bool{true}
     }
     func updateNSView(_ view: NSView,context: Context) {}
+}
+@MainActor private final class WebContentContainer:NSView {
+    weak var runtime:TabRuntime?
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        runtime?.restoreFocusIfNeeded(in:window)
+    }
 }
 private struct FindBar: View {
     @Bindable var session: BrowserSession

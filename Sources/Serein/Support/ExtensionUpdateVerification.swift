@@ -100,6 +100,10 @@ import SereinCore
                 }
                 return false
             }
+            let previousSelection=session.state.selectedTabID
+            session.select(optionsTab)
+            try await Task.sleep(for:.milliseconds(200))
+            check("options-accepts-keyboard-focus",session.window?.makeFirstResponder(optionsRuntime.webView)==true)
             let ordinary=URL(string:"http://127.0.0.1:8765/index.html?options-history=1")!
             optionsRuntime.load(ordinary)
             for _ in 0..<50 {
@@ -107,6 +111,8 @@ import SereinCore
                 try await Task.sleep(for:.milliseconds(100))
             }
             check("options-to-ordinary-document",optionsRuntime.webView.url==ordinary && optionsRuntime.webView.title != "Signed extension options")
+            let responder=session.window?.firstResponder as? NSView
+            check("origin-handoff-preserves-page-focus",responder.map{$0 === optionsRuntime.webView || $0.isDescendant(of:optionsRuntime.webView)} ?? false)
             let privateTarget=String(data:try JSONSerialization.data(withJSONObject:[options.absoluteString]),encoding:.utf8)!
             _=try? await optionsRuntime.webView.evaluateJavaScript("location.href="+privateTarget+"[0]")
             try await Task.sleep(for:.milliseconds(500))
@@ -130,6 +136,7 @@ import SereinCore
             _=try? await optionsRuntime.webView.evaluateJavaScript("history.back()")
             check("script-history-back-to-options",await waitForOptions("Version 1.1"))
             check("script-history-preserves-forward",optionsRuntime.webView.canGoForward)
+            if let previousSelection {session.select(previousSelection)}
             check("new-permission-consented", host.contexts[id]?.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) == true)
             check("old-package-cleaned-after-commit", !FileManager.default.fileExists(atPath: before.directory(in: host.root).path))
             guard let context = host.contexts[id] else { throw ExtensionValidationError.invalid("Updated context missing") }
@@ -153,6 +160,18 @@ import SereinCore
                 "url=\(String(describing:runtime.loadedWebView?.url)) saved=\(session.state.tabs.first{$0.id==runtime.id}?.url ?? "missing") title=\(runtime.title) failure=\(runtime.failure ?? "none") loading=\(runtime.isLoading) revision=\(runtime.viewRevision)"
             }
             check("open-options-refresh-after-reenable",refreshed,diagnostic(optionsRuntime))
+            if !refreshed {
+                let selected=session.state.selectedTabID
+                session.select(optionsTab)
+                try await Task.sleep(for:.milliseconds(300))
+                let capture="25-extension-recovery-error"
+                try capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                for _ in 0..<100 {
+                    if FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path){break}
+                    try await Task.sleep(for:.milliseconds(100))
+                }
+                if let selected {session.select(selected)}
+            }
             var restoredText:String?
             for _ in 0..<50 {
                 restoredText=try? await restoredOptionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
@@ -172,6 +191,9 @@ import SereinCore
             restored.setPermissionStatus(.grantedExplicitly, for: site)
             host.rememberPermissions(restored)
             check("disabled-update-data-preserved", try await state(version: "1.2"))
+            if let record=host.records.first(where:{$0.id==id}) {
+                results += await ExtensionReloadProbe.run(directory:record.directory(in:host.root),version:"1.2")
+            }
             let downgrade = await host.update(id, from: fixtures.appendingPathComponent("signed-fixture.crx"), in: session)
             check("downgrade-preserves-new-version", !downgrade && host.records.first(where: { $0.id == id })?.version == "1.2")
         } catch { check("scenario", false, error.localizedDescription) }

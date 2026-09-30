@@ -19,6 +19,7 @@ struct AddressField: View {
     @FocusState private var focused: Bool
     @State private var selectedSuggestion: UUID?
     @State private var suggestionsDismissed=false
+    @State private var focusPageAfterSubmit=false
     private var suggestions:[PageRecord] {session.manager?.library.suggestions(session.address) ?? []}
     private func moveSuggestion(_ direction:Int) -> KeyPress.Result {
         guard focused,!suggestions.isEmpty else{return .ignored}
@@ -31,7 +32,7 @@ struct AddressField: View {
     }
     private func submit() {
         let target=selectedSuggestion.flatMap{id in suggestions.first{$0.id==id}?.url} ?? session.address
-        session.navigate(target);focused=false;selectedSuggestion=nil
+        session.navigate(target);focusPageAfterSubmit=true;focused=false;selectedSuggestion=nil
     }
     var body: some View {
         TextField("Search or enter address",text:$session.address)
@@ -42,7 +43,10 @@ struct AddressField: View {
             .onKeyPress(.upArrow){moveSuggestion(-1)}
             .onChange(of:session.address){_,_ in selectedSuggestion=nil;suggestionsDismissed=false}
             .onChange(of:session.addressFocused){_,value in focused=value}
-            .onChange(of:focused){_,value in session.addressFocused=value;selectedSuggestion=nil;suggestionsDismissed=false}
+            .onChange(of:focused){_,value in
+                session.addressFocused=value;selectedSuggestion=nil;suggestionsDismissed=false
+                if !value,focusPageAfterSubmit {focusPageAfterSubmit=false;session.focusContent(ifSelected:session.state.selectedTabID)}
+            }
             .onExitCommand{
                 if !suggestionsDismissed,!session.address.isEmpty,!suggestions.isEmpty {suggestionsDismissed=true;selectedSuggestion=nil}
                 else {focused=false;session.addressFocused=false}
@@ -50,7 +54,7 @@ struct AddressField: View {
             .popover(isPresented:Binding(get:{focused && !suggestionsDismissed && !session.address.isEmpty && !suggestions.isEmpty},set:{if !$0 {suggestionsDismissed=true;selectedSuggestion=nil}}),arrowEdge:.trailing) {
                 VStack(alignment:.leading,spacing:2) {
                     ForEach(suggestions){record in
-                        Button {session.navigate(record.url);focused=false} label:{VStack(alignment:.leading,spacing:3){Text(record.title).lineLimit(1);Text(record.url).font(.caption).foregroundStyle(.secondary).lineLimit(1)}.frame(maxWidth:.infinity,alignment:.leading).padding(8)}.buttonStyle(.plain)
+                        Button {session.navigate(record.url);focusPageAfterSubmit=true;focused=false} label:{VStack(alignment:.leading,spacing:3){Text(record.title).lineLimit(1);Text(record.url).font(.caption).foregroundStyle(.secondary).lineLimit(1)}.frame(maxWidth:.infinity,alignment:.leading).padding(8)}.buttonStyle(.plain)
                             .background(selectedSuggestion==record.id ? Color.accentColor.opacity(0.18) : Color.clear,in:RoundedRectangle(cornerRadius:6))
                             .accessibilityAddTraits(selectedSuggestion==record.id ? .isSelected : [])
                     }

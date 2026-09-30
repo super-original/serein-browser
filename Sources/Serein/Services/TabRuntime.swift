@@ -22,6 +22,8 @@ import SereinCore
     @ObservationIgnored private var storedView: WKWebView?
     @ObservationIgnored private var editBridge: EditBridge?
     @ObservationIgnored private var permittedFileRoot: URL?
+    @ObservationIgnored private var pendingPageFocus=false
+    @ObservationIgnored private weak var replacedResponder:NSResponder?
     private(set) var viewRevision=0
     @ObservationIgnored private var configurationContext: WKWebExtensionContext?
     var loadedWebView:WKWebView? {storedView}
@@ -62,7 +64,10 @@ import SereinCore
         let context=session?.extensions?.controller.extensionContext(for:url)
         guard configurationContext !== context else{return current}
         let state=current.interactionState
+        let responder=current.window?.firstResponder as? NSView
+        let restoreFocus=responder.map{$0 === current || $0.isDescendant(of:current)} ?? false
         dispose()
+        pendingPageFocus=restoreFocus;replacedResponder=responder
         let replacement=makeView(for:url)
         if current.backForwardList.currentItem != nil,let state {
             replacement.interactionState=state
@@ -100,6 +105,13 @@ import SereinCore
         let root=url.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
         permittedFileRoot=root;documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false
         view(for:url).loadFileURL(url,allowingReadAccessTo:root)
+    }
+    func restoreFocusIfNeeded(in window:NSWindow?) {
+        guard pendingPageFocus,let window,storedView?.window===window else{return}
+        pendingPageFocus=false
+        if window.firstResponder is NSTextView,window.firstResponder !== replacedResponder {return}
+        session?.focusContent(ifSelected:id)
+        replacedResponder=nil
     }
     func synchronize() {
         guard let view=storedView else{return}
@@ -180,6 +192,7 @@ extension TabRuntime: WKNavigationDelegate {
         session?.confirm("Open another application?",detail:url.absoluteString,yes:"Open") {allow in if allow {NSWorkspace.shared.open(url)}}
     }
     func webView(_ webView: WKWebView,decidePolicyFor response: WKNavigationResponse,decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy)->Void) {
+        guard webView === storedView else{decisionHandler(.cancel);return}
         if response.response.url?.scheme=="webkit-extension" {
             ExtensionNavigationTrace.record("EXTENSION_RESPONSE tab=\(id) revision=\(viewRevision) url=\(String(describing:response.response.url)) mime=\(response.response.mimeType ?? "none") displayable=\(response.canShowMIMEType)")
         }

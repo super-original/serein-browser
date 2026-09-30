@@ -85,6 +85,11 @@ import SereinCore
         let submittedSuggestion=await keyboard("suggestion-return")
         let suggestionArrived=await wait{session.current?.webView.url?.absoluteString==suggestionURL}
         check("keyboard-address-suggestion",typedSuggestion && selectedSuggestion && submittedSuggestion && suggestionArrived,session.address)
+        let contentFocused=await wait{
+            guard let view=session.current?.loadedWebView,let responder=session.window?.firstResponder as? NSView else{return false}
+            return responder === view || responder.isDescendant(of:view)
+        }
+        check("keyboard-address-submit-focuses-content",contentFocused)
         if let bookmark=manager.library.bookmarks.first(where:{$0.url==suggestionURL}) {manager.library.removeBookmark(bookmark.id)}
         session.navigate(fixture,ask:false);_=await wait{session.current?.webView.title=="Field Notes"}
         session.addressFocused=false;session.window?.makeFirstResponder(session.current?.webView)
