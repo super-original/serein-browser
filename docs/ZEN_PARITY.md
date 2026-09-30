@@ -79,7 +79,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Containers / profiles / per-site isolation | U | Not implemented |
 | Zen Mods / themes / gradient editor | U | Not implemented; native glass adaptation is separate |
 | Sync / account / import wizard | U | Not implemented |
-| Tab unloading | P | Manual with warning, visible split protection and confirmation-time revalidation; no automatic suspension |
+| Tab unloading | P | Manual with warning and document/selection revalidation; old-view release and in-memory back/current/forward/zoom restoration verified at `3209fee`, including extension resources. No automatic suspension or cross-launch history restoration |
 | Keyboard customization | U | Fixed native shortcuts only |
 | Picture-in-picture / screenshot tools | U | Not implemented as browser commands |
 | Full extension compatibility | U | See detailed matrix; target remains unmet |

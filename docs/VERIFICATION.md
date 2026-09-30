@@ -4,9 +4,9 @@ Full original-spec completion remains the goal and is not achieved. [Draft PR #1
 
 ## Latest verified source
 
-`88483f8692e7380ef31eaa523e65d8da5fdd79cf`: [run 36774822770](https://github.com/super-original/serein-browser/actions/runs/36774822770) passes **76 unit tests, 358/375 browser checks, 12 independent download-restart checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
+`3209fee9e111dfa4b9c2bebacc84543bd07bfe23`: [run 36776390262](https://github.com/super-original/serein-browser/actions/runs/36776390262) passes **91 unit tests, 371/385 browser checks, 12 independent download-restart checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
 
-[Download app](https://github.com/super-original/serein-browser/actions/runs/36774822770/artifacts/11125966921) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36774822770/artifacts/11125722315). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
+[Download app](https://github.com/super-original/serein-browser/actions/runs/36776390262/artifacts/11125864941) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36776390262/artifacts/11126241608). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
 
 Normal paused downloads resume in a new app process with full 8 MiB byte integrity. Private resume data/history stay off disk; owner-only file permissions and completion/cancellation cleanup pass. Active downloads without saved resume data still become interrupted. The inspected Downloads screenshot now describes this relaunch behavior correctly.
 
@@ -22,9 +22,11 @@ Fresh-process checks at the verified source isolate baseline, WebGPU-first and W
 
 Private app-record persistence and signed-update registry permissions pass, including failed-publication cleanup and symlink replacement. All four geometry unit cases and all four actual window-placement/fullscreen/save/exit checks pass. The retrieved exit screenshot was inspected and shows the correct 800×500 window.
 
-Manual unload releases old web views and retains zoom across two cycles; all six MV2/MV3 extension-resource suspension checks pass. Ordinary history preparation failed: the test used delayed observable loading state and built an empty back/forward list. The history-equality passes against that empty setup do **not** establish retention; setup and forward traversal remain failures. Port fixtures were rejected for missing descriptions, so no port semantics were tested. The next revision waits on direct WebKit loading/committed-history state, refuses vacuous history passes and supplies descriptions.
+All 12 ordinary-tab suspension checks now pass with a nonempty back/current/forward setup: both cycles release the old view, retain history and zoom, and subsequent Forward works. All six MV2/MV3 extension-resource suspension checks pass. Opaque state remains in memory; no cross-launch history or automatic suspension is claimed.
 
-Native-message framing and an asynchronous bounded stdio transport are being implemented and unit-tested with standard macOS cat/printf/sleep processes. They are not connected to production extension delegates. Host registration/identity/permission UI and full lifecycle integration remain required before removing the nativeMessaging install rejection. Full original-spec completion remains the goal.
+**11/12 runtime-port checks pass.** Both generations deliver ordered bidirectional nested JSON/Unicode messages, sender metadata and explicit disconnect. Disable-triggered disconnect is observed for MV3 but not MV2; this remains a failed assertion pending content-world/late-message diagnostics. No multi-recipient, worker suspension/wakeup or full Chrome/Firefox port conformance claim follows.
+
+Native-message framing, actual cat/printf/sleep transport cases, deadline/cancellation and exact Chrome host-manifest origin checks pass within the 91 unit tests. The next revision replaces timed idle polling with a wake pipe, adds awaitable child cleanup, and drafts consent/registry/connection management. It is **not wired to production delegates or UI**, and nativeMessaging installation remains blocked. Full original-spec completion remains the goal.
 
 ## Prioritized remaining work
 

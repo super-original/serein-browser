@@ -30,7 +30,7 @@
 | Frames / dynamic scripting | Partially verified | `53d93bc` passes same-origin injection, unrequested-origin exclusion and isolated globals in HTTP iframes for both generations; nested-frame origin inheritance and executeScript conformance remain untested |
 | MV2 persistent backgrounds | Partially verified | Message → storage → tabs query → response exercised |
 | MV3 service workers | Partially verified | Same controlled path; suspension, restart and queued-event semantics not established |
-| Runtime messaging | Partially verified | One-shot content-to-background messaging; ports/cross-extension semantics untested |
+| Runtime messaging | Partially verified | One-shot messaging and single-recipient runtime ports: ordered nested payloads, sender metadata and explicit disconnect pass in MV2/MV3 at `3209fee`; disable disconnect passes MV3 but fails MV2. Cross-extension and multi-recipient semantics remain untested |
 | Storage | Partially verified | Local counter survives unload/reload with stable context ID; sync/quota/restart/error semantics untested |
 | Cross-origin network | Untested | Native WebKit permission path; no complete fetch/CORS/header test suite |
 | Cookies | Untested extension API | Browser normal/private cookie isolation tested separately |
@@ -207,3 +207,5 @@ New dedicated MV2/MV3 fixtures exercise actual runtime.connect ports, ordered bi
 Port tests follow the [runtime.Port contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/Port). Firefox and Chrome differ when one of several receiving contexts unloads; the current single-recipient fixtures do not establish that multi-recipient behavior.
 
 At `88483f8`, both port fixtures failed manifest validation because descriptions were missing; no port semantics were established. Corrected manifests are pending. New native-message framing/stdio components are also pending CI. They have no production delegate route or host-registration UI, so nativeMessaging remains blocked at installation.
+
+At `3209fee`, corrected port fixtures pass 11/12 checks; MV2 disable-disconnect remains unobserved. Native-message framing/transport and manifest validation pass unit tests, including actual standard macOS processes, malformed/truncated input, deadlines and cancellation. The new registry/consent manager is not wired to production delegates or UI. Required nativeMessaging still rejects installation; no real native application compatibility is claimed.

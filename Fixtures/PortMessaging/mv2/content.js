@@ -8,7 +8,12 @@
     document.documentElement.dataset.portDisconnected='true';
     if(browser.runtime.lastError) failure=browser.runtime.lastError.message;
   });
-  port.onMessage.addListener(message => { echoes.push(message); });
+  port.onMessage.addListener(message => { echoes.push(message);document.documentElement.dataset.portEchoCount=String(echoes.length); });
+  window.addEventListener('serein-port-after-disable',()=>{
+    document.documentElement.dataset.portProbeRan='true';
+    try {port.postMessage({sequence:99,value:'after disable'});document.documentElement.dataset.portPostError='none';}
+    catch(error){document.documentElement.dataset.portPostError=String(error);}
+  });
   for(let sequence=0;sequence<3;sequence++) port.postMessage({sequence,value:{text:'message '+sequence,unicode:'雪',items:[null,true,sequence]}});
   for(let attempt=0;attempt<60 && echoes.length<3;attempt++) await new Promise(resolve=>setTimeout(resolve,50));
   document.documentElement.dataset.portEchoes=JSON.stringify({echoes,failure});

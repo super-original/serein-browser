@@ -44,7 +44,10 @@ import SereinCore
                     disconnected=(try? await session.current?.webView.evaluateJavaScript("document.documentElement.dataset.portDisconnected==='true'") as? Bool)==true
                     if disconnected{break};try? await Task.sleep(for:.milliseconds(50))
                 }
-                check("disable-disconnects-port",live != nil && disconnected)
+                _=try? await session.current?.webView.evaluateJavaScript("window.dispatchEvent(new Event('serein-port-after-disable'))")
+                try? await Task.sleep(for:.milliseconds(250))
+                let diagnostic=try? await session.current?.webView.evaluateJavaScript("JSON.stringify({disconnected:document.documentElement.dataset.portDisconnected,probeRan:document.documentElement.dataset.portProbeRan,postError:document.documentElement.dataset.portPostError,echoCount:document.documentElement.dataset.portEchoCount})")
+                check("disable-disconnects-port",live != nil && disconnected,"contextUnloaded=\(host.contexts[id]==nil) details=\(String(describing:diagnostic))")
                 await host.remove(id)
             } catch {check("setup",false,error.localizedDescription);await host.remove(id)}
         }

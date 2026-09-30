@@ -5,6 +5,7 @@ import XCTest
     func testCancelBeforeStartClosesStreamWithoutLaunching() async throws {
         let transport=NativeMessageTransport(executable:URL(fileURLWithPath:"/nonexistent-serein-test-host"),arguments:[])
         transport.cancel();transport.start()
+        await transport.close()
         var iterator=transport.messages.makeAsyncIterator()
         let message=try await iterator.next();XCTAssertNil(message)
     }
@@ -16,7 +17,7 @@ import XCTest
         var messages=transport.messages.makeAsyncIterator()
         let a=try await messages.next(),b=try await messages.next()
         XCTAssertEqual(a,Data(first.dropFirst(4)));XCTAssertEqual(b,Data(second.dropFirst(4)))
-        transport.cancel()
+        await transport.close()
         let end=try await messages.next();XCTAssertNil(end)
         XCTAssertThrowsError(try transport.send(first))
     }
