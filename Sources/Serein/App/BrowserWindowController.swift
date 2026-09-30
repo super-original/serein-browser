@@ -31,6 +31,7 @@ import SereinCore
     func windowDidBecomeKey(_ notification: Notification) {
         if !session.state.isPrivate {session.extensions?.controller.didFocusWindow(session.extensionWindow)}
     }
+    func windowDidUpdate(_ notification:Notification){session.completeContentFocusRequest()}
     func windowDidMove(_ notification:Notification){rememberFrame()}
     func windowDidResize(_ notification:Notification){rememberFrame()}
     func windowWillEnterFullScreen(_ notification:Notification){rememberFrame();frameBeforeFullscreen=window?.frame;fullscreenTransition=true}
@@ -89,6 +90,7 @@ import SereinCore
         return false
     }
     override func sendEvent(_ event:NSEvent) {
+        if event.type == .leftMouseDown {session?.contentFocusRequest=nil}
         if handleBrowserShortcut(event){return}
         super.sendEvent(event)
     }

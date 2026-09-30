@@ -55,10 +55,10 @@ import SereinCore
             window.setFrame(original,display:true)
         }
 
-        func grid(in view:NSView?)->BrowserGridSplitView? {
+        func findGrid(in view:NSView?)->BrowserGridSplitView? {
             guard let view else{return nil}
             if let split=view as? BrowserGridSplitView,split.paneIDs==ids{return split}
-            for child in view.subviews {if let found=grid(in:child){return found}}
+            for child in view.subviews {if let found=findGrid(in:child){return found}}
             return nil
         }
         func drag(_ split:BrowserGridSplitView,to fraction:Double) async -> Bool {
@@ -76,7 +76,7 @@ import SereinCore
             try? await Task.sleep(for:.milliseconds(250))
             return FileManager.default.fileExists(atPath:done.path)
         }
-        if let split=grid(in:session.window?.contentView),let left=split.subviews.first as? BrowserGridSplitView {
+        if let split=findGrid(in:session.window?.contentView),let left=split.subviews.first as? BrowserGridSplitView {
             let horizontal=await drag(split,to:0.35),vertical=await drag(left,to:0.65)
             check("actual-divider-drag-persists-both-axes",horizontal && vertical && abs(session.state.splitFraction(at:0)-0.35)<0.02 && abs(session.state.splitFraction(at:1)-0.65)<0.02,"\(session.state.splitFractions ?? [])")
             let before=session.state.splitFractions
@@ -92,7 +92,7 @@ import SereinCore
                 restored.id=UUID()
                 let reopened=manager.newWindow(state:restored)
                 try? await Task.sleep(for:.milliseconds(500))
-                let restoredGrid=grid(in:reopened.window?.contentView)
+                let restoredGrid=findGrid(in:reopened.window?.contentView)
                 let restoredLeft=restoredGrid?.subviews.first as? BrowserGridSplitView
                 check("restored-native-dividers-use-saved-fractions",restoredGrid.map{abs(Double($0.subviews[0].frame.width/($0.bounds.width-8))-0.35)<0.02}==true && restoredLeft.map{abs(Double($0.subviews[0].frame.height/($0.bounds.height-8))-0.65)<0.02}==true)
                 reopened.window?.close();session.window?.makeKeyAndOrderFront(nil)

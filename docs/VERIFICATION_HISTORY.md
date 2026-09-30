@@ -293,3 +293,14 @@ The next `5e43906` build passes, but runtime preflight stops before app launch: 
 `029feec7e9fa9a81fb15f61602387ffc9d7352cc`: [run 36780698616](https://github.com/super-original/serein-browser/actions/runs/36780698616) passes **92 unit tests, 412/425 browser checks, 12/12 independent download-restart checks, 9/9 independent quit checks and 12/12 isolated bridge checks**. Fresh-process fullscreen is **8/12**. Environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
 
 [Download app](https://github.com/super-original/serein-browser/actions/runs/36780698616/artifacts/11126989926) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36780698616/artifacts/11128345444). Ad-hoc signed/hardened, not Developer ID signed or notarized. This is a development candidate with known defects.
+
+
+## Latest verified source
+
+`b3e2899c078124604009415fbc53050e9d30b98e`: [run 36789081403](https://github.com/super-original/serein-browser/actions/runs/36789081403) passes **108 unit tests, 404/421 browser checks, 9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fresh fullscreen checks**. Environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
+
+[Download development app](https://github.com/super-original/serein-browser/actions/runs/36789081403/artifacts/11131721219) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36789081403/artifacts/11131571700). Ad-hoc signed/hardened; not Developer ID signed or notarized.
+
+All **19 folder checks** pass, including actual AX collapse, context-menu capture, creation/nesting/persistence, guarded deletion, unpacking and live folder-to-workspace conversion. All **11 Safari Web Extension bundle checks** pass: native installation/cancellation, unchanged signed manifest, options, MV3 worker messaging, persistent storage/identity after reload, tamper rejection and removal. [Inspected screenshots and pinned Zen comparisons](evidence/2026-09-30/folders-and-safari/README.md) show improved essential width and folder geometry, but still blank WebKit content.
+
+The 17 browser failures comprise the 13 retained fullscreen/extension failures below plus four native-host picker/scenario failures. The inspected picker capture remains in its Go-to-file popup. No native-host lifecycle success is inferred from this run; earlier isolated evidence is retained below.

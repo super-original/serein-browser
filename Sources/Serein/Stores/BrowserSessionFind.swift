@@ -23,6 +23,7 @@ extension BrowserSession {
     }
 
     func closeFind() {
+        if findVisible {contentFocusRequest=state.selectedTabID}
         findVisible=false;findRequestID=UUID();findResult=""
         // FindBar returns focus after its field actually leaves the hierarchy.
     }

@@ -12,6 +12,7 @@ import SereinCore
     var findText=""
     var findResult=""
     @ObservationIgnored var findRequestID=UUID()
+    @ObservationIgnored var contentFocusRequest:UUID?
     var libraryPanel: LibraryPanel?
     var folderEditor:FolderEditorRequest?
     var compactRevealed=false

@@ -35,10 +35,18 @@ import AppKit
         session.close(other,ask:false)
         if let original {session.select(original)}
         session.closeFind()
-        try? await Task.sleep(for:.milliseconds(200))
+        for _ in 0..<40 {
+            if session.window?.firstResponder === session.current?.loadedWebView {break}
+            try? await Task.sleep(for:.milliseconds(50))
+        }
         let view=session.current?.loadedWebView
         let responder=session.window?.firstResponder as? NSView
         check("find-close-restores-page-focus",!session.findVisible && view != nil && responder.map{candidate in candidate===view || view.map{candidate.isDescendant(of:$0)}==true}==true,"responder=\(String(describing:responder)) attached=\(view?.window === session.window) addressFocused=\(session.addressFocused)")
+        session.contentFocusRequest=session.state.selectedTabID;session.addressFocused=true
+        let beforeAddress=session.window?.firstResponder
+        session.completeContentFocusRequest()
+        check("find-focus-request-respects-new-address-intent",session.contentFocusRequest==nil && session.window?.firstResponder === beforeAddress)
+        session.addressFocused=false
         func keyboard(_ name:String) async -> Bool {
             let finished=root.appendingPathComponent(name+".keyboard-finished")
             try? FileManager.default.removeItem(at:finished)
