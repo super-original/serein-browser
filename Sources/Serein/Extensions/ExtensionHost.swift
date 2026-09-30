@@ -81,6 +81,7 @@ struct InstalledExtension: Identifiable, Codable {
         }
     }
     func install(_ source: URL,in session: BrowserSession) async {
+        guard !session.state.isPrivate else { error = "Extensions cannot be installed from a private window."; return }
         let access=source.startAccessingSecurityScopedResource();defer{if access{source.stopAccessingSecurityScopedResource()}}
         let id=UUID(),destination=root.appendingPathComponent(UUID().uuidString+".staging")
         do {
@@ -98,6 +99,9 @@ struct InstalledExtension: Identifiable, Codable {
             let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\n\nEmpty reserved action-command metadata is normalized for WebKit when needed. The original source package is unchanged.\n\n\(provenance) Install only if you trust its source. Private browsing access is disabled."
             let allowed=await withCheckedContinuation{continuation in session.confirm("Install \(ext.displayName ?? "extension")?",detail:details,yes:"Install"){continuation.resume(returning:$0)}}
             guard allowed else {try FileManager.default.removeItem(at:destination);return}
+            if let identity, records.contains(where: { $0.packageIdentity?.extensionID == identity.extensionID }) {
+                throw ExtensionValidationError.invalid("This CRX3 developer identity was installed while consent was pending.")
+            }
             let final=root.appendingPathComponent(id.uuidString);try FileManager.default.moveItem(at:destination,to:final)
             let record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity)
             do {try await load(record);records.append(record);save()}
@@ -107,7 +111,7 @@ struct InstalledExtension: Identifiable, Codable {
     @discardableResult
     func prepare(_ source: URL,at destination: URL) throws -> SignedExtensionIdentity? {
         var identity: SignedExtensionIdentity?
-        let values=try source.resourceValues(forKeys:[.isDirectoryKey,.isSymbolicLinkKey])
+        let values=try source.resourceValues(forKeys:[.isDirectoryKey,.isSymbolicLinkKey,.isRegularFileKey])
         guard values.isSymbolicLink != true else{throw ExtensionValidationError.invalid("Symbolic-link packages are not accepted.")}
         if values.isDirectory==true {
             let enumerator=FileManager.default.enumerator(at:source,includingPropertiesForKeys:[.isSymbolicLinkKey,.fileSizeKey])
@@ -118,6 +122,7 @@ struct InstalledExtension: Identifiable, Codable {
             }
             try FileManager.default.copyItem(at:source,to:destination)
         } else {
+            guard values.isRegularFile == true else { throw ExtensionValidationError.invalid("Select a regular package file.") }
             guard ["zip","xpi","crx"].contains(source.pathExtension.lowercased()) else{throw ExtensionValidationError.invalid("Select a ZIP, XPI, CRX3, or unpacked manifest folder. Legacy CRX2 and native Safari formats are not implemented.")}
             let handle = try FileHandle(forReadingFrom: source)
             defer { try? handle.close() }

@@ -6,7 +6,7 @@
 
 | Format | Current status | Exact scope |
 |---|---|---|
-| Chrome Manifest V2 | Partial | ZIP/unpacked loading; controlled persistent-background fixture passes limited semantics. CRX validation/store installation absent. |
+| Chrome Manifest V2 | Partial | ZIP/unpacked loading; controlled persistent-background fixture passes limited semantics. CRX3 verification implemented, pending CI; CRX2/store installation absent. |
 | Firefox Manifest V2 | Partial | XPI/unpacked loading; Firefox-specific semantics and APIs not implemented universally. |
 | Chrome Manifest V3 | Partial | Controlled service-worker fixture passes limited semantics. Lifetime, wakeup, DNR, offscreen and full Chrome API conformance not established. |
 | Firefox Manifest V3 | Untested semantics | Manifest number is accepted, which is not proof of Firefox MV3 lifecycle behavior. |
@@ -18,7 +18,7 @@
 
 | Family | Status | Evidence / missing work |
 |---|---|---|
-| Install / validate | Implemented, partial formats | Path, duplicate, size, symlink and manifest checks; omitted required API permissions reject installation/restore with an explicit list; source consent; no publisher-signature validation |
+| Install / validate | Implemented, partial formats | Path, duplicate, size, symlink and manifest checks; omitted required API permissions reject installation/restore with an explicit list; source consent; CRX3 signature verification pending CI, no XPI publisher-signature validation |
 | Enable / disable / remove | Partial | Fixture disable stops injection; installed records persist; disabled-extension removal now erases data by durable identity; production disable/remove and same-identity storage-reset checks pass for controlled MV2/MV3 fixtures |
 | Updates | Unimplemented | No authenticated update protocol or permission-diff upgrade flow |
 | Permissions / host access | Partial | Install prompts; fixture denied hosts do not inject; runtime permission prompts; persistent explicit grants, denials, revocations and per-site overrides |
@@ -69,13 +69,13 @@ Evidence: [run 35244059174](https://github.com/super-original/serein-browser/act
 
 ## Release blockers
 
-A production compatibility release requires a much broader semantics suite and explicit host/engine gap resolution. Native Safari formats and engine-internal interception are major restrictions. Updating, signature validation, private opt-in, native-host isolation and API coverage are additional unimplemented work. No full custom-engine build/distribution/security-update plan has been proven feasible within the required standard free runner resources.
+A production compatibility release requires a much broader semantics suite and explicit host/engine gap resolution. Native Safari formats and engine-internal interception are major restrictions. Updating, broader signature/store trust, private opt-in, native-host isolation and API coverage are additional unimplemented work. No full custom-engine build/distribution/security-update plan has been proven feasible within the required standard free runner resources.
 
 ## Continuation: required permissions and removal
 
 The host now compares named required manifest permissions with the system WebKit permission set at installation and restoration. If WebKit silently omits a required API permission, Serein rejects the package and lists the missing capabilities. MV2 host patterns remain website-access patterns, not API permission names. Malformed permission fields also fail closed. Recognition still does **not** establish semantic compatibility; the matrices above remain partial/unsupported.
 
-The real-package audit now applies this same required-permission gate before loading. Earlier “loaded without permission grants” results remain historical observations of WebKit alone, not guarantees that current Serein will install those packages. Native Safari App Extensions, legacy `.safariextz`, CRX/store installation, authenticated updates and universal Chrome/Firefox semantics remain unsupported.
+The real-package audit now applies this same required-permission gate before loading. Earlier “loaded without permission grants” results remain historical observations of WebKit alone, not guarantees that current Serein will install those packages. Native Safari App Extensions, legacy `.safariextz`, CRX2/store installation, authenticated updates and universal Chrome/Firefox semantics remain unsupported.
 
 Removing an extension previously erased data only if a context was currently loaded. The host now queries/removes data by the durable extension UUID even after disable or restart. Controlled MV2/MV3 tests exercise production disable/remove paths and check package, record and data cleanup. This does not prove secure erasure of filesystem blocks or conformance for unrelated API families.
 
@@ -120,7 +120,7 @@ Serein now adds only `description: "Activate extension"` to empty, version-appro
 | Identity, idle, clipboard access | Potential host services with explicit consent, OAuth/clipboard/privacy semantics and event handling; same missing dispatch boundary. No blanket native access granted. |
 | Offscreen / sidebar / notifications | Current upstream namespace code has build/runtime gates; observed system permission omission cannot be repaired merely by implementing a delegate. A public system API path or a measured custom-WebKit plan must be established first. |
 | Blocking webRequest / auth interception / privacy | Requires engine-level request ordering, credentials and settings semantics; a page script or ordinary WKNavigationDelegate cannot supply equivalent interception. No public equivalent established for arbitrary extension requests. |
-| Native Safari / legacy Safari / signed Chrome packages | Separate format/hosting/signature work, still unsupported; unrelated to manifest normalization. |
+| Native Safari / legacy Safari / signed Chrome packages | Native/legacy formats and CRX2 remain unsupported. CRX3 verification is implemented pending CI; unrelated to manifest normalization. |
 
 Sources: captured SDK `WKWebExtensionControllerDelegate.h` in [platform run 36705841148](https://github.com/super-original/serein-browser/actions/runs/36705841148), and [WebKit namespace implementation](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/WebProcess/Extensions/API/WebExtensionAPINamespace.cpp). Upstream source is a diagnostic reference, not proof that an API is enabled in the shipped system framework. A complete custom extension execution bridge would require MV2/MV3 lifecycle, isolated worlds, permissions, messaging, and API semantics; no partial shim is being presented as full support.
 

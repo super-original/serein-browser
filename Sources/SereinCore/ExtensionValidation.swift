@@ -61,7 +61,11 @@ public enum ExtensionArchive {
             guard flags & 1==0,[0,8].contains(method),[0,0o100000,0o040000].contains(mode & 0o170000),cursor+46+n+extra+comment<=e,
                   let name=String(bytes:b[(cursor+46)..<(cursor+46+n)],encoding:.utf8) else{throw ExtensionValidationError.invalid("Unsupported or unsafe archive entry.")}
             try ExtensionManifest.validateResourcePath(name)
-            guard names.insert(name.lowercased()).inserted else{throw ExtensionValidationError.invalid("Duplicate resource path.")}
+            let components = name.split(separator: "/", omittingEmptySubsequences: false)
+            let pathComponents = name.hasSuffix("/") ? Array(components.dropLast()) : components
+            guard pathComponents.allSatisfy({ !$0.isEmpty && $0 != "." }) else { throw ExtensionValidationError.invalid("Ambiguous archive resource path.") }
+            let canonicalName = pathComponents.joined(separator: "/").precomposedStringWithCanonicalMapping.lowercased()
+            guard names.insert(canonicalName).inserted else{throw ExtensionValidationError.invalid("Duplicate resource path.")}
             total+=unpacked
             guard total<=128*1024*1024,unpacked<=max(1,packed)*1000 else{throw ExtensionValidationError.invalid("Extension expands beyond the permitted size.")}
             guard try u32(local)==0x04034b50 else{throw ExtensionValidationError.invalid("Invalid local header.")}

@@ -88,6 +88,8 @@ import SereinCore
                 let granted=await probe("granted")
                 let response=granted?["response"] as? [String:String]
                 check(prefix+"-scoped-reply",granted?["allowed"] as? Bool==true && response?["protocol"]=="serein-probe-1" && response?["context"]==delegate.expectedContext && delegate.allowed==1,String(describing:granted))
+                check(prefix+"-missing-namespace-installed", granted?["namespaceInstalled"] as? Bool == true, String(describing:granted))
+                check(prefix+"-expected-execution-world", granted?["workerContext"] as? Bool == (version == 3), String(describing:granted?["workerContext"]))
                 check(prefix+"-unknown-application-denied",granted?["unknownRejected"] as? Bool==true && delegate.rejected==1)
                 stage(prefix+"-unloading")
             } catch {check(prefix+"-setup",false,error.localizedDescription)}

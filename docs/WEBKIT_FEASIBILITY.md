@@ -27,3 +27,5 @@ The [recorded inventory](evidence/2026-09-30/webkit-source-inventory.json) pins 
 5. Pin security updates to reviewed upstream changes, maintain a small patch queue, rebuild and rerun conformance before each release, and publish exact source/build provenance. An unmaintainable engine fork is not production-ready.
 
 These conditions are unresolved. They preserve the WebKit requirement while avoiding an unsupported promise that a full engine build or universal compatibility fits the available resources.
+
+A follow-up isolated probe attempts to define the absent `browser.downloads` namespace in each MV2 background page and MV3 service worker, with a single clearly diagnostic method forwarding the same constant native-message reply. It records the actual execution-world type and namespace definition error. No downloads method, permission, native host or data access is implemented by this experiment. Production installation gates are unchanged. Verification pending.

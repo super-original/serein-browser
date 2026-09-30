@@ -64,6 +64,9 @@ private struct ExtensionListView: View {
             List(host.records) {record in
                 VStack(alignment:.leading,spacing:8) {
                     HStack {Text(record.name).bold();Text(record.version).foregroundStyle(.secondary);Spacer();Toggle("Enabled",isOn:Binding(get:{record.enabled},set:{enabled in Task{await host.setEnabled(record.id,enabled)}})).toggleStyle(.switch).fixedSize()}
+                    if let identity = record.packageIdentity {
+                        Text("Verified original \(identity.format) · \(identity.extensionID)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                    }
                     HStack {
                         Button("Open Action"){Task{await host.performFromLibrary(record.id,in:session)}}.disabled(!record.enabled || !host.actionEnabled(record.id,in:session))
                         if let context=host.contexts[record.id],let url=context.optionsPageURL {Button("Options"){session.newTab(url:url.absoluteString);session.libraryPanel=nil}}
