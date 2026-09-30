@@ -13,8 +13,8 @@ Implemented code and prior evidence cover navigation, basic tabs/workspaces, two
 | Priority | Work | Evidence / completion bar |
 |---|---|---|
 | P0 | Establish actual page rendering | Inspect fresh desktop and direct-AppKit captures; retain the failing gate until genuine page rendering passes. Do not replace desktop evidence with WebKit snapshots. |
-| P0 | Site permission policy | Add exact-origin/capability policies, private isolation, settings/reset and stale-prompt protection; unit and app runtime coverage. Real hardware capture/location consent remains separate. |
-| P1 | Session/split lifecycle | Repair stale pane IDs and verify switching, close, workspace moves and restore with both panes focused. |
+| P0 | Site permission policy | Implemented and exercised: exact-origin/capability policies, private isolation, settings/reset and stale-prompt protection. Real hardware capture/location consent remains unverified. |
+| P1 | Session/split lifecycle | Focus/close/workspace/restore regressions fixed and tested; active-pane geometry inspected. Full split groups, window history stacks and broader AX interactions remain gaps. |
 | P1 | Native interaction and Zen comparisons | Inspect matched light/dark, compact, split and settings states; expand keyboard/AX and accessibility coverage. |
 | P1 | Extension semantic coverage | Package-loading audits are not functionality tests. Implement/test lifecycle, host APIs and permission boundaries; retain native Safari/CRX/legacy restrictions explicitly. |
 | P2 | Durable downloads, suspension, richer Zen parity | Resume/history, media/unsaved-state-aware suspension, Glance, groups/folders, profiles, import and sync remain absent or partial. |
@@ -35,6 +35,9 @@ The same run's warm-idle diagnostic samples **314.99 MiB summed RSS** and **1.11
 
 The [platform probe](https://github.com/super-original/serein-browser/actions/runs/36705841148) proves the same blank-page defect in system Safari and an unhardened WKWebView witness. [All 14 refreshed Zen references](https://github.com/super-original/serein-browser/actions/runs/36705707876) were visually inspected; the same fixture renders in Zen. [Retained inspected comparisons](evidence/2026-09-30/README.md) show the evidence directly.
 
-Native permission settings and consent sheets were inspected, as were focused primary/secondary split outlines. That inspection found an extra titlebar-safe-area inset inside native split panes; a follow-up change removes the nested top safe area and requires another actual capture before calling the geometry fixed.
+Native permission settings and consent sheets were inspected, as were focused primary/secondary split outlines. Inspection found an extra titlebar-safe-area inset inside native split panes. [Run 36707376209](https://github.com/super-original/serein-browser/actions/runs/36707376209), exact commit `acf9bebd0d6f03ed2104b27af47a0bfe48f87951`, passed the same 26 unit and 65 app checks. Its inspected captures confirm the corrected eight-point page inset and focus outline moving between panes. Web content is still blank and the rendering gate still fails.
 
 Full extension compatibility remains unmet: all seven pinned real packages are rejected for exact reasons in [the current matrix](EXTENSIONS.md#current-real-package-admission-results). Safari native/legacy formats and unsupported engine API semantics have not been implemented. Full Zen parity, accessibility states, media/device behavior, crash injection, normal-workload performance and signed/notarized distribution remain release blockers. No claim that independent backlog items are complete is implied by the platform failure.
+
+
+The error-state capture also exposed a recovery defect: failed navigation could show the previous committed URL, and Reload could reload that old page. The continuation now retains provisional/failed destinations, routes toolbar/menu/error-button reload through the failed target, and adds explicit failed-address/retry scenarios. Download responses clear provisional navigation state instead of replacing the current tab destination. Latest exact-commit results are recorded in [draft PR #1](https://github.com/super-original/serein-browser/pull/1); the prior verified runs above are kept as historical evidence.

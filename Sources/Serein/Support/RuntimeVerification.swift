@@ -103,8 +103,13 @@ import SereinCore
         session.state.sidebar = .collapsed;await capture("10-collapsed")
         session.state.sidebar = .expanded;session.libraryPanel = .settings;await capture("11-settings");session.libraryPanel=nil
         session.findVisible=true;session.findText="Workspace";session.find();await capture("12-find");session.findVisible=false
-        session.navigate("http://127.0.0.1:19876/unavailable")
-        check("navigation-error",await wait{session.current?.failure != nil});await capture("13-network-error")
+        let unavailable="http://127.0.0.1:19876/unavailable"
+        session.navigate(unavailable)
+        check("navigation-error",await wait{session.current?.failure != nil})
+        check("navigation-error-keeps-destination",session.address==unavailable && session.state.selectedTab?.url==unavailable)
+        session.current?.reload()
+        check("navigation-error-retry-keeps-destination",await wait{session.current?.failure != nil && session.current?.failedURL?.absoluteString==unavailable})
+        await capture("13-network-error")
         session.navigate(fixture);check("navigation-recovery",await wait{session.current?.webView.title=="Field Notes" && session.current?.failure==nil})
         do {
             _=try await session.current!.webView.evaluateJavaScript("document.cookie='sereinPrivateCheck=normal;path=/'")

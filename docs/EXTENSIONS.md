@@ -19,7 +19,7 @@
 | Family | Status | Evidence / missing work |
 |---|---|---|
 | Install / validate | Implemented, partial formats | Path, duplicate, size, symlink and manifest checks; omitted required API permissions reject installation/restore with an explicit list; source consent; no publisher-signature validation |
-| Enable / disable / remove | Partial | Fixture disable stops injection; installed records persist; disabled-extension removal now erases data by durable identity; new lifecycle tests pending final CI |
+| Enable / disable / remove | Partial | Fixture disable stops injection; installed records persist; disabled-extension removal now erases data by durable identity; production disable/remove and same-identity storage-reset checks pass for controlled MV2/MV3 fixtures |
 | Updates | Unimplemented | No authenticated update protocol or permission-diff upgrade flow |
 | Permissions / host access | Partial | Install prompts; fixture denied hosts do not inject; runtime permission prompts; temporary per-site overrides |
 | Private access | Unsupported by policy in this build | No extension controller in private web views; no opt-in UI |
@@ -51,7 +51,7 @@ Fixtures are original source under `Fixtures/Extensions`, version 1.0.0, MV2 and
 
 These are narrow semantic tests. They do not prove worker eviction, full frame isolation, every permission boundary, restart persistence, event ordering, all API families, or compatibility with arbitrary real extensions.
 
-## Real package audit
+## Historical real-package audit (September 17)
 
 Pinned sources and SHA-256 values are in [`extension-catalog.json`](../Fixtures/extension-catalog.json). The workflow downloads the original packages into an ephemeral directory and does not redistribute them. No credentials or live password vaults are used. The **scenario is package validation and context loading without permission grants**, followed by unload/data removal. None of these rows is marked functionally compatible.
 

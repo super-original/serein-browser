@@ -23,3 +23,10 @@ Zen outlines its focused split pane in the accent color. Serein adopts that focu
 | ![Site permission settings](site-settings.png) | ![Camera permission prompt](permission-prompt.png) |
 
 These two screenshots are from [run 36705846607](https://github.com/super-original/serein-browser/actions/runs/36705846607), source `b36599d`. Both were inspected. Settings use a scrollable native form; camera/microphone rows are visible and further choices continue below. The consent sheet shows both origins and distinct Allow Once, Deny and Always Allow choices. These are real native UI captures, with in-process test responses; no physical camera capture is claimed.
+
+
+| Serein primary pane focused | Serein secondary pane focused |
+|---|---|
+| ![Primary focus](serein-split-primary.png) | ![Secondary focus](serein-split-secondary.png) |
+
+[Run 36707376209](https://github.com/super-original/serein-browser/actions/runs/36707376209), exact source `acf9beb`, produced these inspected captures after correcting the nested native split-host safe area. Both page borders begin around y=39 (eight points below the window top), matching the reference's content inset. The focus outline and address follow the selected pane without swapping the panes. The failed WebKit content area remains explicit.

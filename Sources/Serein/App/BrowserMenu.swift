@@ -33,7 +33,7 @@ import AppKit
     @objc func closeTab(){if let session=manager?.active,let id=session.state.selectedTabID{session.close(id)}}
     @objc func reopen(){manager?.active?.reopen()}
     @objc func address(){manager?.active?.compactRevealed=true;manager?.active?.addressFocused=true}
-    @objc func reload(){manager?.active?.current?.webView.reload()}
+    @objc func reload(){manager?.active?.current?.reload()}
     @objc func stop(){manager?.active?.current?.webView.stopLoading()}
     @objc func back(){manager?.active?.current?.webView.goBack()}
     @objc func forward(){manager?.active?.current?.webView.goForward()}

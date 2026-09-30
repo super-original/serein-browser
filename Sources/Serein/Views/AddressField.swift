@@ -6,7 +6,7 @@ struct NavigationButtons: View {
         Group {
             Button("Back",systemImage:"arrow.left"){session.current?.webView.goBack()}.disabled(!(session.current?.canGoBack ?? false))
             Button("Forward",systemImage:"arrow.right"){session.current?.webView.goForward()}.disabled(!(session.current?.canGoForward ?? false))
-            Button(session.current?.isLoading==true ? "Stop" : "Reload",systemImage:session.current?.isLoading==true ? "xmark" : "arrow.clockwise") {if session.current?.isLoading==true{session.current?.webView.stopLoading()}else{session.current?.webView.reload()}}
+            Button(session.current?.isLoading==true ? "Stop" : "Reload",systemImage:session.current?.isLoading==true ? "xmark" : "arrow.clockwise") {if session.current?.isLoading==true{session.current?.webView.stopLoading()}else{session.current?.reload()}}
         }.labelStyle(.iconOnly).buttonStyle(.plain).frame(width:24,height:28)
     }
 }

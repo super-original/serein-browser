@@ -70,7 +70,7 @@ private struct PagePane: View {
                 }.frame(maxWidth:.infinity,maxHeight:.infinity).background(Color(nsColor:.textBackgroundColor))
             }
             if let failure=runtime.failure {
-                ContentUnavailableView {Label(runtime.crashed ? "Page stopped" : "Unable to load page",systemImage:"exclamationmark.triangle")} description:{Text(failure)} actions:{Button("Reload"){runtime.failure=nil;runtime.webView.reload()}.buttonStyle(.glass)}
+                ContentUnavailableView {Label(runtime.crashed ? "Page stopped" : "Unable to load page",systemImage:"exclamationmark.triangle")} description:{Text(failure)} actions:{Button("Reload"){runtime.reload()}.buttonStyle(.glass)}
                 .frame(maxWidth:.infinity,maxHeight:.infinity).background(Color(nsColor:.textBackgroundColor))
             }
         }
