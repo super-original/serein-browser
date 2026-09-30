@@ -43,7 +43,7 @@ import SereinCore
             Task { @MainActor [weak self] in self?.fraction=min(1,max(0,value)) }
         }
     }
-    private func changed() {store?.save()}
+    private func changed() {if !privateMode {store?.save()}}
     func download(_ download:WKDownload,decideDestinationUsing response:URLResponse,suggestedFilename:String,completionHandler:@escaping @MainActor @Sendable (URL?)->Void) {
         guard !retired,self.download === download else{completionHandler(nil);return}
         record.name=(suggestedFilename as NSString).lastPathComponent
@@ -112,14 +112,14 @@ import SereinCore
     @discardableResult func add(_ download:WKDownload,in session:BrowserSession,destination:URL?=nil)->DownloadItem {
         let record=DownloadRecord(source:download.originalRequest?.url,destination:destination,privateWindowID:session.state.isPrivate ? session.state.id : nil)
         let item=DownloadItem(record:record,store:self,session:session)
-        items.insert(item,at:0);item.attach(download);save();return item
+        items.insert(item,at:0);item.attach(download);if !item.privateMode {save()};return item
     }
     func visible(in session:BrowserSession)->[DownloadItem] {
         items.filter{session.state.isPrivate ? $0.record.privateWindowID==session.state.id : !$0.privateMode}
     }
     func clearFinished(in session:BrowserSession) {
         let ids=Set(visible(in:session).filter(\.finished).map(\.id))
-        items.removeAll{ids.contains($0.id)};save()
+        items.removeAll{ids.contains($0.id)};if !session.state.isPrivate {save()}
     }
     func closePrivateWindow(_ id:UUID) {
         for item in items where item.record.privateWindowID==id {item.retire()}

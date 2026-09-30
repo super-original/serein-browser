@@ -64,7 +64,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Multiple windows / moving tabs | P | Normal live-tab transfer; isolated private transfer deliberately rejected |
 | Persistent sessions | P | Tab/workspace/sidebar restoration; not full history-stack/window restoration |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
-| Downloads | P | Native save/cancel/reveal; no resume or durable download history |
+| Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; interrupted records after restart, no cross-launch resume |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |
 | File selection / JS dialogs | I | Native panels; broader UI automation pending |
 | Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |
@@ -77,7 +77,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Containers / profiles / per-site isolation | U | Not implemented |
 | Zen Mods / themes / gradient editor | U | Not implemented; native glass adaptation is separate |
 | Sync / account / import wizard | U | Not implemented |
-| Tab unloading | P | Manual with warning; no automatic suspension |
+| Tab unloading | P | Manual with warning, visible split protection and confirmation-time revalidation; no automatic suspension |
 | Keyboard customization | U | Fixed native shortcuts only |
 | Picture-in-picture / screenshot tools | U | Not implemented as browser commands |
 | Full extension compatibility | U | See detailed matrix; target remains unmet |

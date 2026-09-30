@@ -25,11 +25,15 @@ import SereinCore
         let restored=DownloadStore(root:root)
         check("download-history-restores",restored.items.contains{$0.id==item.id && $0.record.phase == .complete && $0.destination==item.destination},restored.error ?? "")
 
+        let historyBefore=try? Data(contentsOf:manager.downloads.file)
+        let modifiedBefore=(try? FileManager.default.attributesOfItem(atPath:manager.downloads.file.path))?[.modificationDate] as? Date
         let privateA=manager.newWindow(isPrivate:true),privateB=manager.newWindow(isPrivate:true)
         let a=await start("download.txt",in:privateA,destination:"private-a-download.txt")
         let b=await start("download.txt",in:privateB,destination:"private-b-download.txt")
         _=await wait{a.finished && b.finished}
         check("private-download-owner-isolation",manager.downloads.visible(in:privateA).map(\.id)==[a.id] && manager.downloads.visible(in:privateB).map(\.id)==[b.id] && !manager.downloads.visible(in:session).contains{$0.id==a.id || $0.id==b.id})
+        let modifiedAfter=(try? FileManager.default.attributesOfItem(atPath:manager.downloads.file.path))?[.modificationDate] as? Date
+        check("private-download-does-not-write-history",modifiedBefore != nil && modifiedBefore==modifiedAfter && historyBefore == (try? Data(contentsOf:manager.downloads.file)))
         let disk=DownloadStore(root:root)
         check("private-download-not-persisted",!disk.items.contains{$0.id==a.id || $0.id==b.id})
         let privateActive=await start("slow-download.bin",in:privateA,destination:"private-active-download.bin")
@@ -44,6 +48,14 @@ import SereinCore
         resumable.cancel(pause:true)
         _=await wait{!resumable.isActive}
         check("download-pause-has-resume-data",resumable.record.phase == .paused && resumable.canResume,resumable.status)
+        session.libraryPanel = .downloads
+        try? await Task.sleep(for:.milliseconds(500))
+        let capture="19-downloads-paused"
+        try? capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+        let captured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path)}
+        check("download-paused-ui-capture",captured && FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".png").path))
+        session.libraryPanel=nil
+        try? await Task.sleep(for:.milliseconds(500))
         resumable.resume(in:privateB)
         check("download-resume-rejects-private-context",resumable.record.phase == .paused && resumable.canResume)
         resumable.resume(in:session)
