@@ -125,10 +125,11 @@ import SereinCore
             }
             return
         }
-        for child in group where child != id {close(child,ask:false)}
         let previous=state.selectedTabID,highlighted=tabSelection.ids
-        extensions?.controller.didCloseTab(bridge(id),windowIsClosing:false)
-        runtimes[id]?.dispose();runtimes[id]=nil;extensionTabs[id]=nil
+        for closed in group {
+            extensions?.controller.didCloseTab(bridge(closed),windowIsClosing:false)
+            runtimes[closed]?.dispose();runtimes[closed]=nil;extensionTabs[closed]=nil
+        }
         let before=Set(state.tabs.map(\.id));state.close(id)
         for added in state.tabs where !before.contains(added.id) {extensions?.controller.didOpenTab(bridge(added.id))}
         tabSelection.retain(Set(state.tabs.map(\.id)))
@@ -138,7 +139,11 @@ import SereinCore
     }
     func reopen() {
         let previous=state.selectedTabID,highlighted=tabSelection.ids
-        if let id=state.reopen() {extensions?.controller.didOpenTab(bridge(id));tabSelection.selectOnly(id);publishSelection(previousActive:previous,previousHighlighted:highlighted)}
+        let before=Set(state.tabs.map(\.id))
+        if state.reopen() != nil {
+            for added in state.tabs where !before.contains(added.id) {extensions?.controller.didOpenTab(bridge(added.id))}
+            tabSelection.selectOnly(state.selectedTabID);publishSelection(previousActive:previous,previousHighlighted:highlighted)
+        }
     }
     func duplicate(_ id:UUID) {
         let previous=state.selectedTabID,highlighted=tabSelection.ids

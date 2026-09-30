@@ -10,8 +10,8 @@ struct GlancePages:View {
             let width=min(geometry.size.width*0.8,max(0,geometry.size.width-112))
             ZStack {
                 PagePane(session:session,id:owner)
-                    .padding(10).allowsHitTesting(false).accessibilityHidden(true)
-                Color.black.opacity(0.10).contentShape(Rectangle())
+                    .scaleEffect(0.97).opacity(0.3).allowsHitTesting(false).accessibilityHidden(true)
+                Color.clear.contentShape(Rectangle())
                     .onTapGesture{session.close(preview)}.accessibilityHidden(true)
                 PagePane(session:session,id:preview)
                     .frame(width:width,height:geometry.size.height)

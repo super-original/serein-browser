@@ -57,6 +57,22 @@ import SwiftUI
 
 @MainActor final class SereinWindow:NSWindow {
     weak var session:BrowserSession?
+    override func sendEvent(_ event:NSEvent) {
+        if let session,event.type == .keyDown,attachedSheet==nil {
+            let modifiers=event.modifierFlags.intersection([.command,.option,.control,.shift])
+            if event.keyCode==48,(modifiers == .control || modifiers == [.control,.shift]),
+               let id=session.state.adjacentVisibleTab(modifiers.contains(.shift) ? -1 : 1) {
+                session.select(id);return
+            }
+            if event.keyCode==53,modifiers.isEmpty,session.state.activeGlance != nil,
+               !session.findVisible,!session.addressFocused {session.closeGlance();return}
+        }
+        if ProcessInfo.processInfo.arguments.contains("--integration-test"),[NSEvent.EventType.leftMouseDown,.keyDown].contains(event.type),
+           let session,session.state.activeGlance != nil || event.modifierFlags.contains(.option) {
+            print("GLANCE_INPUT window=\(session.state.id) type=\(event.type.rawValue) modifiers=\(event.modifierFlags.rawValue) point=\(event.locationInWindow)")
+        }
+        super.sendEvent(event)
+    }
     override func performKeyEquivalent(with event:NSEvent)->Bool {
         if super.performKeyEquivalent(with:event){return true}
         guard let session,!session.state.isPrivate else{return false}

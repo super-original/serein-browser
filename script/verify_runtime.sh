@@ -3,6 +3,7 @@ set -euo pipefail
 ROOT="$PWD/evidence/runtime"
 mkdir -p "$ROOT"
 xcrun swiftc -parse-as-library -target arm64-apple-macos27.0 script/ScreenCapture.swift -o /tmp/serein-capture
+xcrun swiftc -target arm64-apple-macos27.0 script/PointerInput.swift -o /tmp/serein-pointer
 system_profiler SPDisplaysDataType > "$ROOT/display.txt"
 python3 script/fixture_server.py --directory Fixtures > "$ROOT/server.log" 2>&1 &
 SERVER_PID=$!
@@ -48,22 +49,7 @@ APPLESCRIPT
       suggestion-return) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
       glance-option-click)
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
-        osascript - "$GLANCE_X" "$GLANCE_Y" <<'APPLESCRIPT'
-on run arguments
-  set pointX to item 1 of arguments as integer
-  set pointY to item 2 of arguments as integer
-  tell application "System Events" to tell process "Serein"
-    key down option
-    try
-      click at {pointX, pointY}
-    on error problem
-      key up option
-      error problem
-    end try
-    key up option
-  end tell
-end run
-APPLESCRIPT
+        /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" > "$ROOT/glance-pointer-input.log" 2>&1
         ;;
       glance-next-tab) osascript -e 'tell application "System Events" to tell process "Serein" to key code 48 using control down' ;;
       glance-previous-tab) osascript -e 'tell application "System Events" to tell process "Serein" to key code 48 using {control down, shift down}' ;;

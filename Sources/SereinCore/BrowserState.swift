@@ -61,12 +61,13 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public mutating func close(_ id: UUID, remember: Bool = true) {
         guard tabs.contains(where:{$0.id==id}) else{return}
-        for child in tabs.filter({$0.glanceParentID==id}).map(\.id) {close(child,remember:false)}
+        let previews=tabs.filter{$0.glanceParentID==id}
+        for child in previews.map(\.id) {close(child,remember:false)}
         guard let index=tabs.firstIndex(where:{$0.id==id}) else{return}
         let parent=tabs[index].glanceParentID
         let oldOrder=visibleTabs.map(\.id);let selectedIndex=oldOrder.firstIndex(of:id) ?? 0
         let removed=tabs.remove(at:index)
-        if remember {var closed=removed;closed.glanceParentID=nil;closedTabs.append(closed);closedTabs=Array(closedTabs.suffix(25))}
+        if remember {var closed=removed;closed.glanceParentID=nil;closedTabs.append(contentsOf:previews);closedTabs.append(closed);closedTabs=Array(closedTabs.suffix(25))}
         removeSplitTab(id)
         if selectedTabID==id {
             let candidates=visibleTabs
@@ -76,9 +77,16 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     @discardableResult public mutating func reopen() -> UUID? {
         guard var tab=closedTabs.popLast() else{return nil}
+        let previousID=tab.id
+        let preview=closedTabs.last?.glanceParentID==previousID ? closedTabs.popLast() : nil
         if !workspaces.contains(where:{$0.id==tab.workspaceID}) {tab.workspaceID=activeWorkspaceID}
         if tabs.contains(where:{$0.id==tab.id}) {tab.id=UUID()};tab.glanceParentID=nil
-        tabs.append(tab);select(tab.id);return tab.id
+        tabs.append(tab)
+        if var child=preview {
+            if tabs.contains(where:{$0.id==child.id}) {child.id=UUID()}
+            child.workspaceID=tab.workspaceID;child.glanceParentID=tab.id;tabs.append(child)
+        }
+        select(tab.id);return tab.id
     }
     @discardableResult public mutating func duplicate(_ id: UUID) -> UUID? {
         guard let old=tabs.first(where:{$0.id==id}) else{return nil}

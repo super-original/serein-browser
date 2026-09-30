@@ -72,4 +72,18 @@ final class GlanceStateTests:XCTestCase {
         state.select(owner);XCTAssertEqual(state.selectedTabID,preview)
     }
 
+    func testReopenParentRestoresItsPreviewAndSanitizesBothURLs() throws {
+        var state=BrowserWindowState();let owner=try XCTUnwrap(state.selectedTabID)
+        state.tabs[0].url="https://owner:secret@example.com/owner"
+        let preview=try XCTUnwrap(state.openGlance(url:"https://preview:secret@example.com/preview",from:owner))
+        state.close(owner)
+        let data=try SavedSession(windows:[state]).encoded()
+        XCTAssertFalse(String(decoding:data,as:UTF8.self).contains("secret"))
+        var restored=try XCTUnwrap(SavedSession.decode(data).windows.first)
+        XCTAssertEqual(restored.reopen(),owner)
+        XCTAssertEqual(restored.activeGlance?.id,preview)
+        XCTAssertEqual(restored.activeGlance?.url,"https://example.com/preview")
+        XCTAssertEqual(restored.tabs.first{$0.id==owner}?.url,"https://example.com/owner")
+    }
+
 }

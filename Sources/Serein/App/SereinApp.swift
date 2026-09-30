@@ -37,7 +37,7 @@ import SwiftUI
             return
         }
         Task {await manager.extensions.restore()}
-        if args.contains("--integration-test") {Task {await RuntimeVerification.run(manager:manager,root:root)}}
+        if args.contains("--integration-test"),testRoot != nil {Task {await RuntimeVerification.run(manager:manager,root:root)}}
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if let session=manager?.windows.map(\.session).first(where:{$0.runtimes.values.contains{$0.hasUserEdits}}) {

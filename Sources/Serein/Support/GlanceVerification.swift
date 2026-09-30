@@ -30,7 +30,7 @@ import WebKit
             try? "\(Int(location.x.rounded())) \(Int((screen.frame.maxY-location.y).rounded()))\n".write(to:root.appendingPathComponent("glance-click-point"),atomically:true,encoding:.utf8)
             let sent=await keyboard("glance-option-click")
             await wait{session.state.activeGlance != nil}
-            check("native-option-click-opens-preview",sent && session.state.activeGlance != nil)
+            check("native-option-click-opens-preview",sent && session.state.activeGlance != nil,"selected=\(String(describing:session.state.selectedTabID)) ownerURL=\(String(describing:parent.webView.url))")
         } else {check("native-option-click-opens-preview",false,"Could not locate the controlled link")}
         // Keep independent lifecycle checks useful if native input fails.
         if session.state.activeGlance==nil {session.openGlance(target,from:owner)}
@@ -40,6 +40,7 @@ import WebKit
         check("loads-with-parent-store",view.url==target && view.configuration.websiteDataStore === parent.webView.configuration.websiteDataStore)
         check("owner-preserved-and-preview-hidden",parent.webView.url?.query=="glance-owner" && session.state.visibleTabs.map(\.id)==[owner] && session.state.sidebarSelectedTabID==owner)
         check("visible-owner-cannot-unload",!session.canUnload(owner) && !session.canUnload(preview.id))
+        _=try? await parent.webView.evaluateJavaScript("scrollTo(0,0)")
         try? "32-glance".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("32-glance.capture-finished").path)}
         let rect=view.convert(view.bounds,to:nil)
@@ -54,9 +55,9 @@ import WebKit
         window.setFrame(originalFrame,display:true)
         let neighbor=session.newTab(select:false)
         let advanced=await keyboard("glance-next-tab")
-        check("native-cycle-leaves-preview",advanced && session.state.selectedTabID==neighbor)
+        check("native-cycle-leaves-preview",advanced && session.state.selectedTabID==neighbor,"selected=\(String(describing:session.state.selectedTabID)) expected=\(neighbor) keyWindow=\(window.isKeyWindow)")
         let returned=await keyboard("glance-previous-tab")
-        check("native-cycle-returns-preview",returned && session.state.activeGlance?.id==preview.id && runtime.loadedWebView === view)
+        check("native-cycle-returns-preview",returned && session.state.activeGlance?.id==preview.id && runtime.loadedWebView === view,"selected=\(String(describing:session.state.selectedTabID)) expected=\(preview.id)")
         session.close(neighbor,ask:false)
         runtime.hasUserEdits=true
         session.close(owner)
@@ -73,7 +74,7 @@ import WebKit
         session.expandGlance()
         try? await Task.sleep(for:.milliseconds(150))
         let retained=try? await view.evaluateJavaScript("window.sereinGlanceSentinel") as? String
-        check("expand-preserves-live-view",session.state.activeGlance==nil && session.state.visibleTabs.count==2 && session.current?.loadedWebView === view && retained=="retained")
+        check("expand-preserves-live-view",session.state.activeGlance==nil && session.state.visibleTabs.count==2 && session.current?.loadedWebView === view && retained=="retained","activeGlance=\(String(describing:session.state.activeGlance?.id)) visible=\(session.state.visibleTabs.count) sameView=\(session.current?.loadedWebView === view) sentinel=\(String(describing:retained))")
         session.close(preview.id,ask:false);session.select(owner);session.openGlance(target,from:owner)
         if let next=session.state.activeGlance {
             let nextRuntime=session.runtime(next.id),nextView=nextRuntime.webView
@@ -109,7 +110,14 @@ import WebKit
                 check("owner-close-disposes-preview",privateSession.runtimes[privatePreview.id]==nil && !privateSession.state.tabs.contains{$0.id==privatePreview.id})
             }
         }
-        privateSession.window?.close();window.close()
+        privateSession.window?.close()
+        session.select(owner);session.openGlance(target,from:owner)
+        if let reopenPreview=session.state.activeGlance {
+            session.close(owner,ask:false)
+            session.reopen()
+            check("reopen-restores-preview-relationship",session.state.activeGlance?.id==reopenPreview.id && session.state.sidebarSelectedTabID==owner && session.tabSelection.ids==[reopenPreview.id])
+        }
+        window.close()
         return results
     }
 }
