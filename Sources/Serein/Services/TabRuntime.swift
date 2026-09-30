@@ -37,10 +37,10 @@ import SereinCore
         return view
     }
     init(id: UUID, session: BrowserSession, configuration: WKWebViewConfiguration? = nil) {self.id=id;self.session=session;initialConfiguration=configuration;super.init()}
-    func load(_ url: URL) {failure=nil;crashed=false;webView.load(URLRequest(url:url))}
+    func load(_ url: URL) {documentID=UUID();failure=nil;crashed=false;webView.load(URLRequest(url:url))}
     func openFile(_ url:URL) {
         let root=url.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
-        permittedFileRoot=root;failure=nil;crashed=false
+        permittedFileRoot=root;documentID=UUID();failure=nil;crashed=false
         webView.loadFileURL(url,allowingReadAccessTo:root)
     }
     func synchronize() {
@@ -70,7 +70,7 @@ extension TabRuntime: WKNavigationDelegate {
     func webView(_ webView: WKWebView,didFailProvisionalNavigation navigation: WKNavigation!,withError error: Error) {failed(error)}
     func webView(_ webView: WKWebView,didFail navigation: WKNavigation!,withError error: Error) {failed(error)}
     private func failed(_ error: Error) {if (error as NSError).code != NSURLErrorCancelled {failure=error.localizedDescription};synchronize()}
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {crashed=true;failure="The web content process stopped. Reload to recover this tab.";isLoading=false}
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {documentID=UUID();crashed=true;failure="The web content process stopped. Reload to recover this tab.";isLoading=false}
     func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy)->Void) {
         guard let url=action.request.url else {decisionHandler(.cancel);return}
         if session?.extensions?.controller.extensionContext(for:url) != nil {decisionHandler(.allow);return}

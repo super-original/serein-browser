@@ -67,7 +67,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Downloads | P | Native save/cancel/reveal; no resume or durable download history |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |
 | File selection / JS dialogs | I | Native panels; broader UI automation pending |
-| Site permissions / media | P | Per-page camera/microphone consent; policy manager incomplete |
+| Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |
 | Fullscreen | P | Native window/fullscreen WebKit preference; media runtime coverage incomplete |
 | Loading / errors / process recovery | P | Visible states; real process-crash injection pending |
 | Settings | P | Appearance, sidebar, website data clearing; advanced policies absent |

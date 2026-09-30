@@ -47,8 +47,22 @@ import SereinCore
                 check("\(name)-disable-stops-injection",disabled is NSNull)
                 await host.remove(id)
                 let remaining=await host.controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
-                check("\(name)-remove-disabled-data",!remaining.contains{$0.uniqueIdentifier==id.uuidString})
+                check("\(name)-remove-disabled-data-errors",remaining.filter{$0.uniqueIdentifier==id.uuidString}.allSatisfy{$0.errors.isEmpty},"WebKit can retain an empty metadata record after removing storage.")
                 check("\(name)-remove-package-and-record",!FileManager.default.fileExists(atPath:target.path) && !host.records.contains{$0.id==id})
+                // Metadata presence is not stored-value persistence. Reinstall with
+                // the same identity and prove the old storage counter is gone.
+                try FileManager.default.copyItem(at:source,to:target)
+                try await host.load(granted);host.records.append(granted)
+                session.current!.webView.reload()
+                var resetCount:Int?
+                for _ in 0..<50 {
+                    try await Task.sleep(for:.milliseconds(100))
+                    if let value=try? await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null"),let text=value as? String,let data=text.data(using:.utf8),let payload=(try? JSONSerialization.jsonObject(with:data)) as? [String:Any] {
+                        resetCount=payload["count"] as? Int;break
+                    }
+                }
+                check("\(name)-remove-erases-stored-value",resetCount==1,"Counter after reinstall with identical UUID: \(String(describing:resetCount))")
+                await host.remove(id)
             } catch {check("\(name)-lifecycle",false,error.localizedDescription);if let context=manager.extensions.contexts[id]{try? manager.extensions.controller.unload(context);manager.extensions.contexts[id]=nil}}
         }
         return results

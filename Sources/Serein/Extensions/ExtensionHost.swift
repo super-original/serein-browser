@@ -126,6 +126,10 @@ struct InstalledExtension: Identifiable, Codable {
             let dataRecords=await controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes)
             let matching=dataRecords.filter{$0.uniqueIdentifier==id.uuidString}
             await controller.removeData(ofTypes:WKWebExtensionController.allExtensionDataTypes,from:matching)
+            let removalErrors=matching.flatMap(\.errors)
+            guard removalErrors.isEmpty else {
+                throw ExtensionValidationError.invalid("Extension data could not be removed: " + removalErrors.map(\.localizedDescription).joined(separator:"; "))
+            }
             try FileManager.default.removeItem(at:root.appendingPathComponent(id.uuidString));records.removeAll{$0.id==id};save()
         } catch {self.error=error.localizedDescription}
     }

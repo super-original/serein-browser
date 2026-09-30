@@ -18,8 +18,8 @@
 
 | Family | Status | Evidence / missing work |
 |---|---|---|
-| Install / validate | Implemented, partial formats | Path, duplicate, size, symlink and manifest checks; source consent; no publisher-signature validation |
-| Enable / disable / remove | Partial | Fixture disable stops injection; installed records persist; complete UI/removal tests pending |
+| Install / validate | Implemented, partial formats | Path, duplicate, size, symlink and manifest checks; omitted required API permissions reject installation/restore with an explicit list; source consent; no publisher-signature validation |
+| Enable / disable / remove | Partial | Fixture disable stops injection; installed records persist; disabled-extension removal now erases data by durable identity; new lifecycle tests pending final CI |
 | Updates | Unimplemented | No authenticated update protocol or permission-diff upgrade flow |
 | Permissions / host access | Partial | Install prompts; fixture denied hosts do not inject; runtime permission prompts; temporary per-site overrides |
 | Private access | Unsupported by policy in this build | No extension controller in private web views; no opt-in UI |
@@ -70,3 +70,11 @@ Evidence: [run 35244059174](https://github.com/super-original/serein-browser/act
 ## Release blockers
 
 A production compatibility release requires a much broader semantics suite and explicit host/engine gap resolution. Native Safari formats and engine-internal interception are major restrictions. Updating, signature validation, per-site persistent policies, private opt-in, native-host isolation and API coverage are additional unimplemented work. No full custom-engine build/distribution/security-update plan has been proven feasible within the required standard free runner resources.
+
+## Continuation: required permissions and removal
+
+The host now compares named required manifest permissions with the system WebKit permission set at installation and restoration. If WebKit silently omits a required API permission, Serein rejects the package and lists the missing capabilities. MV2 host patterns remain website-access patterns, not API permission names. Malformed permission fields also fail closed. Recognition still does **not** establish semantic compatibility; the matrices above remain partial/unsupported.
+
+The real-package audit now applies this same required-permission gate before loading. Earlier “loaded without permission grants” results remain historical observations of WebKit alone, not guarantees that current Serein will install those packages. Native Safari App Extensions, legacy `.safariextz`, CRX/store installation, authenticated updates and universal Chrome/Firefox semantics remain unsupported.
+
+Removing an extension previously erased data only if a context was currently loaded. The host now queries/removes data by the durable extension UUID even after disable or restart. Controlled MV2/MV3 tests exercise production disable/remove paths and check package, record and data cleanup. This does not prove secure erasure of filesystem blocks or conformance for unrelated API families.

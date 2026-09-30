@@ -51,9 +51,16 @@ extension TabRuntime: WKUIDelegate {
         components.scheme = origin.protocol
         components.host = origin.host
         if origin.port > 0 { components.port = origin.port }
+        guard let requestingURL = components.url, let requesting = SiteOrigin(url: requestingURL) else {
+            decisionHandler(.deny); return
+        }
+        decideSitePermission(requesting: requesting, capabilities: capabilities, decisionHandler: decisionHandler)
+    }
+
+    /// Shared by WebKit delegates and the deterministic app-process verification.
+    func decideSitePermission(requesting: SiteOrigin, capabilities: [SiteCapability], decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void) {
         guard let session, let window = session.window,
-              let topURL = webView.url, let top = SiteOrigin(url: topURL),
-              let requestingURL = components.url, let requesting = SiteOrigin(url: requestingURL) else {
+              let topURL = webView.url, let top = SiteOrigin(url: topURL) else {
             decisionHandler(.deny); return
         }
         let keys = capabilities.map { SitePermissionKey(topLevel: top, requesting: requesting, capability: $0) }

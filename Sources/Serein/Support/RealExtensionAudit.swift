@@ -17,11 +17,12 @@ import SereinCore
                 let host=manager.extensions,id=UUID(),target=manager.extensions.root.appendingPathComponent(UUID().uuidString)
                 do {
                     try host.prepare(URL(fileURLWithPath:path),at:target)
-                    _=try ExtensionManifest(data:Data(contentsOf:target.appendingPathComponent("manifest.json")))
+                    let manifest=try ExtensionManifest(data:Data(contentsOf:target.appendingPathComponent("manifest.json")))
                     let ext=try await WKWebExtension(resourceBaseURL:target)
                     let errors=ext.errors.map(\.localizedDescription)
                     if !errors.isEmpty {results.append(.init(candidate:candidate,status:"webkit-validation-rejected",detail:errors.joined(separator:"\n")))}
                     else {
+                        try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
                         let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=id.uuidString;context.hasAccessToPrivateData=false
                         try host.controller.load(context)
                         try await Task.sleep(for:.milliseconds(300))
