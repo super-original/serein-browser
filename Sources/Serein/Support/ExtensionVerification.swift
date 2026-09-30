@@ -39,6 +39,10 @@ import SereinCore
                 for field in ["zoomSet","zoomReset","zoomEvent","createdPinned","duplicatePinned","distinctIDs","duplicateURL","createdEvents","removedEvents","multiSelected","firstHighlightActive","highlightedEvent"] {
                     check("\(name)-tabs-\(field)",lifecycle?[field] == true,String(describing:lifecycle)+" selection="+String(describing:payload?["selectionDiagnostics"]))
                 }
+                let windowLifecycle=payload?["windowLifecycle"] as? [String:Any]
+                for field in ["normalWindow","initialBounds","populatedTabs","resized","focused","removed","privateRejected","createdEvent","removedEvent"] {
+                    check("\(name)-windows-\(field)",windowLifecycle?[field] as? Bool==true,String(describing:windowLifecycle))
+                }
                 let secret=try await session.current!.webView.evaluateJavaScript("typeof window.sereinIsolatedSecret")
                 check("\(name)-isolated-world",secret as? String=="undefined")
                 results += await ExtensionFrameVerification.run(session:session,generation:generation)
@@ -47,9 +51,13 @@ import SereinCore
                 try host.controller.unload(context);host.contexts[id]=nil
                 var granted=record;granted.hosts=["http://127.0.0.1/*"]
                 try await host.load(granted);session.current!.webView.reload()
-                try await Task.sleep(for:.seconds(2))
-                let value=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
-                let after=(value as? String).flatMap{$0.data(using:.utf8)}.flatMap{try? JSONSerialization.jsonObject(with:$0) as? [String:Any]}
+                var after:[String:Any]?
+                for _ in 0..<80 {
+                    try await Task.sleep(for:.milliseconds(100))
+                    let value=try? await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
+                    after=(value as? String).flatMap{$0.data(using:.utf8)}.flatMap{try? JSONSerialization.jsonObject(with:$0) as? [String:Any]}
+                    if after?["ok"] as? Bool==true,(after?["count"] as? Int ?? 0)>firstCount{break}
+                }
                 check("\(name)-storage-persists-reload",(after?["count"] as? Int ?? 0)>firstCount && firstCount>0)
                 if generation == 3 {
                     session.libraryPanel = .extensions

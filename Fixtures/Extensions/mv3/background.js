@@ -1,3 +1,37 @@
+// Controlled real windows API exercise; failures do not abort tab assertions.
+async function probeWindows(senderTabId) {
+  const createdEvents=[],removedEvents=[];
+  const onCreated=window=>createdEvents.push(window.id);
+  const onRemoved=id=>removedEvents.push(id);
+  let created;
+  try {
+    browser.windows.onCreated.addListener(onCreated);
+    browser.windows.onRemoved.addListener(onRemoved);
+    const sender=await browser.tabs.get(senderTabId);
+    created=await browser.windows.create({url:'about:blank',focused:false,width:700,height:500});
+    const queried=await browser.windows.get(created.id,{populate:true});
+    await browser.windows.update(created.id,{width:720,height:520,focused:true});
+    const resized=await browser.windows.get(created.id);
+    let privateRejected=false;
+    try {const privateWindow=await browser.windows.create({incognito:true}); await browser.windows.remove(privateWindow.id);}
+    catch (_) {privateRejected=true;}
+    await browser.windows.remove(created.id);
+    await browser.windows.update(sender.windowId,{focused:true});
+    await new Promise(resolve=>setTimeout(resolve,100));
+    const remaining=await browser.windows.getAll();
+    return {normalWindow:queried.type==='normal' && queried.incognito===false,
+      initialBounds:queried.width===700 && queried.height===500,
+      populatedTabs:queried.tabs?.length===1 && queried.tabs[0].url==='about:blank',
+      resized:resized.width===720 && resized.height===520,focused:resized.focused===true,
+      removed:!remaining.some(window=>window.id===created.id),privateRejected,
+      createdEvent:createdEvents.includes(created.id),removedEvent:removedEvents.includes(created.id)};
+  } catch (error) {return {error:String(error)};}
+  finally {
+    browser.windows?.onCreated?.removeListener(onCreated);
+    browser.windows?.onRemoved?.removeListener(onRemoved);
+    if(created) {try{await browser.windows.remove(created.id);}catch(_){}}
+  }
+}
 browser.commands?.onCommand?.addListener(async command => {
   if (command !== 'record-fixture-command') return;
   const previous = await browser.storage.local.get('commandCount');
@@ -71,8 +105,9 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
         try { await browser.tabs.remove(tab.id); } catch (_) {}
       }
     }
+    const windowLifecycle = await probeWindows(sender.tab.id);
     const tabs = await browser.tabs.query({});
-    reply({ok:true,count,tabsHighlightAvailable:typeof browser.tabs.highlight === "function",tabLifecycle,selectionDiagnostics,zoomDiagnostic,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
+    reply({ok:true,count,windowLifecycle,tabsHighlightAvailable:typeof browser.tabs.highlight === "function",tabLifecycle,selectionDiagnostics,zoomDiagnostic,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
   }).catch(error => reply({ok:false,error:String(error)}));
   return true;
 });

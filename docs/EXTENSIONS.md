@@ -20,7 +20,7 @@
 |---|---|---|
 | Install / validate | Implemented, partial formats | Path, duplicate, size, symlink and manifest checks; omitted required API permissions reject installation/restore with an explicit list; source consent; CRX3 signature verification tested, no XPI publisher-signature validation |
 | Enable / disable / remove | Partial | Fixture disable stops injection; installed records persist; disabled-extension removal now erases data by durable identity; production disable/remove and same-identity storage-reset checks pass for controlled MV2/MV3 fixtures |
-| Updates | Partial | Reviewed local same-developer CRX3 updates; storage/identity/denials verified; options refresh and native cross-origin navigation exercised, repeated context recovery/back-list counts pass at `d4c80d1`; complete history-list comparison is pending. No automatic store or unsigned/XPI update protocol |
+| Updates | Partial | Reviewed local same-developer CRX3 updates; storage/identity/denials verified; options refresh and native cross-origin navigation exercised, repeated context recovery/back-list counts pass at `d4c80d1`; complete back/forward URL-list and zoom comparisons pass at `e32960d`. No automatic store or unsigned/XPI update protocol |
 | Permissions / host access | Partial | Install prompts; fixture denied hosts do not inject; runtime permission prompts; persistent explicit grants, denials, revocations and per-site overrides |
 | Private access | Unsupported by policy in this build | No extension controller in private web views; no opt-in UI |
 | Tabs / windows | Partial | Native bridges, navigation, creation, focus, closure, pinning, duplication and window state; per-tab highlighted update/query/events tested; batch `tabs.highlight` absent; exhaustive ordering/concurrency unverified |
@@ -40,7 +40,7 @@
 | Declarative network rules | Untested | API availability is not evidence of matching Chrome/Firefox rule limits or semantics |
 | Native messaging | Unsupported | Manifest requests fail closed; no arbitrary native process access |
 | External messaging / devtools | Unsupported | Manifest installation fails with a clear error |
-| Commands | Partial | Public performCommand(for:) routed after native key equivalents; conflicts and real extension shortcut semantics unverified |
+| Commands | Partial | Actual MV2/MV3 keyboard delivery, management-menu dispatch and private exclusion pass at `e32960d`; conflicts, remapping, global and real-extension shortcuts remain unverified |
 | Notifications | Untested | No complete consent/delivery/action semantics suite |
 | Actions / popups / options | Partial | Native toolbar/popover routing and management dialogs exercised; popup DOM loads but actual desktop popup content is blank |
 

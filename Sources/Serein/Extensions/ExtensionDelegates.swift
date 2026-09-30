@@ -23,14 +23,27 @@ extension ExtensionHost: WKWebExtensionControllerDelegate {
     }
     func webExtensionController(_ controller:WKWebExtensionController,openNewWindowUsing configuration:WKWebExtension.WindowConfiguration,for context:WKWebExtensionContext,completionHandler:@escaping ((any WKWebExtensionWindow)?,(any Error)?)->Void) {
         guard let manager,!configuration.shouldBePrivate,configuration.windowType == .normal,configuration.tabURLs.allSatisfy({canOpen($0,for:context)}) else{completionHandler(nil,ExtensionValidationError.invalid("Only normal nonprivate browser windows and permitted URLs are supported."));return}
+        let requested=configuration.frame
+        guard [requested.origin.x,requested.origin.y,requested.width,requested.height].allSatisfy({$0.isNaN || $0.isFinite}),
+              requested.width.isNaN || requested.width>=640,requested.height.isNaN || requested.height>=400 else {
+            completionHandler(nil,ExtensionValidationError.invalid("Window dimensions must be finite and at least 640 by 400 when specified."));return
+        }
         let previous=manager.active
         let session=manager.newWindow()
         let blank=session.state.selectedTabID
         for url in configuration.tabURLs {session.newTab(url:url.absoluteString)}
         for tab in configuration.tabs {if let bridge=tab as? ExtensionTab,let source=bridge.session,!source.state.isPrivate {manager.moveTab(bridge.id,from:source,to:session)}}
         if session.state.tabs.count>1,let blank {session.close(blank,ask:false)}
-        let frame=configuration.frame
-        if frame.origin.x.isFinite,frame.origin.y.isFinite,frame.width.isFinite,frame.height.isFinite,frame.width>=640,frame.height>=400 {session.window?.setFrame(frame,display:true)}
+        // WebKit uses NaN for each omitted component, not just an entirely
+        // unspecified frame. Honor size-only and position-only requests.
+        if let window=session.window {
+            var frame=window.frame
+            if requested.origin.x.isFinite {frame.origin.x=requested.origin.x}
+            if requested.origin.y.isFinite {frame.origin.y=requested.origin.y}
+            if requested.width.isFinite {frame.size.width=requested.width}
+            if requested.height.isFinite {frame.size.height=requested.height}
+            window.setFrame(frame,display:true)
+        }
         if !configuration.shouldBeFocused {previous?.window?.makeKeyAndOrderFront(nil)}
         session.extensionWindow?.setWindowState(configuration.windowState,for:context){_ in}
         completionHandler(session.extensionWindow,nil)
