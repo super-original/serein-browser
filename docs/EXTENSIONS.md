@@ -30,7 +30,7 @@
 | Frames / dynamic scripting | Partially verified | `53d93bc` passes same-origin injection, unrequested-origin exclusion and isolated globals in HTTP iframes for both generations; nested-frame origin inheritance and executeScript conformance remain untested |
 | MV2 persistent backgrounds | Partially verified | Message → storage → tabs query → response exercised |
 | MV3 service workers | Partially verified | Same controlled path; suspension, restart and queued-event semantics not established |
-| Runtime messaging | Partially verified | One-shot messaging and single-recipient runtime ports: ordered nested payloads, sender metadata and explicit disconnect pass in MV2/MV3 at `3209fee`; disable disconnect passes MV3 but fails MV2. Cross-extension and multi-recipient semantics remain untested |
+| Runtime messaging | Partially verified | One-shot messaging and single-recipient runtime ports: ordered nested payloads, sender metadata and explicit disconnect pass in MV2/MV3 at `029feec`; disable disconnect passes both (MV2 was intermittent at `3209fee`). Cross-extension and multi-recipient semantics remain untested |
 | Storage | Partially verified | Local counter survives unload/reload with stable context ID; sync/quota/restart/error semantics untested |
 | Cross-origin network | Untested | Native WebKit permission path; no complete fetch/CORS/header test suite |
 | Cookies | Untested extension API | Browser normal/private cookie isolation tested separately |
@@ -38,7 +38,7 @@
 | Context menus | Partial / untested | Engine and action-menu hooks exist; full native menu integration not complete |
 | Request interception | Blocked or unverified per operation | Safari's documented blocking webRequest differences are material; no equivalent engine-level implementation added |
 | Declarative network rules | Untested | API availability is not evidence of matching Chrome/Firefox rule limits or semantics |
-| Native messaging | Partial implementation, integration pending | Verified CRX3 identity, explicit Chrome host-manifest registration and consent, framed stdio; Firefox host identities and automatic discovery unsupported |
+| Native messaging | Partial, controlled runtime verified | Verified CRX3 identity, explicit Chrome host-manifest registration and consent, framed stdio; Firefox host identities and automatic discovery unsupported |
 | External messaging / devtools | Unsupported | Manifest installation fails with a clear error |
 | Commands | Partial | Actual MV2/MV3 keyboard delivery, management-menu dispatch and private exclusion pass at `e32960d`; conflicts, remapping, global and real-extension shortcuts remain unverified |
 | Notifications | Untested | No complete consent/delivery/action semantics suite |
@@ -212,3 +212,6 @@ At `3209fee`, corrected port fixtures pass 11/12 checks; MV2 disable-disconnect 
 
 
 The current continuation wires public WebKit native-message delegates to explicit host registration. Only verified CRX3 identities can use registered Chrome-format hosts; each invocation rechecks extension enablement, live context, nativeMessaging permission and the registered developer key. Users select an already installed executable's manifest and approve a native consent sheet. Registrations persist with owner-only permissions. Revocation, disable, removal and quit cancel owned processes; cleanup awaits child reaping. Limits are 1 MiB host responses, 64 MiB outbound messages/queue, eight buffered inbound messages, four connections per extension and sixteen overall; one-shot calls have a 30-second deadline. These limits are deliberate resource bounds and not full Chrome/Firefox conformance. Firefox allowed_extensions, unsigned identities, automatic browser-directory discovery, Safari native App Extensions and legacy formats remain unsupported. Actual options-page MV2/MV3 fixture execution and consent screenshots are pending exact-commit CI. Earlier bridge-only evidence is not production host evidence.
+
+
+At `029feec`, [run 36780698616](https://github.com/super-original/serein-browser/actions/runs/36780698616) passes all 40 actual production native-host scenarios across options pages, MV2 backgrounds and MV3 workers, plus the independent live-port quit/child-reaping scenario. Consent and management captures were inspected ([images](evidence/2026-09-30/native-hosts/README.md)). Permission/registration revocation, regrant, disable/removal and scoped identity checks are exercised. These results supersede earlier pending integration notes for this limited CRX3/Chrome-format path. No Firefox host, native Safari format, arbitrary real native application, native-initiated reconnect or universal compatibility result is implied. All seven pinned real extensions still reject their separate missing API requirements.

@@ -24,6 +24,12 @@ def snap(name,code=''):
             geometry['splitPanes']=js('return window.referenceGridTabs.filter(t=>t.splitView).map(t=>({label:t.label,rect:t.linkedBrowser.getBoundingClientRect().toJSON()}));')
             expected=3 if name=='16-three-pane-grid' else 4
             if len(geometry['splitPanes'])!=expected or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['splitPanes']): raise RuntimeError('Incorrect visible split pane count or geometry')
+        if name in ['20-folder-expanded','21-folder-collapsed','22-folder-nested','23-folder-context']:
+            geometry['folders']=js('return [...document.querySelectorAll("zen-folder")].map(f=>({label:f.label,collapsed:f.collapsed,parent:f.group?.label||null,rect:f.getBoundingClientRect().toJSON(),labelRect:f.labelElement.getBoundingClientRect().toJSON(),items:f.tabs.map(t=>({label:t.label,pinned:t.pinned,empty:t.hasAttribute("zen-empty-tab"),rect:t.getBoundingClientRect().toJSON()}))}));')
+            relevant=[f for f in geometry['folders'] if f['label']=='Research notes']
+            if len(relevant)!=1 or relevant[0]['labelRect']['width']<=0: raise RuntimeError('Folder label missing or hidden')
+            if name=='21-folder-collapsed' and not relevant[0]['collapsed']: raise RuntimeError('Folder did not collapse')
+            if name=='22-folder-nested' and not any(f['parent']=='Research notes' for f in geometry['folders']): raise RuntimeError('Nested folder has no parent')
         if name=='19-glance':
             geometry['glance']=js('return [...document.querySelectorAll(".zen-glance-overlay .browserContainer, .zen-glance-overlay .zen-glance-sidebar-container")].map(e=>({className:e.className,rect:e.getBoundingClientRect().toJSON()}));')
             if len(geometry['glance'])<2 or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['glance']): raise RuntimeError('Glance overlay or controls are not visible')
@@ -68,6 +74,14 @@ try:
     snap('17-four-pane-addition','gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
     snap('18-four-pane-grid','gZenViewSplitter.unsplitCurrentView();gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
     snap('19-glance','gZenViewSplitter.unsplitCurrentView();gBrowser.selectedTab=window.referenceGridTabs[0];gZenGlanceManager.openGlance({},window.referenceGridTabs[1]);')
+    js('gZenGlanceManager.closeGlance({noAnimation:true});gZenWorkspaces.createAndSaveWorkspace("Folder reference");')
+    time.sleep(2)
+    js('window.referenceFolderTabs=["index.html","second.html"].map(page=>gBrowser.addTab("http://127.0.0.1:8765/"+page,{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()}));gBrowser.selectedTab=window.referenceFolderTabs[0];window.referenceFolder=gZenFolders.createFolder(window.referenceFolderTabs,{renameFolder:false,label:"Research notes"});')
+    time.sleep(2)
+    snap('20-folder-expanded')
+    snap('21-folder-collapsed','window.referenceFolder.labelElement.click();')
+    snap('22-folder-nested','window.referenceFolder.collapsed=false;window.referenceSubfolder=gZenFolders.createFolder([],{renameFolder:false,label:"Reading list"});window.referenceFolder.tabs[0].after(window.referenceSubfolder);')
+    snap('23-folder-context','document.getElementById("zenFolderActions").openPopup(window.referenceFolder.labelElement,"after_start",0,0,true,false);')
 finally:
     (out/'manifest.json').write_text(json.dumps({'zen':'1.22.2b','theme':'Built-in default, no mods','requestedWindow':[1000,700],'results':results},indent=2))
     request(prefix,method='DELETE')
@@ -78,3 +92,5 @@ if sum(x['status']=='captured' for x in results)<12: raise SystemExit('Fewer tha
 if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid']): raise SystemExit('Grid reference capture failed')
 
 if not any(x["name"]=="19-glance" and x["status"]=="captured" for x in results): raise SystemExit("Glance reference capture failed")
+
+if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['20-folder-expanded','21-folder-collapsed','22-folder-nested','23-folder-context']): raise SystemExit('Folder reference capture failed')

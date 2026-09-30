@@ -53,6 +53,7 @@ struct NativeHostRegistration:Codable,Identifiable {
     }
     func chooseRegistration(for record:InstalledExtension,in session:BrowserSession) {
         guard !session.state.isPrivate,let window=session.dialogWindow,let identity=record.packageIdentity,identity.format=="CRX3" else{return}
+        host?.error=nil
         let panel=NSOpenPanel();panel.allowedContentTypes=[.json];panel.allowsMultipleSelection=false
         panel.message="Choose an installed native application's Chrome host manifest. Its allowed origins must include this signed extension."
         panel.beginSheetModal(for:window){[weak self,weak session] response in
@@ -80,12 +81,12 @@ struct NativeHostRegistration:Codable,Identifiable {
         let previous=registrations.filter{$0.recordID==record.id && $0.manifest.name==manifest.name}
         var proposed=registrations.filter{$0.recordID != record.id || $0.manifest.name != manifest.name}
         proposed.append(.init(recordID:record.id,extensionID:identity.extensionID,publicKeySHA256:identity.publicKeySHA256,manifest:manifest))
-        try save(proposed)
+        try save(proposed);host?.error=nil
         for old in previous {stop(registrationID:old.id)}
     }
     func revoke(_ id:UUID) {
         registrations.removeAll{$0.id==id};stop(registrationID:id)
-        do {try save(registrations)}
+        do {try save(registrations);host?.error=nil}
         catch {host?.error="Native access was revoked for this session, but the change could not be saved: \(error.localizedDescription)"}
     }
     func removeRegistrations(for id:UUID){for registration in registrations(for:id){revoke(registration.id)}}
