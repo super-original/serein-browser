@@ -120,7 +120,15 @@ import SereinCore
         if let new=state.duplicate(id) {extensions?.controller.didOpenTab(bridge(new));tabSelection.selectOnly(new);publishSelection(previousActive:previous,previousHighlighted:highlighted)}
     }
     func navigate(_ input: String,ask:Bool = true) {
-        if ask,current?.hasUserEdits==true {confirm("Leave this page?",detail:"Unsaved changes may be lost.",yes:"Leave"){[weak self] allowed in if allowed{self?.navigate(input,ask:false)}};return}
+        if ask,let runtime=current,runtime.hasUserEdits {
+            let tabID=runtime.id,documentID=runtime.documentID
+            confirm("Leave this page?",detail:"Unsaved changes may be lost.",yes:"Leave") { [weak self,weak runtime] allowed in
+                guard allowed,let self,let runtime,self.state.selectedTabID==tabID,
+                      self.runtimes[tabID] === runtime,runtime.documentID==documentID else{return}
+                self.navigate(input,ask:false)
+            }
+            return
+        }
         guard let url=AddressResolver.resolve(input),let runtime=current else{return}
         address=url.absoluteString;addressFocused=false;runtime.load(url)
     }

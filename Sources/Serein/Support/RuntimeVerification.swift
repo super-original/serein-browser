@@ -138,6 +138,26 @@ import SereinCore
         check("unload-revalidates-selection",session.runtimes[inactive] === inactiveRuntime)
         session.close(inactive,ask:false)
 
+        session.select(third)
+        if let edited=session.current {
+            _=try? await edited.webView.evaluateJavaScript("document.querySelector('textarea')?.dispatchEvent(new Event('input',{bubbles:true}))")
+            check("navigation-edit-detected",await wait{edited.hasUserEdits})
+            session.navigate("http://127.0.0.1:8765/second.html?stale-confirmation")
+            let sheet=session.window?.attachedSheet
+            check("navigation-edited-page-prompts",sheet != nil)
+            session.select(second)
+            if let sheet {session.window?.endSheet(sheet,returnCode:.alertFirstButtonReturn)}
+            await pause(300)
+            check("navigation-confirmation-keeps-new-tab",session.state.selectedTabID==second && !(session.current?.webView.url?.absoluteString.contains("stale-confirmation") ?? true))
+            session.select(third)
+            session.navigate("http://127.0.0.1:8765/second.html?stale-document")
+            let documentSheet=session.window?.attachedSheet
+            edited.load(URL(string:fixture+"?fresh-document")!)
+            if let documentSheet {session.window?.endSheet(documentSheet,returnCode:.alertFirstButtonReturn)}
+            _=await wait{edited.webView.url?.query=="fresh-document" && !edited.isLoading}
+            check("navigation-confirmation-keeps-new-document",documentSheet != nil && edited.webView.url?.query=="fresh-document")
+        }
+
         session.state.sidebar = .expanded;session.libraryPanel = .settings;await capture("11-settings");session.libraryPanel=nil
         session.findVisible=true;session.findText="Workspace";session.find();await capture("12-find");session.findVisible=false
         let unavailable="http://127.0.0.1:19876/unavailable"
