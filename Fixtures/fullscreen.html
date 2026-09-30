@@ -3,6 +3,6 @@
 <section id="stage"><h1>Room for the whole page.</h1><p>This deterministic fixture checks native element fullscreen.</p><button id="enter">Enter fullscreen</button></section>
 <script>
 const stage=document.querySelector('#stage');
-document.querySelector('#enter').onclick=()=>stage.requestFullscreen().catch(error=>{document.documentElement.dataset.fullscreenError=String(error)});
+document.querySelector('#enter').onclick=event=>{window.fullscreenAttempt={trusted:event.isTrusted,activation:navigator.userActivation.isActive,enabled:document.fullscreenEnabled,visibility:document.visibilityState,focused:document.hasFocus()};stage.requestFullscreen().catch(error=>{document.documentElement.dataset.fullscreenError=String(error);window.fullscreenAttempt.error={name:error.name,message:error.message}})};
 document.addEventListener('fullscreenchange',()=>{document.documentElement.dataset.fullscreenState=document.fullscreenElement?.id || 'none'});
 </script>

@@ -31,6 +31,8 @@ For a contributor who already has Xcode 27 on a separate development machine, th
 
 ⌘L addresses/searches; ⌘T creates a tab; ⌘W closes it; ⇧⌘T reopens it; ⌘N opens a window; ⇧⌘N opens a private window; ⌘F finds text. ⇧⌘S toggles the expanded sidebar; ⌥⌘C toggles compact mode; ⌥⌘S splits with another tab. Tabs have native context menus for pinning, essentials, duplication, movement, unloading, and closing. Workspace controls are at the sidebar's bottom. Command-click toggles tab selection; Shift-click selects a range. The tab context menu can pin, unpin, move to a workspace, or close selected tabs.
 
+Choose DuckDuckGo, Google, or Bing in Settings → Search engine. DuckDuckGo is the default.
+
 In the address field, Down/Up select local history or bookmark suggestions, Return opens the selection, and Escape dismisses suggestions while retaining the typed query.
 
 Downloads show progress and support pause/resume when WebKit supplies resume data. Normal download history and available pause/failure resume data survive relaunch. Active transfers without saved resume data become interrupted; server or partial-file changes can prevent resumption. Private download records belong to their originating private window and disappear when it closes; downloaded files remain on disk.

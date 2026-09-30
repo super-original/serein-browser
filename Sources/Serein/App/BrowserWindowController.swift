@@ -65,7 +65,8 @@ import SwiftUI
             session.select(id);return true
         }
         if event.keyCode==53,modifiers.isEmpty,session.state.activeGlance != nil,
-           !session.findVisible,!session.addressFocused {session.closeGlance();return true}
+           !session.findVisible,!session.addressFocused,
+           session.current?.loadedWebView?.fullscreenState == .notInFullscreen {session.closeGlance();return true}
         return false
     }
     override func sendEvent(_ event:NSEvent) {

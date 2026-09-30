@@ -163,7 +163,8 @@ import SereinCore
         if entered?.scheme?.lowercased()=="webkit-extension",entered.flatMap({extensions?.controller.extensionContext(for:$0)})==nil {
             error="This extension page is unavailable in this window.";return
         }
-        let target=entered.flatMap{extensions?.controller.extensionContext(for:$0)} != nil ? entered : AddressResolver.resolve(input)
+        let provider=SearchProvider(rawValue:UserDefaults.standard.string(forKey:"searchProvider") ?? "") ?? .duckDuckGo
+        let target=entered.flatMap{extensions?.controller.extensionContext(for:$0)} != nil ? entered : AddressResolver.resolve(input,searchBase:provider.queryPrefix)
         guard let url=target,let runtime=current else{return}
         address=url.absoluteString;addressFocused=false;runtime.load(url)
     }

@@ -5,6 +5,7 @@ struct LibraryPanelView: View {
     @Bindable var session: BrowserSession
     let panel: LibraryPanel
     @State private var query=""
+    @AppStorage("searchProvider") private var searchProvider=SearchProvider.duckDuckGo
     @AppStorage("appearance") private var appearance="system"
     @AppStorage("previewExternalPinnedLinks") private var previewExternalPinnedLinks=true
     var body: some View {
@@ -35,6 +36,7 @@ struct LibraryPanelView: View {
                     else {ExtensionListView(host:manager.extensions,session:session)}
                 case .settings:
                     Form {
+                        Picker("Search engine",selection:$searchProvider){ForEach(SearchProvider.allCases,id:\.self){provider in Text(provider.title).tag(provider)}}
                         Picker("Appearance",selection:$appearance){Text("System").tag("system");Text("Light").tag("light");Text("Dark").tag("dark")}
                         Picker("Sidebar",selection:$session.state.sidebar){Text("Expanded").tag(SidebarMode.expanded);Text("Collapsed").tag(SidebarMode.collapsed);Text("Compact").tag(SidebarMode.compact)}
                         Toggle("Preview external links opened by pinned and essential tabs",isOn:$previewExternalPinnedLinks)

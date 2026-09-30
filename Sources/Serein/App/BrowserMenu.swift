@@ -22,7 +22,7 @@ import AppKit
         NSApp.mainMenu=bar;NSApp.windowsMenu=bar.items.last?.submenu
     }
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
-        if item.action == #selector(closeGlance) {return manager?.active?.state.activeGlance != nil && manager?.active?.window?.attachedSheet == nil && manager?.active?.findVisible == false && manager?.active?.addressFocused == false}
+        if item.action == #selector(closeGlance) {return manager?.active?.state.activeGlance != nil && manager?.active?.window?.attachedSheet == nil && manager?.active?.findVisible == false && manager?.active?.addressFocused == false && manager?.active?.current?.loadedWebView?.fullscreenState == .notInFullscreen}
         if item.action == #selector(back) {return manager?.active?.current?.canGoBack ?? false}
         if item.action == #selector(forward) {return manager?.active?.current?.canGoForward ?? false}
         if item.action == #selector(unsplit) {return !(manager?.active?.state.splitTabIDs.isEmpty ?? true)}
