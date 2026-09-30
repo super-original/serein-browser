@@ -95,7 +95,7 @@ import SereinCore
             check("resource-origin-and-open-page-preserved", host.contexts[id]?.baseURL == originalContext.baseURL && optionText == "Version 1.1", optionText ?? "no options document")
             func waitForOptions(_ expected:String) async -> Bool {
                 for _ in 0..<50 {
-                    if let text=try? await optionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String,text==expected{return true}
+                    if let text=try? await optionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String,text==expected,optionsRuntime.webView.url==options,!optionsRuntime.webView.isLoading{return true}
                     try? await Task.sleep(for:.milliseconds(100))
                 }
                 return false
@@ -107,6 +107,10 @@ import SereinCore
                 try await Task.sleep(for:.milliseconds(100))
             }
             check("options-to-ordinary-document",optionsRuntime.webView.url==ordinary && optionsRuntime.webView.title != "Signed extension options")
+            let privateTarget=String(data:try JSONSerialization.data(withJSONObject:[options.absoluteString]),encoding:.utf8)!
+            _=try? await optionsRuntime.webView.evaluateJavaScript("location.href="+privateTarget+"[0]")
+            try await Task.sleep(for:.milliseconds(500))
+            check("website-cannot-open-private-options",optionsRuntime.webView.url==ordinary)
             optionsRuntime.goBack()
             check("back-to-options-document",await waitForOptions("Version 1.1"))
             optionsRuntime.goForward()
@@ -144,14 +148,18 @@ import SereinCore
             check("version-pointer-persists", saved.first(where: { $0.id == id })?.packageVersionID != nil && saved.first(where: { $0.id == id })?.version == "1.2")
             await host.setEnabled(id, true)
             guard let restored = host.contexts[id] else { throw ExtensionValidationError.invalid("Disabled update did not re-enable") }
-            check("open-options-refresh-after-reenable",await waitForOptions("Version 1.2"))
+            let refreshed=await waitForOptions("Version 1.2")
+            func diagnostic(_ runtime:TabRuntime)->String {
+                "url=\(String(describing:runtime.loadedWebView?.url)) saved=\(session.state.tabs.first{$0.id==runtime.id}?.url ?? "missing") title=\(runtime.title) failure=\(runtime.failure ?? "none") loading=\(runtime.isLoading) revision=\(runtime.viewRevision)"
+            }
+            check("open-options-refresh-after-reenable",refreshed,diagnostic(optionsRuntime))
             var restoredText:String?
             for _ in 0..<50 {
                 restoredText=try? await restoredOptionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
                 if restoredText=="Version 1.2"{break}
                 try await Task.sleep(for:.milliseconds(100))
             }
-            check("unavailable-options-retry-after-context-load",restoredText=="Version 1.2",restoredText ?? "no document")
+            check("unavailable-options-retry-after-context-load",restoredText=="Version 1.2",(restoredText ?? "no document")+" "+diagnostic(restoredOptionsRuntime))
             session.close(optionsTab,ask:false);session.close(restoredOptionsTab,ask:false)
             check("revocation-and-site-denial-preserved", !restored.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) && restored.permissionStatus(for: site) == .deniedExplicitly)
             restored.setPermissionStatus(.grantedExplicitly, for: site)

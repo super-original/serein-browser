@@ -29,7 +29,7 @@ import SereinCore
         if let storedView {return storedView}
         let url=session?.state.tabs.first(where:{$0.id==id}).flatMap{URL(string:$0.url)}
         let view=makeView(for:url)
-        if let url,url.absoluteString != "about:blank" {view.load(url)}
+        if let url,url.absoluteString != "about:blank" {provisionalURL=url;view.load(url)}
         return view
     }
     private func makeView(for url:URL?) -> WKWebView {
@@ -80,12 +80,14 @@ import SereinCore
     func goForward(){traverse(1)}
     private func traverse(_ offset:Int) {
         guard let item=webView.backForwardList.item(at:offset) else{return}
+        provisionalURL=item.url
         let view=view(for:item.url)
         if let restored=view.backForwardList.item(at:offset){view.go(to:restored)}
     }
     func reload() {
         if let failedURL {if failedURL.isFileURL {openFile(failedURL)} else {load(failedURL)};return}
         guard let url=storedView?.url ?? session?.state.tabs.first(where:{$0.id==id}).flatMap({URL(string:$0.url)}) else{webView.reload();return}
+        provisionalURL=url
         let view=view(for:url)
         if view.backForwardList.currentItem != nil {view.reloadFromOrigin()} else {view.load(url)}
     }
@@ -136,12 +138,17 @@ extension TabRuntime: WKNavigationDelegate {
         if action.targetFrame?.isMainFrame==true,!action.shouldPerformDownload,
            configurationContext !== destinationContext,
            destinationContext != nil || ["http","https","about"].contains(url.scheme?.lowercased() ?? "") {
+            if let destinationContext,action.navigationType != .backForward,
+               session?.extensions?.allowsPageNavigation(to:url,context:destinationContext,from:action.sourceFrame.securityOrigin) != true {
+                decisionHandler(.cancel);return
+            }
             decisionHandler(.cancel)
             let request=action.request
             let offsets=Array((-webView.backForwardList.backList.count)...webView.backForwardList.forwardList.count)
             let historyOffset=action.navigationType == .backForward ? offsets.sorted{abs($0)<abs($1)}.first{webView.backForwardList.item(at:$0)?.url==url} : nil
             Task { @MainActor [weak self,weak webView] in
                 guard let self,let webView,webView === self.storedView else{return}
+                self.provisionalURL=url
                 let replacement=self.view(for:url)
                 if let historyOffset,let item=replacement.backForwardList.item(at:historyOffset) {replacement.go(to:item)}
                 else {replacement.load(request)}

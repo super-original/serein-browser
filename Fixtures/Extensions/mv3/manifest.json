@@ -29,5 +29,15 @@
   "description": "Controlled Serein integration fixture for extension lifecycle, permissions, storage and messaging.",
   "commands": {
     "_execute_action": {}
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "public.html"
+      ],
+      "matches": [
+        "http://127.0.0.1/*"
+      ]
+    }
+  ]
 }

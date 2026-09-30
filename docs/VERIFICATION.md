@@ -1,5 +1,9 @@
 # Verification and continuation backlog
 
+## Address keyboard verification and recovery regression
+
+Source `9f92de0696b5afd64a9006304b6930af7066ec85`, [run 36735423590](https://github.com/super-original/serein-browser/actions/runs/36735423590), passes 47 unit tests and **183/185 browser checks**. Actual Command-L/type/Down/Return input selects and loads the local suggestion. The retrieved `24-address-keyboard-suggestion.png` visibly shows the selected suggestion and retained text-field focus. The two failures are options recovery after re-enable and recovery of a tab opened before context availability; these passed on the preceding source, so their reliability remains unresolved. Follow-up preserves intended destinations during restoration and adds diagnostic state; it must pass its own runtime checks. The independent desktop gate still fails. [Candidate app](https://github.com/super-original/serein-browser/actions/runs/36735423590/artifacts/11105984816), [evidence](https://github.com/super-original/serein-browser/actions/runs/36735423590/artifacts/11106673493).
+
 ## Latest signed-update verification
 
 Source `835870b191ca6acd29839884c0ce70f73c49954c`: [run 36731114526](https://github.com/super-original/serein-browser/actions/runs/36731114526) passed **47 unit tests, 171 of 172 browser checks, and all 12 isolated bridge checks**. Same-developer signed updates, permission review/cancellation, downgrade/wrong-key/unsupported-permission rejection, persistent identity/storage, disabled updates and retained site denial passed. The sole browser failure was the open options document remaining empty after update. The native update-consent screenshot was retrieved and inspected. [Candidate app](https://github.com/super-original/serein-browser/actions/runs/36731114526/artifacts/11104888183) is ARM64/macOS 27, ad-hoc signed, not notarized; it includes that known defect.

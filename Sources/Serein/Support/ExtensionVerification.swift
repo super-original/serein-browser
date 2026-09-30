@@ -39,6 +39,7 @@ import SereinCore
                 }
                 let secret=try await session.current!.webView.evaluateJavaScript("typeof window.sereinIsolatedSecret")
                 check("\(name)-isolated-world",secret as? String=="undefined")
+                results += await ExtensionResourceVerification.run(context:context,session:session,generation:generation)
                 let firstCount=payload?["count"] as? Int ?? 0
                 try host.controller.unload(context);host.contexts[id]=nil
                 var granted=record;granted.hosts=["http://127.0.0.1/*"]
