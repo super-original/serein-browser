@@ -33,3 +33,21 @@ test -s evidence/platform/desktop.png
 killall SereinProbe
 cat evidence/platform/application.log
 cat evidence/platform/application-error.log
+
+# Compare Apple's separately signed system browser on the same ephemeral VM.
+# This diagnostic cannot satisfy Serein's visual gate.
+python3 -m http.server 8765 --bind 127.0.0.1 --directory Fixtures > evidence/platform/server.log 2>&1 &
+SERVER_PID=$!
+trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+osascript <<'APPLESCRIPT' > evidence/platform/safari-automation.log 2>&1 || true
+tell application "Safari"
+    activate
+    make new document with properties {URL:"http://127.0.0.1:8765/index.html"}
+    set bounds of front window to {10, 30, 1010, 707}
+end tell
+APPLESCRIPT
+sleep 5
+screencapture -x evidence/platform/safari-desktop.png
+log show --last 2m --style compact --predicate '(process CONTAINS "WebKit" OR subsystem BEGINSWITH "com.apple.WebKit") AND (messageType == error OR messageType == fault)' > evidence/platform/webkit-errors.log 2>&1 || true
+head -60 evidence/platform/webkit-errors.log
+cat evidence/platform/safari-automation.log

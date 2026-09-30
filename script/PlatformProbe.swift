@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 import WebKit
 import Metal
+import IOSurface
+import CoreVideo
 
 @MainActor final class Probe: NSObject, NSApplicationDelegate {
     var window: NSWindow!
@@ -17,6 +19,19 @@ import Metal
         }.frame(maxWidth: .infinity, maxHeight: .infinity))
         window.makeKeyAndOrderFront(nil)
         print("METAL_DEVICES \(MTLCopyAllDevices().map(\.name))")
+        // Public allocation API only. Distinguish an app-process surface failure
+        // from failure limited to WebKit's sandboxed rendering processes.
+        for width in [17, 739, 800] {
+            let properties: [String: Any] = [
+                kIOSurfaceWidth as String: width,
+                kIOSurfaceHeight as String: 512,
+                kIOSurfaceBytesPerElement as String: 4,
+                kIOSurfaceBytesPerRow as String: ((width * 4 + 63) / 64) * 64,
+                kIOSurfacePixelFormat as String: kCVPixelFormatType_32BGRA
+            ]
+            let surface = IOSurfaceCreate(properties as CFDictionary)
+            print("IOSURFACE_PUBLIC_BGRA width=\(width) allocated=\(surface != nil)")
+        }
         print("OS \(ProcessInfo.processInfo.operatingSystemVersionString)")
         webWindow=NSWindow(contentRect:NSRect(x:80,y:100,width:800,height:550),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
         webWindow.title="System WebKit rendering witness — no hardened runtime"

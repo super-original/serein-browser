@@ -50,7 +50,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public mutating func select(_ id: UUID) {
         guard let tab=tabs.first(where:{$0.id==id}) else {return}
-        if tab.kind != .essential && tab.workspaceID != activeWorkspaceID {activeWorkspaceID=tab.workspaceID;secondaryTabID=nil}
+        if tab.kind != .essential && tab.workspaceID != activeWorkspaceID {activeWorkspaceID=tab.workspaceID;secondaryTabID=nil;primarySplitTabID=nil}
         if secondaryTabID != nil,id != secondaryTabID,id != primarySplitTabID {secondaryTabID=nil;primarySplitTabID=nil}
         selectedTabID=id
     }
@@ -64,7 +64,6 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
             let candidates=visibleTabs
             selectedTabID=candidates.isEmpty ? nil : candidates[min(selectedIndex,candidates.count-1)].id
         }
-        if selectedTabID==secondaryTabID {secondaryTabID=nil}
         if visibleTabs.isEmpty {newTab()}
     }
     @discardableResult public mutating func reopen() -> UUID? {
@@ -102,7 +101,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     }
     public mutating func switchWorkspace(_ id: UUID) {
         guard workspaces.contains(where:{$0.id==id}) else{return}
-        activeWorkspaceID=id;secondaryTabID=nil
+        activeWorkspaceID=id;secondaryTabID=nil;primarySplitTabID=nil
         selectedTabID=visibleTabs.first(where:{$0.kind != .essential})?.id ?? visibleTabs.first?.id
         if selectedTabID==nil {newTab()}
     }
@@ -127,6 +126,6 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         sidebarWidth=min(500,max(180,sidebarWidth.isFinite ? sidebarWidth : 240))
         if !visibleTabs.contains(where:{$0.id==selectedTabID}) {selectedTabID=visibleTabs.first?.id}
         if selectedTabID==nil {newTab()}
-        if !visibleTabs.contains(where:{$0.id==secondaryTabID}) || !visibleTabs.contains(where:{$0.id==primarySplitTabID}) || secondaryTabID==primarySplitTabID {secondaryTabID=nil;primarySplitTabID=nil}
+        if !visibleTabs.contains(where:{$0.id==secondaryTabID}) || !visibleTabs.contains(where:{$0.id==primarySplitTabID}) || secondaryTabID==primarySplitTabID || (selectedTabID != primarySplitTabID && selectedTabID != secondaryTabID) {secondaryTabID=nil;primarySplitTabID=nil}
     }
 }
