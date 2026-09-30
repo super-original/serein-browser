@@ -35,6 +35,9 @@ extension BrowserSession {
             self.state.removeEmptyFolderTree(id)
         }
     }
+    func convertFolderToWorkspace(_ id:UUID) {
+        changeWorkspace{_=$0.convertFolderToWorkspace(id)}
+    }
     func moveFolder(_ id:UUID,toWorkspace workspace:UUID) {
         changeWorkspace{$0.moveFolderToWorkspace(id,workspace)}
     }

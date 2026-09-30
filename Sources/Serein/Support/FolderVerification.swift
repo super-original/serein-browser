@@ -92,6 +92,14 @@ import SereinCore
         if let sheet=session.window?.attachedSheet {session.window?.endSheet(sheet,returnCode:.alertFirstButtonReturn)}
         await wait{session.state.folder(deleting)==nil}
         check("fresh-consent-closes-only-folder-pages",session.state.folder(deleting)==nil && !session.state.tabs.contains{[a,b].contains($0.id)} && child.flatMap{session.state.folder($0)} != nil && session.runtimes[a]==nil && session.runtimes[b]==nil)
+        let converting=session.newTab(url:"http://127.0.0.1:8765/index.html")
+        let conversionRuntime=session.runtime(converting),conversionView=conversionRuntime.webView
+        await wait{conversionView.title=="Field Notes" && !conversionView.isLoading}
+        let conversionFolder=session.createFolder(name:"Converted research",tabIDs:[converting])!
+        let conversionChild=session.createFolder(name:"Retained child",parentID:conversionFolder)!
+        let priorWorkspace=session.state.activeWorkspaceID
+        session.convertFolderToWorkspace(conversionFolder)
+        check("convert-folder-to-workspace-keeps-live-page",session.state.activeWorkspaceID != priorWorkspace && session.state.selectedTabID==converting && session.runtime(converting)===conversionRuntime && conversionRuntime.loadedWebView===conversionView && session.state.folder(conversionFolder)==nil && session.state.folder(conversionChild)?.workspaceID==session.state.activeWorkspaceID && session.state.folder(conversionChild)?.parentID==nil)
         return results
     }
 }

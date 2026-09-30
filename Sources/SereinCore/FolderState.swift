@@ -95,6 +95,19 @@ extension BrowserWindowState {
         var order=pinnedItemIDs(workspaceID:workspace);if !order.contains(id){order.append(id)};setPinnedOrder(order,in:nil,workspaceID:workspace)
         repair()
     }
+    /// Move the contents into a new workspace, preserving nested folders and tab IDs.
+    @discardableResult public mutating func convertFolderToWorkspace(_ id:UUID)->UUID? {
+        guard let item=folder(id) else{return nil}
+        let selected=selectedTabID,members=Set(folderTabIDs(id))
+        let selectedBelongs=selected.flatMap{selected in tabs.first{$0.id==selected}}.map{members.contains($0.id) || $0.glanceParentID.map(members.contains)==true} ?? false
+        let workspace=Workspace(name:item.name)
+        workspaces.append(workspace)
+        moveFolderToWorkspace(id,workspace.id)
+        unpackFolder(id)
+        switchWorkspace(workspace.id)
+        if selectedBelongs,let selected,tabs.contains(where:{$0.id==selected}) {selectedTabID=selected}
+        return workspace.id
+    }
     @discardableResult public mutating func shiftPinnedItem(_ id:UUID,by offset:Int)->Bool {
         guard [-1,1].contains(offset) else{return false}
         let item=folder(id),tab=tabs.first{$0.id==id}

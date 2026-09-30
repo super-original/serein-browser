@@ -90,4 +90,39 @@ final class FolderStateTests:XCTestCase {
         XCTAssertEqual(state.pinnedItemIDs(),[b])
         state.switchWorkspace(second);XCTAssertEqual(state.pinnedItemIDs(),[d,c])
     }
+    func testConvertFolderPreservesNestedOrderSelectionAndOtherWorkspace() throws {
+        var state=BrowserWindowState();let old=state.activeWorkspaceID,a=state.selectedTabID!
+        let b=state.newTab(),outside=state.newTab()
+        let root=try XCTUnwrap(state.createFolder(name:"Research",tabIDs:[a]))
+        let child=try XCTUnwrap(state.createFolder(name:"Reading",tabIDs:[b],parentID:root))
+        state.select(b)
+        let new=try XCTUnwrap(state.convertFolderToWorkspace(root))
+        XCTAssertEqual(state.activeWorkspaceID,new);XCTAssertEqual(state.selectedTabID,b)
+        XCTAssertEqual(state.workspaces.first{$0.id==new}?.name,"Research")
+        XCTAssertNil(state.folder(root));XCTAssertNil(state.folder(child)?.parentID)
+        XCTAssertEqual(state.folder(child)?.workspaceID,new)
+        XCTAssertEqual(state.pinnedItemIDs(),[a,child]);XCTAssertEqual(state.folderTabIDs(child),[b])
+        XCTAssertEqual(state.tabs.count,3);XCTAssertEqual(state.tabs.first{$0.id==outside}?.workspaceID,old)
+        state.switchWorkspace(old);XCTAssertEqual(state.selectedTabID,outside)
+        let before=state;XCTAssertNil(state.convertFolderToWorkspace(root));XCTAssertEqual(state,before)
+    }
+    func testConvertEmptyFolderCreatesUsableWorkspaceWithoutClosingPages() throws {
+        var state=BrowserWindowState();let original=state.selectedTabID!
+        let folder=try XCTUnwrap(state.createFolder(name:"Empty"))
+        let workspace=try XCTUnwrap(state.convertFolderToWorkspace(folder))
+        XCTAssertEqual(state.activeWorkspaceID,workspace);XCTAssertNotNil(state.selectedTabID)
+        XCTAssertTrue(state.tabs.contains{$0.id==original});XCTAssertNil(state.folder(folder))
+        XCTAssertEqual(state.tabs.count,2)
+    }
+
+    func testConvertFolderCarriesSelectedGlanceWithoutDetachingIt() throws {
+        var state=BrowserWindowState();let owner=state.selectedTabID!
+        let folder=try XCTUnwrap(state.createFolder(name:"Preview",tabIDs:[owner]))
+        let preview=try XCTUnwrap(state.openGlance(url:"https://example.org",from:owner))
+        let workspace=try XCTUnwrap(state.convertFolderToWorkspace(folder))
+        XCTAssertEqual(state.selectedTabID,preview);XCTAssertEqual(state.activeGlance?.glanceParentID,owner)
+        XCTAssertEqual(state.activeGlance?.workspaceID,workspace);XCTAssertEqual(state.sidebarSelectedTabID,owner)
+        XCTAssertEqual(state.tabs.first{$0.id==owner}?.workspaceID,workspace)
+    }
+
 }

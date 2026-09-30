@@ -8,7 +8,8 @@ python3 - <<'PYTHON'
 from pathlib import Path
 import re, subprocess, tempfile
 source = Path("script/verify_runtime.sh").read_text()
-blocks = re.findall(r"<<'APPLESCRIPT'[^\n]*\n(.*?)^APPLESCRIPT$", source, re.M | re.S)
+blocks = re.findall(r"^[ \t]*(?:if )?osascript[^\n]*<<'APPLESCRIPT'[^\n]*\n(.*?)^APPLESCRIPT$", source, re.M | re.S)
+assert blocks and all(block.startswith("on run arguments") for block in blocks), "No valid AppleScript blocks found"
 with tempfile.TemporaryDirectory(prefix="serein-applescript-") as temporary:
     for index, block in enumerate(blocks):
         script = Path(temporary) / f"input-{index}.applescript"

@@ -37,6 +37,7 @@ struct FolderRow:View {
             Button("Move Folder Up"){session.state.shiftPinnedItem(folder.id,by:-1)}.disabled(siblings.first==folder.id)
             Button("Move Folder Down"){session.state.shiftPinnedItem(folder.id,by:1)}.disabled(siblings.last==folder.id)
             Divider()
+            Button("Convert Folder to Workspace"){session.convertFolderToWorkspace(folder.id)}
             Button("Unpack Folder"){session.state.unpackFolder(folder.id)}
             Button("Delete Folder…"){session.deleteFolder(folder.id)}
         }

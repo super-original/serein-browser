@@ -10,6 +10,8 @@ Folder creation through native text entry, live-page retention, nesting, session
 
 The pinned Zen 1.22.2b [reference run 36781892358](https://github.com/super-original/serein-browser/actions/runs/36781892358) supplies four additional inspected folder captures (expanded, collapsed with active child retained, nested, context menu). Native folder icons deliberately use SF Symbols. Live folder providers, custom icons, sharing, conversion to workspaces and drag insertion remain unfinished; native folders do not implement the WebExtensions `tabGroups` API.
 
+The next `5e43906` build passes, but runtime preflight stops before app launch: its initial extractor matched its own pattern string. The revised extractor anchors to actual `osascript` invocations and checks block headers. No browser checks or new screenshots are claimed from that run. Independent scenarios are recorded separately when its job completes.
+
 ## Latest verified source
 
 `029feec7e9fa9a81fb15f61602387ffc9d7352cc`: [run 36780698616](https://github.com/super-original/serein-browser/actions/runs/36780698616) passes **92 unit tests, 412/425 browser checks, 12/12 independent download-restart checks, 9/9 independent quit checks and 12/12 isolated bridge checks**. Fresh-process fullscreen is **8/12**. Environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
