@@ -22,6 +22,7 @@ async function probeWindows(senderTabId) {
     return {normalWindow:queried.type==='normal' && queried.incognito===false,
       initialBounds:queried.width===700 && queried.height===500,
       populatedTabs:queried.tabs?.length===1 && queried.tabs[0].url==='about:blank',
+      populatedTabDetails:queried.tabs?.map(tab=>({id:tab.id,url:tab.url,pendingUrl:tab.pendingUrl,windowId:tab.windowId})),
       resized:resized.width===720 && resized.height===520,focused:resized.focused===true,
       removed:!remaining.some(window=>window.id===created.id),privateRejected,
       createdEvent:createdEvents.includes(created.id),removedEvent:removedEvents.includes(created.id)};

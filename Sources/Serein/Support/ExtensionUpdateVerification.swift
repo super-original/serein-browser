@@ -148,6 +148,10 @@ import SereinCore
                 let list=optionsRuntime.webView.backForwardList
                 return list.backList.map{ $0.url.absoluteString }+["CURRENT",list.currentItem?.url.absoluteString ?? "nil","FORWARD"]+list.forwardList.map{ $0.url.absoluteString }
             }
+            func executionCount() async -> Int? {
+                try? await optionsRuntime.webView.callAsyncJavaScript("return Object.keys(await browser.storage.local.get(null)).filter(key => key.startsWith('optionsExecution_')).length",arguments:[:],in:nil,contentWorld:.page) as? Int
+            }
+            let executionsBeforeDisable=await executionCount()
             let expectedHistory=historyEntries()
             optionsRuntime.setZoom(1.25)
             await host.setEnabled(id, false)
@@ -186,9 +190,12 @@ import SereinCore
                 try await Task.sleep(for:.milliseconds(100))
             }
             check("unavailable-options-retry-after-context-load",restoredText=="Version 1.2",(restoredText ?? "no document")+" "+diagnostic(restoredOptionsRuntime))
+            let executionsAfterEnable=await executionCount()
+            check("reenable-initializes-each-options-page-once",executionsBeforeDisable != nil && executionsAfterEnable==executionsBeforeDisable.map{$0+2},"before=\(String(describing:executionsBeforeDisable)) after=\(String(describing:executionsAfterEnable))")
             var lastRecoveryFailed=false
             let historyCount=optionsRuntime.webView.backForwardList.backList.count
             for cycle in 1...3 {
+                let executionsBefore=await executionCount()
                 await host.setEnabled(id,false)
                 await host.setEnabled(id,true)
                 guard let latest=host.contexts[id] else{throw ExtensionValidationError.invalid("Context did not return during reload cycle")}
@@ -199,6 +206,13 @@ import SereinCore
                 check("repeat-options-history-count-\(cycle)",optionsRuntime.webView.backForwardList.backList.count==historyCount,"before=\(historyCount) after=\(optionsRuntime.webView.backForwardList.backList.count)")
                 check("repeat-options-history-entries-\(cycle)",historyEntries()==expectedHistory,"before=\(expectedHistory) after=\(historyEntries())")
                 check("repeat-options-zoom-\(cycle)",optionsRuntime.webView.pageZoom==1.25)
+                for _ in 0..<50 {
+                    let other=try? await restoredOptionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
+                    if other=="Version 1.2",!restoredOptionsRuntime.webView.isLoading{break}
+                    try await Task.sleep(for:.milliseconds(100))
+                }
+                let executionsAfter=await executionCount()
+                check("repeat-options-single-initialization-\(cycle)",executionsBefore != nil && executionsAfter==executionsBefore.map{$0+2},"before=\(String(describing:executionsBefore)) after=\(String(describing:executionsAfter))")
             }
             if lastRecoveryFailed {try await captureRecoveryError("28-final-extension-recovery-error")}
             results += await ExtensionReloadProbe.inspectHost(context:restored,dataStore:session.dataStore,version:"1.2",history:optionsRuntime.webView.interactionState)

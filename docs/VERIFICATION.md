@@ -4,19 +4,19 @@ Full original-spec completion remains the goal and is not achieved. [Draft PR #1
 
 ## Latest verified source
 
-`e32960d423691f1347303a97ebdc8c850fd2aac6`: [run 36755310248](https://github.com/super-original/serein-browser/actions/runs/36755310248) passes **58 unit tests, 279/281 browser checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
+`21be7aed0e9c0b65a8668739781e1acbc6b2ab41`: [run 36756928826](https://github.com/super-original/serein-browser/actions/runs/36756928826) passes **58 unit tests, 295/299 browser checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
 
-[Download app](https://github.com/super-original/serein-browser/actions/runs/36755310248/artifacts/11116478485) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36755310248/artifacts/11116488605). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
+[Download app](https://github.com/super-original/serein-browser/actions/runs/36756928826/artifacts/11117666284) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36756928826/artifacts/11117960756). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
 
 Verified additions: complete back/forward URL-list, current-position and zoom preservation across initial and three repeated extension recoveries; seven Find checks; eight extension-window close delegate checks; native window/quit consent with process exit/session save; selected-tab grids, balanced divider geometry, minimum-window bounds, focus, unload protection and closure. Actual keyboard commands, management-menu dispatch and private-window exclusion pass for MV2/MV3. These narrow fixtures do not establish universal extension compatibility.
 
-The two browser failures are missing MV2/MV3 `tabs.onZoomChange`. The separate **actual desktop rendering gate fails** with zero content glyph pixels. DOM/internal snapshots are not desktop-rendering evidence. Plain WKWebView and Apple-signed Safari reproduce IOSurface failures on this free runner. No supported second free macOS 27 image has been identified; no private flags, security weakening, lower deployment target or engine substitution is used. [Prepared upstream report](MACOS27_RENDERING_REPORT.md) has not been posted.
+The four browser failures are missing MV2/MV3 `tabs.onZoomChange` and two populated-window tab assertions under investigation. Window creation, size-only bounds, resizing, focus, removal, private-denial and created/removed events pass through actual MV2/MV3 JavaScript APIs. The separate **actual desktop rendering gate fails** with zero content glyph pixels. DOM/internal snapshots are not desktop-rendering evidence. Plain WKWebView and Apple-signed Safari reproduce IOSurface failures on this free runner. No supported second free macOS 27 image has been identified; no private flags, security weakening, lower deployment target or engine substitution is used. [Prepared upstream report](MACOS27_RENDERING_REPORT.md) has not been posted.
 
 Grid, minimum-window and extension-management screenshots were inspected. Native grid columns now have eight-point gaps, with 327/326-point rows. [Side-by-side original screenshots and measurements](evidence/2026-09-30/grid/README.md) compare the inspected fresh Zen reference; their sidebar/focus differences are explicit. Page bodies remain blank.
 
 ## Current work under verification
 
-Pending follow-up: JavaScript windows create/query/resize/focus/remove/events/private-denial coverage and honoring partial creation frames. The SDK documents omitted components as NaN; the previous adapter silently ignored size-only requests. Current-source changes require a fresh exact-head run.
+Pending follow-up: inspect populated-window tab payloads without relaxing their assertions; use an inert preload for extension history restoration and verify that each recovered options page initializes exactly once. The previous resource preload may execute startup scripts twice. These changes require a fresh exact-head run.
 
 ## Prioritized remaining work
 

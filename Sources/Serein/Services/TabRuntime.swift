@@ -43,8 +43,7 @@ import SereinCore
                     awaitingExtensionReload=false
                     let state=extensionReloadState;extensionReloadState=nil
                     view.pageZoom=extensionReloadZoom
-                    if let state {extensionHistoryAfterPreload=state}
-                    view.load(url)
+                    if let state {prepareHistoryRestore(state,in:view,at:url)} else {view.load(url)}
                 } else {
                     failedURL=url;failure="This extension is disabled. Re-enable it to reload this page."
                 }
@@ -107,8 +106,7 @@ import SereinCore
         let replacement=makeView(for:url)
         if saved || current.backForwardList.currentItem != nil,let state {
             if saved,restoringCurrentPage,context != nil {
-                extensionHistoryAfterPreload=state
-                replacement.load(url)
+                prepareHistoryRestore(state,in:replacement,at:url)
             } else {
                 replacement.interactionState=state
                 // Restore the list, then let the caller request its destination.
@@ -118,6 +116,12 @@ import SereinCore
         replacement.pageZoom=zoom
         viewRevision += 1
         return replacement
+    }
+    private func prepareHistoryRestore(_ state:Any,in view:WKWebView,at url:URL) {
+        extensionHistoryAfterPreload=state
+        // Initialize the context's document without executing the extension's
+        // options scripts twice. The real resource loads after history restore.
+        view.loadHTMLString("<!doctype html><title></title>",baseURL:url)
     }
     func load(_ url: URL) {
         extensionHistoryAfterPreload=nil

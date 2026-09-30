@@ -10,11 +10,15 @@ script = """(async () => {
   document.documentElement.dataset.sereinCRXIdentity = browser.runtime.id;
   document.documentElement.dataset.sereinCRXState = JSON.stringify({version:browser.runtime.getManifest().version,marker:current.updateSentinel});
 })();"""
+options_script = """(async () => {
+  await browser.storage.local.set({['optionsExecution_'+crypto.randomUUID()]:browser.runtime.getManifest().version});
+  document.body.textContent = 'Version ' + browser.runtime.getManifest().version;
+})();"""
 def build_archive(version='1.0', permissions=None):
  out=io.BytesIO()
  manifest={'manifest_version':3,'name':'Signed fixture','version':version,'description':'Controlled signed update fixture.','permissions':permissions or ['storage'],'host_permissions':['http://127.0.0.1/*'],'content_scripts':[{'matches':['http://127.0.0.1/*'],'js':['identity.js']}],'options_ui':{'page':'options.html','open_in_tab':True}}
  with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
-  for name,value in [('manifest.json',json.dumps(manifest)),('identity.js',script),('options.html','<!doctype html><title>Signed extension options</title><body><script src="options.js"></script></body>'),('options.js',"document.body.textContent = 'Version ' + browser.runtime.getManifest().version;")] :
+  for name,value in [('manifest.json',json.dumps(manifest)),('identity.js',script),('options.html','<!doctype html><title>Signed extension options</title><body><script src="options.js"></script></body>'),('options.js',options_script)] :
    info=zipfile.ZipInfo(name,(2026,9,30,0,0,0));info.compress_type=8;z.writestr(info,value)
  return out.getvalue()
 archive=build_archive()
