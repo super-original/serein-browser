@@ -65,7 +65,7 @@ struct InstalledExtension: Identifiable, Codable {
         for permission in ext.requestedPermissions where record.permissions.contains(permission.rawValue) {context.setPermissionStatus(.grantedExplicitly,for:permission)}
         for pattern in ext.requestedPermissionMatchPatterns where record.hosts.contains(pattern.string) {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
         if let state=record.permissionState {try state.apply(to:context)}
-        try controller.load(context);contexts[record.id]=context
+        try controller.load(context);contexts[record.id]=context;actionRevision += 1
         for window in manager?.windows ?? [] where !window.session.state.isPrivate {
             if let bridge=window.session.extensionWindow {context.didOpenWindow(bridge)}
         }
@@ -163,6 +163,19 @@ struct InstalledExtension: Identifiable, Codable {
             }
             try FileManager.default.removeItem(at:root.appendingPathComponent(id.uuidString));records.removeAll{$0.id==id};save()
         } catch {self.error=error.localizedDescription}
+    }
+    func actionEnabled(_ id: UUID,in session: BrowserSession) -> Bool {
+        _=actionRevision
+        return contexts[id]?.action(for:session.state.selectedTabID.map{session.bridge($0)})?.isEnabled ?? false
+    }
+    func performFromLibrary(_ id: UUID,in session: BrowserSession) async {
+        session.libraryPanel=nil
+        for _ in 0..<40 {
+            guard let window=session.window else{return}
+            if window.attachedSheet == nil {perform(id,in:session);return}
+            try? await Task.sleep(for:.milliseconds(50))
+        }
+        error="Close the current dialog before opening the extension action."
     }
     func perform(_ id: UUID,in session: BrowserSession) {
         guard let context=contexts[id],let tab=session.state.selectedTabID else{return}

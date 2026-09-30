@@ -63,9 +63,9 @@ private struct ExtensionListView: View {
                 VStack(alignment:.leading,spacing:8) {
                     HStack {Text(record.name).bold();Text(record.version).foregroundStyle(.secondary);Spacer();Toggle("Enabled",isOn:Binding(get:{record.enabled},set:{enabled in Task{await host.setEnabled(record.id,enabled)}})).toggleStyle(.switch).fixedSize()}
                     HStack {
-                        Button("Open Action"){host.perform(record.id,in:session)}.disabled(!record.enabled)
+                        Button("Open Action"){Task{await host.performFromLibrary(record.id,in:session)}}.disabled(!record.enabled || !host.actionEnabled(record.id,in:session))
                         if let context=host.contexts[record.id],let url=context.optionsPageURL {Button("Options"){session.newTab(url:url.absoluteString);session.libraryPanel=nil}}
-                        Menu("Current Site") {Button("Allow on This Site"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny on This Site"){host.setCurrentSite(record.id,in:session,allow:false)}}.disabled(!record.enabled || !["http","https"].contains(session.current?.webView.url?.scheme?.lowercased() ?? ""))
+                        Menu("Current Site") {Button("Allow on This Site"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny on This Site"){host.setCurrentSite(record.id,in:session,allow:false)}}.disabled(!record.enabled || host.contexts[record.id] == nil || !["http","https"].contains(session.current?.webView.url?.scheme?.lowercased() ?? ""))
                         Spacer()
                         Button("Remove…"){host.confirmRemoval(record,in:session)}
                     }.font(.caption)

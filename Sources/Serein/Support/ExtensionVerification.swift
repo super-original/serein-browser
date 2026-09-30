@@ -72,14 +72,35 @@ import SereinCore
                     try await Task.sleep(for:.milliseconds(300))
                     check("extension-remove-cancel-keeps-record",host.records.contains{$0.id==id} && host.contexts[id] != nil)
                     host.chooseInstall(in:session)
-                    try await Task.sleep(for:.seconds(1))
+                    for _ in 0..<50 {
+                        if librarySheet?.attachedSheet is NSOpenPanel {break}
+                        try await Task.sleep(for:.milliseconds(100))
+                    }
                     let installPanel=librarySheet?.attachedSheet as? NSOpenPanel
                     check("extension-install-dialog-visible",installPanel != nil)
                     installPanel?.cancel(nil)
                     try await Task.sleep(for:.milliseconds(300))
                     check("extension-install-cancel-keeps-record",host.records.count==1 && host.records.first?.id==id)
-                    session.libraryPanel=nil
-                    try await Task.sleep(for:.milliseconds(500))
+                    let action=host.contexts[id]?.action(for:session.state.selectedTabID.map{session.bridge($0)})
+                    await host.performFromLibrary(id,in:session)
+                    for _ in 0..<100 {
+                        if action?.popupPopover?.isShown == true {break}
+                        try await Task.sleep(for:.milliseconds(50))
+                    }
+                    check("extension-action-from-library-shows-popup",session.window?.attachedSheet == nil && action?.popupPopover?.isShown == true)
+                    let popupText=try? await action?.popupWebView?.evaluateJavaScript("document.body.innerText")
+                    check("extension-popup-document-loaded",(popupText as? String)?.contains("Serein") == true)
+                    if action?.popupPopover?.isShown == true {
+                        let name="18-extension-action-popup"
+                        try name.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                        for _ in 0..<100 {
+                            if FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".capture-finished").path){break}
+                            try await Task.sleep(for:.milliseconds(100))
+                        }
+                        check("extension-popup-capture",FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".png").path))
+                    }
+                    action?.popupPopover?.close()
+                    try await Task.sleep(for:.milliseconds(300))
                 }
                 // Persist engine changes, including revocation, without depending on shutdown.
                 guard let live=host.contexts[id] else{throw ExtensionValidationError.invalid("Missing reloaded context")}
