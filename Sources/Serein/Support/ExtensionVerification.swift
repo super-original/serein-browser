@@ -191,7 +191,18 @@ import SereinCore
             check("crx3-installed-and-loaded", installed.map { host.contexts[$0.id] != nil } == true, host.error ?? "")
             let persisted = try JSONDecoder().decode([InstalledExtension].self, from: Data(contentsOf: host.root.appendingPathComponent("extensions.json")))
             check("crx3-identity-persists", installed != nil && persisted.first?.packageIdentity == installed?.packageIdentity)
-            if let installed { await host.remove(installed.id) }
+            if let installed {
+                session.navigate("http://127.0.0.1:8765/index.html?extension=crx-identity")
+                var runtimeID: String?
+                for _ in 0..<50 {
+                    try await Task.sleep(for: .milliseconds(100))
+                    runtimeID = try? await session.current?.webView.evaluateJavaScript("document.documentElement.dataset.sereinCRXIdentity") as? String
+                    if runtimeID != nil { break }
+                }
+                check("crx3-developer-runtime-identity", runtimeID == installed.packageIdentity?.extensionID, runtimeID ?? "no identity")
+                await host.remove(installed.id)
+                check("crx3-removal", !host.records.contains { $0.id == installed.id } && host.contexts[installed.id] == nil)
+            }
         } catch { check("crx3-installation", false, error.localizedDescription) }
         return results
     }

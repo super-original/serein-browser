@@ -1,5 +1,12 @@
 # Verification and continuation backlog
 
+## Signed package and adapter continuation
+
+Source `b854f846c3b6c8198a6103845ed930e9c7dd49f3`: [run 36723768551](https://github.com/super-original/serein-browser/actions/runs/36723768551) passes **39 unit tests, 144 browser checks and 12 isolated bridge checks**. CRX3 RSA/P-256 proof verification, invalid proofs/tampering, bounded decompression/checksums, path aliases, actual installation consent/loading and persisted archive identity pass. The native consent capture (`runtime/22-crx3-install-consent.png` in the evidence artifact) was retrieved and inspected. Missing namespace installation works in both the MV2 background page and actual MV3 service worker, without bypassing native-message permission denial. No production downloads API adapter has been enabled.
+
+[Download this tested ARM64/macOS 27 app](https://github.com/super-original/serein-browser/actions/runs/36723768551/artifacts/11102502761); ad-hoc signed/hardened, not notarized. [Evidence and real screenshots](https://github.com/super-original/serein-browser/actions/runs/36723768551/artifacts/11102272804). The unchanged actual-desktop gate still fails with zero dark content pixels; full extension compatibility and the original completion goal remain unmet. A follow-up preserves new signed installs' verified developer ID as runtime.id, retaining old records' identity; its runtime test is pending.
+
+
 This browser is not complete. A passing build is not a production or extension-compatibility claim.
 
 ## Current verified source

@@ -12,6 +12,8 @@ struct InstalledExtension: Identifiable, Codable {
     var hosts: [String]
     var permissionState: ExtensionPermissionState? = nil
     var packageIdentity: SignedExtensionIdentity? = nil
+    var contextIdentifier: String? = nil
+    var runtimeIdentifier: String { contextIdentifier ?? id.uuidString }
 }
 @MainActor @Observable final class ExtensionHost: NSObject {
     let controller=WKWebExtensionController()
@@ -61,7 +63,7 @@ struct InstalledExtension: Identifiable, Codable {
         let ext=try await WKWebExtension(resourceBaseURL:directory)
         try manifest.validateRequiredPermissions(recognized:Set(ext.requestedPermissions.map(\.rawValue)))
         guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
-        let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=record.id.uuidString
+        let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=record.runtimeIdentifier
         context.hasAccessToPrivateData=false
         for permission in ext.requestedPermissions where record.permissions.contains(permission.rawValue) {context.setPermissionStatus(.grantedExplicitly,for:permission)}
         for pattern in ext.requestedPermissionMatchPatterns where record.hosts.contains(pattern.string) {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
@@ -103,7 +105,7 @@ struct InstalledExtension: Identifiable, Codable {
                 throw ExtensionValidationError.invalid("This CRX3 developer identity was installed while consent was pending.")
             }
             let final=root.appendingPathComponent(id.uuidString);try FileManager.default.moveItem(at:destination,to:final)
-            let record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity)
+            let record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID)
             do {try await load(record);records.append(record);save()}
             catch {try? FileManager.default.removeItem(at:final);throw error}
         } catch {try? FileManager.default.removeItem(at:destination);self.error=error.localizedDescription}
@@ -182,7 +184,8 @@ struct InstalledExtension: Identifiable, Codable {
             // record. Querying it after unload produces WebKit storage errors.
             let persistentTypes=WKWebExtensionController.allExtensionDataTypes.subtracting([.session])
             let dataRecords=await controller.dataRecords(ofTypes:persistentTypes)
-            let matching=dataRecords.filter{$0.uniqueIdentifier==id.uuidString}
+            let runtimeIdentifier = records.first { $0.id == id }?.runtimeIdentifier ?? id.uuidString
+            let matching=dataRecords.filter{$0.uniqueIdentifier==runtimeIdentifier}
             await controller.removeData(ofTypes:persistentTypes,from:matching)
             let removalErrors=matching.flatMap(\.errors)
             guard removalErrors.isEmpty else {

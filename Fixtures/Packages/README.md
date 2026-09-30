@@ -1,6 +1,6 @@
 # Signed package fixture
 
-`signed-fixture.crx` contains only a minimal MV3 manifest. Its original RSA-2048
+`signed-fixture.crx` contains a minimal MV3 manifest and a content script that reports `browser.runtime.id` through a DOM test attribute. Its original RSA-2048
 CRX3 signature was generated with Python cryptography 50.0.0 using an ephemeral
 key that was discarded. The public key and signature are embedded in CRX3; no
 private key or third-party package is included. Identical bytes are embedded in
