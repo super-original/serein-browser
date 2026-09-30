@@ -32,12 +32,16 @@ import SereinCore
     @ObservationIgnored private var extensionHistoryAfterPreload:Any?
     var hasPendingExtensionReload:Bool {awaitingExtensionReload}
     @ObservationIgnored private var configurationContext: WKWebExtensionContext?
+    @ObservationIgnored private var suspendedState:Any?
+    @ObservationIgnored private var suspendedZoom:CGFloat=1
     var loadedWebView:WKWebView? {storedView}
+    var zoomFactor:CGFloat {storedView?.pageZoom ?? (awaitingExtensionReload ? extensionReloadZoom : suspendedZoom)}
     var webView: WKWebView {
         if let storedView {return storedView}
         let url=session?.state.tabs.first(where:{$0.id==id}).flatMap{URL(string:$0.url)}
         let view=makeView(for:url)
-        if let url,url.absoluteString != "about:blank" {
+        view.pageZoom=suspendedZoom
+        if let url {
             provisionalURL=url
             if awaitingExtensionReload {
                 if configurationContext != nil {
@@ -48,7 +52,11 @@ import SereinCore
                 } else {
                     failedURL=url;failure="This extension is disabled. Re-enable it to reload this page."
                 }
-            } else {view.load(url)}
+            } else if let state=suspendedState {
+                suspendedState=nil;view.pageZoom=suspendedZoom
+                if configurationContext != nil {prepareHistoryRestore(state,in:view,at:url)}
+                else {view.interactionState=state}
+            } else if url.absoluteString != "about:blank" {view.load(url)}
         }
         return view
     }
@@ -80,8 +88,9 @@ import SereinCore
     init(id: UUID, session: BrowserSession, configuration: WKWebViewConfiguration? = nil) {self.id=id;self.session=session;initialConfiguration=configuration;super.init()}
     func captureExtensionReloadState(for context:WKWebExtensionContext) -> Bool {
         guard configurationContext === context else{return false}
-        extensionReloadState=extensionHistoryAfterPreload ?? storedView?.interactionState
-        extensionReloadZoom=storedView?.pageZoom ?? 1
+        extensionReloadState=extensionHistoryAfterPreload ?? storedView?.interactionState ?? suspendedState
+        extensionReloadZoom=storedView?.pageZoom ?? suspendedZoom
+        suspendedState=nil
         awaitingExtensionReload=true
         if let current=storedView,let responder=current.window?.firstResponder as? NSView {
             pendingPageFocus = responder === current || responder.isDescendant(of:current)
@@ -178,6 +187,14 @@ import SereinCore
         guard let view=storedView else{return}
         title=view.title ?? "New Tab";isLoading=view.isLoading;progress=view.estimatedProgress;canGoBack=view.canGoBack;canGoForward=view.canGoForward
         session?.update(id,url:(failedURL ?? provisionalURL ?? view.url)?.absoluteString,title:view.title)
+    }
+    func suspend() {
+        guard let view=storedView else{return}
+        // A pending navigation must resume its requested URL, not an older
+        // committed history item. Opaque state stays in memory only.
+        suspendedState=isLoading ? nil : extensionHistoryAfterPreload ?? view.interactionState
+        suspendedZoom=view.pageZoom
+        dispose();isLoading=false;progress=0;hasUserEdits=false;viewRevision += 1
     }
     func dispose() {
         documentID=UUID()

@@ -4,9 +4,9 @@ Full original-spec completion remains the goal and is not achieved. [Draft PR #1
 
 ## Latest verified source
 
-`1b45649a8d566e46fe66a95289313c420c46f37a`: [run 36772488140](https://github.com/super-original/serein-browser/actions/runs/36772488140) passes **70 unit tests, 338/351 browser checks, 12 independent download-restart checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
+`95c1335e9d6de01904f6e8986361f7b593aee5b8`: [run 36773735934](https://github.com/super-original/serein-browser/actions/runs/36773735934) passes **76 unit tests, 341/355 browser checks, 12 independent download-restart checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
 
-[Download app](https://github.com/super-original/serein-browser/actions/runs/36772488140/artifacts/11123978845) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36772488140/artifacts/11124513047). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
+[Download app](https://github.com/super-original/serein-browser/actions/runs/36773735934/artifacts/11125121027) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36773735934/artifacts/11124976055). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
 
 Normal paused downloads resume in a new app process with full 8 MiB byte integrity. Private resume data/history stay off disk; owner-only file permissions and completion/cancellation cleanup pass. Active downloads without saved resume data still become interrupted. The inspected Downloads screenshot now describes this relaunch behavior correctly.
 
@@ -20,7 +20,9 @@ Downloads and extension-management screenshots from the preceding `4449c7a` chec
 
 Fresh-process checks at the verified source isolate baseline, WebGPU-first and WebGL-first. **8/12 pass**: both API primers permit native/DOM entry and Escape, while all four unprimed baseline checks fail. WebGPU still returns no adapter, but both primers create a GPU process; baseline has none. All five captures were inspected: both fullscreen images are black and ordinary pages blank. This narrows the fullscreen prerequisite without solving desktop rendering. No production warmup is introduced.
 
-Private app-record persistence passes its two core cases and both actual restart permission checks. The next change applies the writer to signed-update registry transactions too, creates owner-only temporary files before atomic publication, and tests failed-publication cleanup and symlink replacement. It also restores saved windows within current display bounds and protects the ordinary frame during native fullscreen. Four geometry unit cases and a native transition/save/exit scenario await exact-head CI. [Inspected original Glance comparison](evidence/2026-09-30/glance/README.md) retains its exact source and limits. Full original-spec completion remains the goal.
+Private app-record persistence and signed-update registry permissions pass, including failed-publication cleanup and symlink replacement. All four geometry unit cases pass. Native runtime checks pass disconnected-display placement and ordinary-frame retention/persistence while fullscreen; **exit-frame restoration fails**. The actual exit screenshot was inspected and shows a full usable-screen window rather than the requested 800×500 frame. The next change explicitly reapplies the saved pre-fullscreen frame at completion, clamped to current displays.
+
+Manual unload now retains in-memory opaque navigation state and zoom while releasing the old view; repeated consent/release/history/zoom tests and MV2/MV3 extension-resource restoration tests are pending. Dedicated extension runtime-port fixtures add ordering, nested payload, sender and disconnect coverage. No automatic suspension, cross-launch history restoration or production native messaging is claimed. [Inspected original Glance comparison](evidence/2026-09-30/glance/README.md) retains its exact source and limits. Full original-spec completion remains the goal.
 
 ## Prioritized remaining work
 

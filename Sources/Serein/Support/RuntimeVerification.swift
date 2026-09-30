@@ -297,11 +297,13 @@ import SereinCore
         results += await SplitGridVerification.run(manager:manager,root:root)
         results += await GlanceVerification.run(manager:manager,root:root)
         results += await FullscreenVerification.run(manager:manager,root:root)
+        results += await TabSuspensionVerification.run(manager:manager)
         results += await WindowPlacementVerification.run(manager:manager,root:root)
         results += await WindowConsentVerification.run(manager:manager)
         session.window?.makeKeyAndOrderFront(nil)
         results += await SitePermissionVerification.run(session:session,root:root)
         results += await ExtensionVerification.run(manager:manager,session:session,root:root)
+        results += await PortMessagingVerification.run(manager:manager)
         ExtensionSelectionTrace.save(to:root)
         await RealExtensionAudit.run(manager:manager,root:root)
         do {try JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)} catch {print(error)}

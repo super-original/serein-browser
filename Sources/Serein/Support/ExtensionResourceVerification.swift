@@ -21,6 +21,13 @@ import WebKit
         _=try? await runtime.webView.evaluateJavaScript("location.href="+literal+"[0]")
         let publicLoaded=await loaded("Public extension resource")
         check("declared-page-navigation",publicLoaded && runtime.webView.url==target)
+        let priorBack=runtime.webView.backForwardList.backList.map(\.url)
+        _=runtime.setZoom(1.2)
+        runtime.suspend()
+        check("suspension-keeps-zoom-without-waking",runtime.loadedWebView==nil && abs(session.bridge(id).zoomFactor(for:context)-1.2)<0.001 && runtime.loadedWebView==nil)
+        let resumed=await loaded("Public extension resource")
+        check("suspension-restores-extension-page",resumed && runtime.webView.url==target && abs(runtime.webView.pageZoom-1.2)<0.001)
+        check("suspension-preserves-back-list",runtime.webView.backForwardList.backList.map(\.url)==priorBack)
         if generation==3 {
             let other=URL(string:"http://localhost:8765/second.html?resource-check")!
             runtime.load(other)

@@ -199,3 +199,9 @@ At `5022078`, MV2 and MV3 `windows.create`/`get({populate:true})` return the exp
 The observed redaction is consistent with upstream [URL permission filtering](https://github.com/WebKit/WebKit/blob/b55be06b347f8530b33e876cc40157df6fd5ccf8/Source/WebKit/UIProcess/Extensions/WebExtensionContext.cpp), which checks supported URL schemes before host-pattern grants. This is an inference from upstream source, not proof of the exact binary's implementation. Public context permission status and actual returned JavaScript payloads are the runtime evidence.
 
 At `29dabbf`, granted-HTTP populated-window URLs pass in both generations; `about:blank` remains empty. Recreated extension options pages now preserve history/zoom and initialize exactly once per page over all four cycles (persistent counts 5→7→9→11→13 for two pages). This verifies script execution counts, not complete webNavigation event ordering during preload.
+
+### Port lifecycle coverage in progress
+
+New dedicated MV2/MV3 fixtures exercise actual runtime.connect ports, ordered bidirectional nested JSON/Unicode messages, sender frame metadata, explicit disconnect and disconnect when the production host disables the extension. These checks are pending exact-head CI. They do not establish service-worker suspension/wakeup or native-host messaging.
+
+Port tests follow the [runtime.Port contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/Port). Firefox and Chrome differ when one of several receiving contexts unloads; the current single-recipient fixtures do not establish that multi-recipient behavior.

@@ -4,6 +4,7 @@ import SereinCore
 
 @MainActor final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private(set) var fullscreenTransition=false
+    private var frameBeforeFullscreen:NSRect?
     let session: BrowserSession
     init(session: BrowserSession) {
         self.session=session
@@ -32,11 +33,17 @@ import SereinCore
     }
     func windowDidMove(_ notification:Notification){rememberFrame()}
     func windowDidResize(_ notification:Notification){rememberFrame()}
-    func windowWillEnterFullScreen(_ notification:Notification){rememberFrame();fullscreenTransition=true}
+    func windowWillEnterFullScreen(_ notification:Notification){rememberFrame();frameBeforeFullscreen=window?.frame;fullscreenTransition=true}
     func windowDidEnterFullScreen(_ notification:Notification){fullscreenTransition=false}
     func windowWillExitFullScreen(_ notification:Notification){fullscreenTransition=true}
-    func windowDidExitFullScreen(_ notification:Notification){fullscreenTransition=false;rememberFrame()}
-    func windowDidFailToEnterFullScreen(_ window:NSWindow){fullscreenTransition=false;rememberFrame()}
+    func windowDidExitFullScreen(_ notification:Notification){
+        if let frame=frameBeforeFullscreen,
+           let restored=WindowPlacement.restored([frame.minX,frame.minY,frame.width,frame.height],screens:NSScreen.screens.map(\.visibleFrame)) {
+            window?.setFrame(restored,display:true)
+        }
+        frameBeforeFullscreen=nil;fullscreenTransition=false;rememberFrame()
+    }
+    func windowDidFailToEnterFullScreen(_ window:NSWindow){frameBeforeFullscreen=nil;fullscreenTransition=false;rememberFrame()}
     func windowDidFailToExitFullScreen(_ window:NSWindow){fullscreenTransition=false}
     private func rememberFrame(){
         guard !fullscreenTransition,let window,!window.styleMask.contains(.fullScreen) else{return}

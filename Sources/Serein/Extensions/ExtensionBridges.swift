@@ -55,7 +55,7 @@ import SereinCore
     func shouldBypassPermissions(for context: WKWebExtensionContext) -> Bool {false}
     func shouldGrantPermissionsOnUserGesture(for context: WKWebExtensionContext) -> Bool {true}
     func size(for context: WKWebExtensionContext) -> CGSize {session?.runtimes[id]?.loadedWebView?.bounds.size ?? .zero}
-    func zoomFactor(for context: WKWebExtensionContext) -> Double {Double(session?.runtimes[id]?.loadedWebView?.pageZoom ?? 1)}
+    func zoomFactor(for context: WKWebExtensionContext) -> Double {Double(session?.runtimes[id]?.zoomFactor ?? 1)}
     func setZoomFactor(_ value: Double,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {guard let session,tab != nil,session.runtime(id).setZoom(value) else{completionHandler(ExtensionValidationError.invalid("The tab is unavailable or the zoom factor is outside 0.25–5 (0 resets)."));return};completionHandler(nil)}
     func activate(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.select(id,preservingSelection:true);completionHandler(nil)}
     func setSelected(_ selected: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {

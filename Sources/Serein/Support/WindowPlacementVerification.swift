@@ -28,7 +28,7 @@ import SereinCore
         } catch {check("persisted-normal-frame-in-fullscreen",false,error.localizedDescription)}
         if window.styleMask.contains(.fullScreen) {window.toggleFullScreen(nil)}
         await wait{!window.styleMask.contains(.fullScreen) && !controller.fullscreenTransition}
-        check("native-fullscreen-exit-frame",entered && !window.styleMask.contains(.fullScreen) && session.state.windowFrame==regular)
+        check("native-fullscreen-exit-frame",entered && !window.styleMask.contains(.fullScreen) && session.state.windowFrame==regular,"saved=\(String(describing:session.state.windowFrame)) regular=\(String(describing:regular)) actual=\(window.frame) transition=\(controller.fullscreenTransition) fullscreen=\(window.styleMask.contains(.fullScreen))")
         let name="41-restored-window-placement"
         try? name.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".capture-finished").path)}

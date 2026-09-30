@@ -231,7 +231,7 @@ import SereinCore
         guard canUnload(id),let runtime=runtimes[id] else{return}
         let document=runtime.documentID
         confirm("Unload this tab?",detail:"The page will reload when selected. Media will stop and unsaved page state will be lost.",yes:"Unload") { [weak self,weak runtime] yes in
-            guard yes,let self,let runtime,self.canUnload(id),self.runtimes[id] === runtime,runtime.documentID==document else{return};runtime.dispose();self.runtimes[id]=nil
+            guard yes,let self,let runtime,self.canUnload(id),self.runtimes[id] === runtime,runtime.documentID==document else{return};runtime.suspend()
         }
     }
 }
