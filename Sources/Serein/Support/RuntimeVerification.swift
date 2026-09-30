@@ -197,6 +197,7 @@ import SereinCore
         try? Data().write(to:root.appendingPathComponent("idle-end"))
         results += await SitePermissionVerification.run(session:session,root:root)
         results += await ExtensionVerification.run(manager:manager,session:session,root:root)
+        results += await NativeBridgeVerification.run(root:root)
         await RealExtensionAudit.run(manager:manager,root:root)
         do {try JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)} catch {print(error)}
         manager.saveNow()

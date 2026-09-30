@@ -135,3 +135,7 @@ The next UI follow-up routes library confirmation/file dialogs to the visible li
 ### Tab highlighting workstream
 
 The macOS 27 public `WKWebExtensionTab.setSelected` contract explicitly requires changing highlighted membership without changing the active tab; `activate` must include the active tab in the selection. Serein now keeps transient highlighted membership separate from the active page, sends public selection/deselection notifications, and supports command-click, shift-range selection and an explicit bulk-close action. Runtime fixtures exercise [tabs.highlight](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/highlight), highlighted/active queries and onHighlighted delivery. Verification is pending for this follow-up; exhaustive event ordering and full tab-group semantics remain separate gaps.
+
+### Exact macOS 27 selection API gap
+
+Run [36713799565](https://github.com/super-original/serein-browser/actions/runs/36713799565), commit `7ce1cad`, found `browser.tabs.highlight` undefined in both MV2 and MV3 backgrounds. Native command-click/range selection and bulk close passed, but the new extension call aborted its lifecycle scenario; those failures are not counted as verified compatibility. The next fixture exercises `tabs.update({highlighted:…})` independently. A working update path would not establish `tabs.highlight` support.

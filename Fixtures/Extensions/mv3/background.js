@@ -18,14 +18,18 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       const queried = await browser.tabs.get(created.id);
       duplicate = await browser.tabs.duplicate(created.id);
       const copied = await browser.tabs.get(duplicate.id);
-      await browser.tabs.highlight({windowId:queried.windowId, tabs:[queried.index,copied.index]});
+      // This system WebKit omits tabs.highlight. Exercise the supported
+      // per-tab update path separately, without claiming that API exists.
+      await browser.tabs.update(sender.tab.id, {highlighted:false});
+      await browser.tabs.update(created.id, {highlighted:true,active:true});
+      await browser.tabs.update(duplicate.id, {highlighted:true,active:false});
       const highlighted = await browser.tabs.query({windowId:queried.windowId,highlighted:true});
       const active = await browser.tabs.query({windowId:queried.windowId,active:true});
       const multiSelected = highlighted.length === 2 && highlighted.some(t=>t.id===created.id) && highlighted.some(t=>t.id===duplicate.id);
       const firstHighlightActive = active.length === 1 && active[0].id === created.id;
       await new Promise(resolve => setTimeout(resolve, 100));
       const senderTab = await browser.tabs.get(sender.tab.id);
-      await browser.tabs.highlight({windowId:senderTab.windowId,tabs:[senderTab.index]});
+      await browser.tabs.update(senderTab.id, {highlighted:true,active:true});
       await browser.tabs.remove([created.id, duplicate.id]);
       await browser.tabs.update(sender.tab.id, {active:true});
       // Event delivery is asynchronous relative to promise resolution.
@@ -43,7 +47,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       }
     }
     const tabs = await browser.tabs.query({});
-    reply({ok:true,count,tabLifecycle,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
+    reply({ok:true,count,tabsHighlightAvailable:typeof browser.tabs.highlight === "function",tabLifecycle,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
   })().catch(error => reply({ok:false,error:String(error)}));
   return true;
 });

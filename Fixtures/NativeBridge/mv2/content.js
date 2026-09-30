@@ -1,0 +1,1 @@
+browser.runtime.sendMessage({type:'native-probe'}).then(value=>{document.documentElement.dataset.sereinNativeProbe=JSON.stringify(value);}).catch(error=>{document.documentElement.dataset.sereinNativeProbe=JSON.stringify({error:String(error)});});
