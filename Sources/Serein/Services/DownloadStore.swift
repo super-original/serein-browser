@@ -26,7 +26,7 @@ import SereinCore
         }
     }
     @ObservationIgnored private var download:WKDownload?
-    @ObservationIgnored private var resumeData:Data?
+    @ObservationIgnored fileprivate var resumeData:Data?
     @ObservationIgnored private var observation:NSKeyValueObservation?
     @ObservationIgnored private var savePanel:NSSavePanel?
     @ObservationIgnored private var retired=false
@@ -97,17 +97,44 @@ import SereinCore
     var items:[DownloadItem]=[]
     var error:String?
     let file:URL
+    let resumeDirectory:URL
     init(root:URL) {
+        resumeDirectory=root.appendingPathComponent("DownloadResume",isDirectory:true)
         file=root.appendingPathComponent("downloads.json")
         do {
             if FileManager.default.fileExists(atPath:file.path) {
-                items=try DownloadRecord.restoredHistory(Data(contentsOf:file)).map{DownloadItem(record:$0,store:self)}
+                items=try DownloadRecord.restoredHistory(Data(contentsOf:file)).map { record in
+                    let item=DownloadItem(record:record,store:self)
+                    if [.interrupted,.failed].contains(record.phase),
+                       let data=try? Data(contentsOf:resumeFile(record.id)),!data.isEmpty {
+                        item.resumeData=data
+                        item.record.phase = .paused
+                        item.record.detail=""
+                    }
+                    return item
+                }
             }
         } catch {self.error="Could not restore downloads: \(error.localizedDescription)"}
     }
     func save() {
-        do {try DownloadRecord.encodedHistory(items.map(\.record)).write(to:file,options:.atomic)}
+        do {
+            for item in items where !item.privateMode {
+                if let data=item.resumeData {
+                    try FileManager.default.createDirectory(at:resumeDirectory,withIntermediateDirectories:true,attributes:[.posixPermissions:0o700])
+                    try FileManager.default.setAttributes([.posixPermissions:0o700],ofItemAtPath:resumeDirectory.path)
+                    let destination=resumeFile(item.id)
+                    try data.write(to:destination,options:.atomic)
+                    try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:destination.path)
+                } else {try discardResume(item.id)}
+            }
+            try DownloadRecord.encodedHistory(items.map(\.record)).write(to:file,options:.atomic)
+        }
         catch {self.error="Could not save downloads: \(error.localizedDescription)"}
+    }
+    private func resumeFile(_ id:UUID)->URL {resumeDirectory.appendingPathComponent(id.uuidString+".resume")}
+    private func discardResume(_ id:UUID) throws {
+        let url=resumeFile(id)
+        if FileManager.default.fileExists(atPath:url.path){try FileManager.default.removeItem(at:url)}
     }
     @discardableResult func add(_ download:WKDownload,in session:BrowserSession,destination:URL?=nil)->DownloadItem {
         let record=DownloadRecord(source:download.originalRequest?.url,destination:destination,privateWindowID:session.state.isPrivate ? session.state.id : nil)
@@ -119,6 +146,10 @@ import SereinCore
     }
     func clearFinished(in session:BrowserSession) {
         let ids=Set(visible(in:session).filter(\.finished).map(\.id))
+        if !session.state.isPrivate {
+            do {for id in ids {try discardResume(id)}}
+            catch {self.error="Could not remove download recovery data: \(error.localizedDescription)";return}
+        }
         items.removeAll{ids.contains($0.id)};if !session.state.isPrivate {save()}
     }
     func closePrivateWindow(_ id:UUID) {

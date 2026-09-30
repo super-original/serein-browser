@@ -32,6 +32,10 @@ import SwiftUI
             QuitConsentVerification.run(manager:manager,root:root)
             return
         }
+        if args.contains("--download-restart-prepare") || args.contains("--download-restart-resume"),testRoot != nil {
+            Task {await DownloadRestartVerification.run(manager:manager,root:root,prepare:args.contains("--download-restart-prepare"))}
+            return
+        }
         Task {await manager.extensions.restore()}
         if args.contains("--integration-test") {Task {await RuntimeVerification.run(manager:manager,root:root)}}
     }

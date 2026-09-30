@@ -119,9 +119,9 @@ import SereinCore
     }
     private func prepareHistoryRestore(_ state:Any,in view:WKWebView,at url:URL) {
         extensionHistoryAfterPreload=state
-        // Initialize the context's document without executing the extension's
-        // options scripts twice. The real resource loads after history restore.
-        view.loadHTMLString("<!doctype html><title></title>",baseURL:url)
+        // A real context resource is required to initialize WebKit's extension
+        // loader. Navigation preferences suppress this transient page's scripts.
+        view.load(url)
     }
     func load(_ url: URL) {
         extensionHistoryAfterPreload=nil
@@ -220,6 +220,12 @@ extension TabRuntime: WKNavigationDelegate {
         synchronize()
     }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {guard webView === storedView else{return};documentID=UUID();failedURL=provisionalURL ?? webView.url;provisionalURL=nil;crashed=true;failure="The web content process stopped. Reload to recover this tab.";isLoading=false}
+    func webView(_ webView:WKWebView,decidePolicyFor action:WKNavigationAction,preferences:WKWebpagePreferences,decisionHandler:@escaping @MainActor @Sendable (WKNavigationActionPolicy,WKWebpagePreferences)->Void) {
+        if webView === storedView,configurationContext != nil {
+            preferences.allowsContentJavaScript=extensionHistoryAfterPreload == nil
+        }
+        self.webView(webView,decidePolicyFor:action) {policy in decisionHandler(policy,preferences)}
+    }
     func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy)->Void) {
         guard webView === storedView,let url=action.request.url else {decisionHandler(.cancel);return}
         let destinationContext=session?.extensions?.controller.extensionContext(for:url)

@@ -24,11 +24,6 @@ extension BrowserSession {
 
     func closeFind() {
         findVisible=false;findRequestID=UUID();findResult=""
-        // Let SwiftUI remove its field before returning the responder to WebKit.
-        let selected=state.selectedTabID
-        Task { @MainActor [weak self] in
-            await Task.yield()
-            self?.focusContent(ifSelected:selected)
-        }
+        // FindBar returns focus after its field actually leaves the hierarchy.
     }
 }

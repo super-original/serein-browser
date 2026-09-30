@@ -40,7 +40,7 @@ import SereinCore
                     check("\(name)-tabs-\(field)",lifecycle?[field] == true,String(describing:lifecycle)+" selection="+String(describing:payload?["selectionDiagnostics"]))
                 }
                 let windowLifecycle=payload?["windowLifecycle"] as? [String:Any]
-                for field in ["normalWindow","initialBounds","populatedTabs","resized","focused","removed","privateRejected","createdEvent","removedEvent"] {
+                for field in ["normalWindow","initialBounds","populatedTabs","grantedPopulatedURL","resized","focused","removed","privateRejected","createdEvent","removedEvent"] {
                     check("\(name)-windows-\(field)",windowLifecycle?[field] as? Bool==true,String(describing:windowLifecycle))
                 }
                 let secret=try await session.current!.webView.evaluateJavaScript("typeof window.sereinIsolatedSecret")

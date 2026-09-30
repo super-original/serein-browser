@@ -121,5 +121,10 @@ private struct FindBar: View {
             Button("Next",systemImage:"chevron.down"){session.find()}.labelStyle(.iconOnly)
             Button("Close Find",systemImage:"xmark"){session.closeFind()}.labelStyle(.iconOnly)
         }.padding(8).onAppear{focused=true}.onExitCommand{session.closeFind()}
+        .onDisappear {
+            focused=false
+            let selected=session.state.selectedTabID
+            DispatchQueue.main.async {session.focusContent(ifSelected:selected)}
+        }
     }
 }

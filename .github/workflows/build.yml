@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/verify_runtime.sh', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/fixture_server.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', '.github/workflows/build.yml']
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/verify_runtime.sh', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/fixture_server.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', '.github/workflows/build.yml']
   pull_request:
 permissions:
   contents: read
@@ -27,6 +27,9 @@ jobs:
       - name: Verify native quit consent and process exit
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: python3 script/verify_quit_consent.py
+      - name: Verify download resume across app launches
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: python3 script/verify_download_restart.py
       - name: Probe isolated extension native messaging
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: bash script/verify_native_bridge.sh

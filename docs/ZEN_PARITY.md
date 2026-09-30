@@ -61,11 +61,11 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Multiple workspaces | P | Create, rename, remove, switch; no containers or per-workspace cookie stores |
 | Expanded/collapsed sidebar | I | Visual inspection required across resizing and focus |
 | Compact mode | P | Edge reveal/hide; Zen's complete toolbar variants absent |
-| Split views | P | Explicit selected-tab grids up to four panes verified at `d4c80d1`; initial divider spacing/row sizing under correction; split-group tabs, incremental layout preservation and drag composition remain absent |
+| Split views | P | Explicit selected-tab grids up to four panes verified at `d4c80d1`; balanced native dividers and minimum-window bounds verified at `e32960d`; split-group tabs, incremental layout preservation and drag composition remain absent |
 | Multiple windows / moving tabs | P | Normal live-tab transfer; isolated private transfer deliberately rejected |
 | Persistent sessions | P | Tab/workspace/sidebar restoration; not full history-stack/window restoration |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
-| Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; interrupted records after restart, no cross-launch resume |
+| Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume implementation awaits the separate-process gate; active transfers without resume data remain interrupted |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |
 | File selection / JS dialogs | I | Native panels; broader UI automation pending |
 | Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |

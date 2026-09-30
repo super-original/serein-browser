@@ -24,7 +24,7 @@ public struct DownloadRecord: Identifiable, Codable, Sendable {
     public static func restoredHistory(_ data:Data) throws -> [DownloadRecord] {
         try JSONDecoder().decode([DownloadRecord].self,from:data).filter{$0.privateWindowID == nil}.map {
             var record=$0
-            if record.phase.isActive || record.phase == .paused {record.phase = .interrupted;record.detail="Interrupted when Serein closed. Resume data is not stored on disk."}
+            if record.phase.isActive || record.phase == .paused {record.phase = .interrupted;record.detail="Interrupted when Serein closed. No saved resume data is available."}
             return record
         }
     }

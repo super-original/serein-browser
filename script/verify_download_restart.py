@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Prove download recovery across two actual app processes on the runner."""
+import json
+import pathlib
+import subprocess
+import sys
+import time
+import urllib.request
+import uuid
+
+root = pathlib.Path('evidence/download-restart', str(uuid.uuid4())).resolve()
+root.mkdir(parents=True)
+app = pathlib.Path('dist/Serein.app/Contents/MacOS/Serein').resolve()
+
+def stop(process):
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+
+results = []
+with (root / 'server.log').open('w') as log:
+    server = subprocess.Popen([sys.executable, 'script/fixture_server.py', '--directory', 'Fixtures'], stdout=log, stderr=log)
+    try:
+        for _ in range(100):
+            assert server.poll() is None, 'Owned fixture server exited'
+            try:
+                with urllib.request.urlopen('http://127.0.0.1:8765/index.html', timeout=1) as response:
+                    assert response.status == 200
+                break
+            except OSError:
+                time.sleep(.1)
+        else:
+            raise AssertionError('Fixture server did not become ready')
+        for stage, expected in [('prepare', 4), ('resume', 5)]:
+            with (root / f'{stage}.log').open('w') as stdout, (root / f'{stage}-error.log').open('w') as stderr:
+                process = subprocess.Popen([str(app), '--test-root', str(root), f'--download-restart-{stage}'], stdout=stdout, stderr=stderr)
+                try:
+                    code = process.wait(timeout=80)
+                finally:
+                    stop(process)
+            assert code == 0, f'{stage} app exited with {code}'
+            stage_results = json.loads((root / f'{stage}-results.json').read_text())
+            results.extend(stage_results)
+            (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
+            print(json.dumps(stage_results, indent=2), flush=True)
+            assert len(stage_results) == expected and all(item['passed'] for item in stage_results), stage_results
+        results.append({'name':'download-resumed-after-process-exit','passed':True,'detail':'Two independent launches exited with status 0; full byte-integrity assertion passed.'})
+        (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
+    finally:
+        stop(server)

@@ -10,6 +10,16 @@ async function probeWindows(senderTabId) {
     const sender=await browser.tabs.get(senderTabId);
     created=await browser.windows.create({url:'about:blank',focused:false,width:700,height:500});
     const queried=await browser.windows.get(created.id,{populate:true});
+    const permittedURL='http://127.0.0.1:8765/index.html?window-api';
+    let permitted;
+    if (queried.tabs?.[0]) {
+      await browser.tabs.update(queried.tabs[0].id,{url:permittedURL});
+      for(let attempt=0;attempt<30;attempt++) {
+        permitted=await browser.windows.get(created.id,{populate:true});
+        if(permitted.tabs?.[0]?.url===permittedURL) break;
+        await new Promise(resolve=>setTimeout(resolve,50));
+      }
+    }
     await browser.windows.update(created.id,{width:720,height:520,focused:true});
     const resized=await browser.windows.get(created.id);
     let privateRejected=false;
@@ -22,6 +32,7 @@ async function probeWindows(senderTabId) {
     return {normalWindow:queried.type==='normal' && queried.incognito===false,
       initialBounds:queried.width===700 && queried.height===500,
       populatedTabs:queried.tabs?.length===1 && queried.tabs[0].url==='about:blank',
+      grantedPopulatedURL:permitted?.tabs?.length===1 && permitted.tabs[0].url===permittedURL,
       populatedTabDetails:queried.tabs?.map(tab=>({id:tab.id,url:tab.url,pendingUrl:tab.pendingUrl,windowId:tab.windowId})),
       resized:resized.width===720 && resized.height===520,focused:resized.focused===true,
       removed:!remaining.some(window=>window.id===created.id),privateRejected,

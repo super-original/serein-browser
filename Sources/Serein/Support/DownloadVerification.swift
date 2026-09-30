@@ -4,7 +4,7 @@ import Foundation
 import SereinCore
 
 /// Exercises production downloads, including the native destination sheet.
-/// Resume data remains in memory; this does not claim cross-launch resume.
+/// Separate DownloadRestartVerification covers recovery in a fresh process.
 @MainActor enum DownloadVerification {
     static func run(manager:BrowserManager,session:BrowserSession,root:URL) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
@@ -94,6 +94,7 @@ import SereinCore
         check("download-cancel-fixture-paused",cancelled.canResume)
         cancelled.cancel()
         check("download-paused-cancel-discards-resume",cancelled.record.phase == .cancelled && !cancelled.canResume)
+        check("download-paused-cancel-removes-disk-data",!FileManager.default.fileExists(atPath:manager.downloads.resumeDirectory.appendingPathComponent(cancelled.id.uuidString+".resume").path))
         privateB.window?.performClose(nil)
         check("private-download-close-clears-records",!manager.downloads.items.contains{$0.privateMode})
         session.window?.makeKeyAndOrderFront(nil)
