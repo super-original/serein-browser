@@ -7,7 +7,9 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
     const previous = await browser.storage.local.get('count');
     const count = (previous.count || 0) + 1;
     await browser.storage.local.set({count});
-    const createdEvents = [], removedEvents = [];
+    const createdEvents = [], removedEvents = [], zoomEvents = [];
+    const onZoom = info => zoomEvents.push(info);
+    browser.tabs.onZoomChange.addListener(onZoom);
     const onCreated = tab => createdEvents.push(tab.id);
     const onRemoved = id => removedEvents.push(id);
     browser.tabs.onCreated.addListener(onCreated);
@@ -21,6 +23,11 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       const queried = await browser.tabs.get(created.id);
       duplicate = await browser.tabs.duplicate(created.id);
       const copied = await browser.tabs.get(duplicate.id);
+      await browser.tabs.setZoom(created.id, 1.25);
+      const zoomSet = await browser.tabs.getZoom(created.id) === 1.25;
+      await browser.tabs.setZoom(created.id, 0);
+      const zoomReset = await browser.tabs.getZoom(created.id) === 1;
+
       // This system WebKit omits tabs.highlight. Exercise the supported
       // per-tab update path separately, without claiming that API exists.
       const allTabs = await browser.tabs.query({windowId:queried.windowId});
@@ -40,11 +47,12 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       await browser.tabs.update(sender.tab.id, {active:true});
       // Event delivery is asynchronous relative to promise resolution.
       await new Promise(resolve => setTimeout(resolve, 100));
-      tabLifecycle = {multiSelected,firstHighlightActive,highlightedEvent,createdPinned:queried.pinned, duplicatePinned:copied.pinned,
+      tabLifecycle = {zoomSet,zoomReset,zoomEvent:zoomEvents.some(e=>e.tabId===created.id && e.oldZoomFactor===1 && e.newZoomFactor===1.25),multiSelected,firstHighlightActive,highlightedEvent,createdPinned:queried.pinned, duplicatePinned:copied.pinned,
         distinctIDs:created.id !== duplicate.id, duplicateURL:copied.url === queried.url,
         createdEvents:createdEvents.includes(created.id) && createdEvents.includes(duplicate.id),
         removedEvents:removedEvents.includes(created.id) && removedEvents.includes(duplicate.id)};
     } finally {
+      browser.tabs.onZoomChange.removeListener(onZoom);
       browser.tabs.onHighlighted.removeListener(onHighlighted);
       browser.tabs.onCreated.removeListener(onCreated);
       browser.tabs.onRemoved.removeListener(onRemoved);

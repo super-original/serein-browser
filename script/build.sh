@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-export DEVELOPER_DIR=/Applications/Xcode_27.0.app/Contents/Developer
+export DEVELOPER_DIR=/Applications/Xcode_27.1.app/Contents/Developer
 export MACOSX_DEPLOYMENT_TARGET=27.0
 mkdir -p evidence/build dist
 {
@@ -10,7 +10,7 @@ mkdir -p evidence/build dist
   xcrun swift --version
   xcrun --sdk macosx --show-sdk-version
   ls -d /Applications/Xcode*.app
-  readlink /Applications/Xcode_27.0.app || true
+  readlink /Applications/Xcode_27.1.app || true
   df -h .
   sysctl hw.memsize
   echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET"

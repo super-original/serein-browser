@@ -82,6 +82,15 @@ import SereinCore
         let view=view(for:url)
         documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false;view.load(url)
     }
+    @discardableResult func setZoom(_ value:Double) -> Bool {
+        guard value.isFinite,value==0 || (0.25...5).contains(value) else{return false}
+        let factor=value==0 ? 1 : value
+        let view=webView
+        guard view.pageZoom != factor else{return true}
+        view.pageZoom=factor
+        if let session {session.extensions?.controller.didChangeTabProperties(.zoomFactor,for:session.bridge(id))}
+        return true
+    }
     func goBack(){traverse(-1)}
     func goForward(){traverse(1)}
     private func traverse(_ offset:Int) {
@@ -99,7 +108,17 @@ import SereinCore
         // Restored history can retain an entry associated with the unloaded
         // extension context. Issue a fresh request against the new context;
         // reloading that restored entry can fail with WebKit error 102.
-        if view !== previous {view.load(URLRequest(url:url));return}
+        if view !== previous {
+            if view.backForwardList.currentItem != nil {
+                // Replace the restored current entry with a new request. A normal
+                // load appends a duplicate; reload reuses the interrupted entry.
+                view.callAsyncJavaScript("location.replace(destination)",arguments:["destination":url.absoluteString],in:nil,in:.page) { [weak self,weak view] result in
+                    guard let self,let view,view === self.storedView else{return}
+                    if case .failure(let error)=result {self.failed(error)}
+                }
+            } else {view.load(URLRequest(url:url))}
+            return
+        }
         if view.backForwardList.currentItem?.url==url {if fromOrigin {view.reloadFromOrigin()} else {view.reload()}} else {view.load(url)}
     }
     func openFile(_ url:URL) {

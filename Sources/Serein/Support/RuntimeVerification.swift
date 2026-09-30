@@ -142,6 +142,8 @@ import SereinCore
         let temporary=session.addWorkspace(name:"Temporary verification workspace")
         let bulkA=session.newTab(),bulkB=session.newTab()
         session.clickTab(bulkA,modifiers:.command)
+        session.moveHighlightedToWorkspace(temporary)
+        check("bulk-workspace-noop-keeps-selection",session.tabSelection.ids==Set([bulkA,bulkB]) && session.state.selectedTabID==bulkB)
         session.moveHighlightedToWorkspace(normalWorkspace)
         check("bulk-workspace-move-snapshots-selection",session.state.tabs.filter{[bulkA,bulkB].contains($0.id) && $0.workspaceID==normalWorkspace}.count==2 && session.state.selectedTabID != bulkA && session.state.selectedTabID != bulkB && session.tabSelection.ids==Set(session.state.selectedTabID.map{[$0]} ?? []))
         session.close(bulkA,ask:false);session.close(bulkB,ask:false)

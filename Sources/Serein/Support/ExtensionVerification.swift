@@ -34,7 +34,7 @@ import SereinCore
                 check("\(name)-tabs-query-keeps-unloaded-tab-asleep",session.runtimes[sleeping]==nil)
                 session.close(sleeping,ask:false)
                 let lifecycle=payload?["tabLifecycle"] as? [String:Bool]
-                for field in ["createdPinned","duplicatePinned","distinctIDs","duplicateURL","createdEvents","removedEvents","multiSelected","firstHighlightActive","highlightedEvent"] {
+                for field in ["zoomSet","zoomReset","zoomEvent","createdPinned","duplicatePinned","distinctIDs","duplicateURL","createdEvents","removedEvents","multiSelected","firstHighlightActive","highlightedEvent"] {
                     check("\(name)-tabs-\(field)",lifecycle?[field] == true,String(describing:lifecycle)+" selection="+String(describing:payload?["selectionDiagnostics"]))
                 }
                 let secret=try await session.current!.webView.evaluateJavaScript("typeof window.sereinIsolatedSecret")

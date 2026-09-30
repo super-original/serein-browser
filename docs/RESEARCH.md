@@ -104,3 +104,5 @@ Local suggestion selection uses SwiftUI’s public [onKeyPress](https://develope
 ### Free-runner recheck, September 30 continuation
 
 The [current official image catalog](https://github.com/actions/runner-images/blob/main/README.md) still lists only `xcode-27` and the larger-runner `xcode-27-xlarge` for the Xcode 27 preview image. `macos-latest` remains macOS 26 ARM64 in that catalog. No second standard free macOS 27 image was identified; the larger label is outside this task’s constraints. This does not establish that every future free-runner image has the same IOSurface failure. Continue recording actual OS/SDK/build values and retain the rendering gate.
+
+The [September 21 image software inventory](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md) lists Xcode 27.1 (27A9269) with macOS SDK 27.0 alongside default Xcode 27.0 and beta 27.2. The build workflow now explicitly selects the 27.1 alias, preserving SDK/minimum 27.0 assertions; the next run must confirm the actual resolved compiler and SDK. This compiler update does not replace the OS WebKit framework or establish a rendering fix.

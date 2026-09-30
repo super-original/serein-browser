@@ -29,7 +29,7 @@ For a contributor who already has Xcode 27 on a separate development machine, th
 
 ## Basic controls
 
-⌘L addresses/searches; ⌘T creates a tab; ⌘W closes it; ⇧⌘T reopens it; ⌘N opens a window; ⇧⌘N opens a private window; ⌘F finds text. ⇧⌘S toggles the expanded sidebar; ⌥⌘C toggles compact mode; ⌥⌘S splits with another tab. Tabs have native context menus for pinning, essentials, duplication, movement, unloading, and closing. Workspace controls are at the sidebar's bottom. Command-click toggles tab selection; Shift-click selects a range. The tab context menu can close the selected tabs.
+⌘L addresses/searches; ⌘T creates a tab; ⌘W closes it; ⇧⌘T reopens it; ⌘N opens a window; ⇧⌘N opens a private window; ⌘F finds text. ⇧⌘S toggles the expanded sidebar; ⌥⌘C toggles compact mode; ⌥⌘S splits with another tab. Tabs have native context menus for pinning, essentials, duplication, movement, unloading, and closing. Workspace controls are at the sidebar's bottom. Command-click toggles tab selection; Shift-click selects a range. The tab context menu can pin, unpin, move to a workspace, or close selected tabs.
 
 In the address field, Down/Up select local history or bookmark suggestions, Return opens the selection, and Escape dismisses suggestions while retaining the typed query.
 

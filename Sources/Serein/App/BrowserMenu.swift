@@ -48,9 +48,9 @@ import AppKit
     @objc func compact(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .compact ? .expanded : .compact;s.compactRevealed=false}
     @objc func split(){guard let s=manager?.active,let other=s.state.visibleTabs.first(where:{$0.id != s.state.selectedTabID}) else{return};s.state.split(with:other.id)}
     @objc func unsplit(){manager?.active?.state.secondaryTabID=nil;manager?.active?.state.primarySplitTabID=nil}
-    @objc func zoomIn(){if let v=manager?.active?.current?.webView{v.pageZoom=min(3,v.pageZoom+0.1)}}
-    @objc func zoomOut(){if let v=manager?.active?.current?.webView{v.pageZoom=max(0.3,v.pageZoom-0.1)}}
-    @objc func actualSize(){manager?.active?.current?.webView.pageZoom=1}
+    @objc func zoomIn(){if let runtime=manager?.active?.current{runtime.setZoom(min(5,runtime.webView.pageZoom+0.1))}}
+    @objc func zoomOut(){if let runtime=manager?.active?.current{runtime.setZoom(max(0.25,runtime.webView.pageZoom-0.1))}}
+    @objc func actualSize(){manager?.active?.current?.setZoom(0)}
     @objc func fullscreen(){manager?.active?.window?.toggleFullScreen(nil)}
     @objc func minimize(){manager?.active?.window?.miniaturize(nil)}
     @objc func nextTab(){cycle(1)}

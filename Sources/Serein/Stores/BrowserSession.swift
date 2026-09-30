@@ -146,7 +146,8 @@ import SereinCore
     }
     func moveHighlightedToWorkspace(_ workspace:UUID) {
         guard state.workspaces.contains(where:{$0.id==workspace}) else{return}
-        let targets=state.visibleTabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
+        let targets=state.visibleTabs.filter{tabSelection.ids.contains($0.id) && ($0.workspaceID != workspace || $0.kind == .essential)}.map(\.id)
+        guard !targets.isEmpty else{return}
         // Snapshot selection before the first move changes the active tab.
         changeWorkspace {state in for id in targets {state.moveToWorkspace(id,workspace)}}
     }
