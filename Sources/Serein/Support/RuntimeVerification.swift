@@ -236,7 +236,7 @@ import SereinCore
         check("close-completion-follows-removal",closeResult==true && !session.state.tabs.contains{$0.id==closing})
         session.select(third)
         session.state.sidebar = .expanded;session.libraryPanel = .settings;await capture("11-settings");session.libraryPanel=nil
-        results += await FindVerification.run(session:session)
+        results += await FindVerification.run(session:session,root:root)
         session.findVisible=true;session.findText="Workspace";session.find();await capture("12-find");session.closeFind()
         let unavailable="http://127.0.0.1:19876/unavailable"
         session.navigate(unavailable)

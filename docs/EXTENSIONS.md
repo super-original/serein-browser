@@ -190,3 +190,12 @@ At `f3757e9`, [run 36747921197](https://github.com/super-original/serein-browser
 ### Recovery, window completion and commands follow-up
 
 At `d4c80d1`, all three options re-enable cycles load the updated document and retain back-list count. The host first loads the recreated context's resource, then replaces that transient list with saved opaque interaction state. Full back/forward URL-list and zoom checks are pending. At `3556d1`, all eight MV2/MV3 window-close delegate tests pass: completion waits for consent, cancellation/stale tabs report errors, and success follows actual removal. These are delegate tests, not JavaScript promise tests. A Commands menu and actual keyboard-event/private-window checks are now being added; global shortcuts, remapping and conflicts remain unverified.
+
+
+### Window API URL visibility investigation
+
+At `5022078`, MV2 and MV3 `windows.create`/`get({populate:true})` return the expected single tab, but its `url` is an empty string instead of the requested `about:blank`. Bounds, resize, focus, removal and create/remove events pass. The failing URL assertions remain in the suite. Granted-HTTP coverage and an explicit native `tabs` grant assertion are being added to distinguish metadata filtering from window/tab adapter failures. No permission-bypass delegate is enabled to conceal this difference.
+
+The observed redaction is consistent with upstream [URL permission filtering](https://github.com/WebKit/WebKit/blob/b55be06b347f8530b33e876cc40157df6fd5ccf8/Source/WebKit/UIProcess/Extensions/WebExtensionContext.cpp), which checks supported URL schemes before host-pattern grants. This is an inference from upstream source, not proof of the exact binary's implementation. Public context permission status and actual returned JavaScript payloads are the runtime evidence.
+
+At `29dabbf`, granted-HTTP populated-window URLs pass in both generations; `about:blank` remains empty. Recreated extension options pages now preserve history/zoom and initialize exactly once per page over all four cycles (persistent counts 5→7→9→11→13 for two pages). This verifies script execution counts, not complete webNavigation event ordering during preload.

@@ -39,6 +39,7 @@ import SereinCore
                 for field in ["zoomSet","zoomReset","zoomEvent","createdPinned","duplicatePinned","distinctIDs","duplicateURL","createdEvents","removedEvents","multiSelected","firstHighlightActive","highlightedEvent"] {
                     check("\(name)-tabs-\(field)",lifecycle?[field] == true,String(describing:lifecycle)+" selection="+String(describing:payload?["selectionDiagnostics"]))
                 }
+                check("\(name)-windows-tabs-permission-granted",context.hasPermission(WKWebExtension.Permission(rawValue:"tabs")),"about:blank permission status=\(context.permissionStatus(for:URL(string:"about:blank")!).rawValue)")
                 let windowLifecycle=payload?["windowLifecycle"] as? [String:Any]
                 for field in ["normalWindow","initialBounds","populatedTabs","grantedPopulatedURL","resized","focused","removed","privateRejected","createdEvent","removedEvent"] {
                     check("\(name)-windows-\(field)",windowLifecycle?[field] as? Bool==true,String(describing:windowLifecycle))

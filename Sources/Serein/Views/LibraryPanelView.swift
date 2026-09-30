@@ -27,7 +27,7 @@ struct LibraryPanelView: View {
                         HStack {VStack(alignment:.leading){Text(item.name);Text(item.status).font(.caption).foregroundStyle(.secondary)};Spacer();if item.isActive {ProgressView(value:item.fraction).frame(width:70);Button("Pause"){item.cancel(pause:true)};Button("Cancel"){item.cancel()}};if item.canResume {Button("Resume"){item.resume(in:session)};Button("Cancel"){item.cancel()}};if item.destination != nil,item.finished {Button("Show in Finder"){item.reveal()}.disabled(item.destination.map{!FileManager.default.fileExists(atPath:$0.path)} ?? true)}}
                     }
                     Button("Clear Finished"){manager.downloads.clearFinished(in:session)}
-                    Text("Paused downloads can resume while Serein stays open. Private download history stays in this window; downloaded files remain where you saved them.").font(.caption).foregroundStyle(.secondary)
+                    Text(session.state.isPrivate ? "Private downloads can resume while this window stays open. Closing it forgets their history; saved files remain on disk." : "Paused downloads can resume after reopening Serein. Saved files remain where you chose to download them.").font(.caption).foregroundStyle(.secondary)
                     if let error=manager.downloads.error {Text(error).foregroundStyle(.red)}
                 case .extensions:
                     if session.state.isPrivate {ContentUnavailableView("Extensions are disabled in private windows",systemImage:"hand.raised")}

@@ -33,7 +33,7 @@ For a contributor who already has Xcode 27 on a separate development machine, th
 
 In the address field, Down/Up select local history or bookmark suggestions, Return opens the selection, and Escape dismisses suggestions while retaining the typed query.
 
-Downloads show progress and support pause/resume when WebKit supplies resume data. Normal download history survives relaunch; resume data does not. Private download records belong to their originating private window and disappear when it closes; downloaded files remain on disk.
+Downloads show progress and support pause/resume when WebKit supplies resume data. Normal download history and available pause/failure resume data survive relaunch. Active transfers without saved resume data become interrupted; server or partial-file changes can prevent resumption. Private download records belong to their originating private window and disappear when it closes; downloaded files remain on disk.
 
 Camera, microphone and location choices are available under Browser Menu → Settings → Site Permissions. Choices are scoped to the exact requesting and top-level sites; private-window choices are discarded with that window. Settings changes apply to future requests; reload a page to end an existing grant.
 

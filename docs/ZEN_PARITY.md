@@ -65,7 +65,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Multiple windows / moving tabs | P | Normal live-tab transfer; isolated private transfer deliberately rejected |
 | Persistent sessions | P | Tab/workspace/sidebar restoration; not full history-stack/window restoration |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
-| Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume implementation awaits the separate-process gate; active transfers without resume data remain interrupted |
+| Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume passed the separate-process integrity/privacy gate at `29dabbf`; active transfers without resume data remain interrupted |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |
 | File selection / JS dialogs | I | Native panels; broader UI automation pending |
 | Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |
@@ -99,3 +99,5 @@ The pinned [ZenViewSplitter source](https://github.com/zen-browser/desktop/blob/
 The fresh four-pane grid in [run 36753946618](https://github.com/super-original/serein-browser/actions/runs/36753946618) was retrieved and inspected. Relative to the window, its pane rectangles are (236,8,374.5,326), (236,343,374.5,326), (618.5,8,374.5,326), (618.5,343,374.5,326). Serein's first grid captures show the correct pane order and focus outline but uneven heights and narrow column spacing; these remain visual defects until the native-divider follow-up is inspected. WebKit page rendering remains blank.
 
 At `e32960d`, the native divider follow-up passes balanced geometry and minimum-window tests. Retrieved/inspected screenshots confirm eight-point column gaps and 327/326-point rows. [Original-image comparison](evidence/2026-09-30/grid/README.md) records exact differences from Zen, including differing sidebar/focus state and blank Serein content. This is geometry evidence, not complete visual parity.
+
+Glance research uses the pinned [manager](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/glance/ZenGlanceManager.mjs) and [styles](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/glance/zen-glance.css). Zen associates a hidden child tab with its owner, overlays the preview, and provides close, expand and split actions. A new real reference capture opens an existing tab through this manager; it does not claim to test modifier-click input. Serein Glance remains unimplemented until native behavior and matching geometry are verified.

@@ -24,6 +24,9 @@ def snap(name,code=''):
             geometry['splitPanes']=js('return window.referenceGridTabs.filter(t=>t.splitView).map(t=>({label:t.label,rect:t.linkedBrowser.getBoundingClientRect().toJSON()}));')
             expected=3 if name=='16-three-pane-grid' else 4
             if len(geometry['splitPanes'])!=expected or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['splitPanes']): raise RuntimeError('Incorrect visible split pane count or geometry')
+        if name=='19-glance':
+            geometry['glance']=js('return [...document.querySelectorAll(".zen-glance-overlay .browserContainer, .zen-glance-overlay .zen-glance-sidebar-container")].map(e=>({className:e.className,rect:e.getBoundingClientRect().toJSON()}));')
+            if len(geometry['glance'])<2 or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['glance']): raise RuntimeError('Glance overlay or controls are not visible')
         if name=='15-tab-multiselection' and sum(t.get('multiselected',False) for t in geometry['tabs'])<2: raise RuntimeError('Fewer than two tabs are actually multiselected')
         results.append({'name':name,'status':'captured','geometry':geometry})
     except Exception as e: results.append({'name':name,'status':'failed','error':str(e)});print(name,str(e),flush=True)
@@ -64,6 +67,7 @@ try:
     snap('16-three-pane-grid','gZenViewSplitter.splitTabs(window.referenceGridTabs.slice(0,3),"grid");')
     snap('17-four-pane-addition','gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
     snap('18-four-pane-grid','gZenViewSplitter.unsplitCurrentView();gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
+    snap('19-glance','gZenViewSplitter.unsplitCurrentView();gBrowser.selectedTab=window.referenceGridTabs[0];gZenGlanceManager.openGlance({},window.referenceGridTabs[1]);')
 finally:
     (out/'manifest.json').write_text(json.dumps({'zen':'1.22.2b','theme':'Built-in default, no mods','requestedWindow':[1000,700],'results':results},indent=2))
     request(prefix,method='DELETE')
@@ -72,3 +76,5 @@ if not any(x['name']=='15-tab-multiselection' and x['status']=='captured' for x 
 if sum(x['status']=='captured' for x in results)<12: raise SystemExit('Fewer than twelve successful captures')
 
 if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid']): raise SystemExit('Grid reference capture failed')
+
+if not any(x["name"]=="19-glance" and x["status"]=="captured" for x in results): raise SystemExit("Glance reference capture failed")

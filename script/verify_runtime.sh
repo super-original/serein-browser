@@ -46,6 +46,9 @@ APPLESCRIPT
       suggestion-up) osascript -e 'tell application "System Events" to tell process "Serein" to key code 126' ;;
       suggestion-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
       suggestion-return) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
+      find-query) osascript -e 'tell application "System Events" to tell process "Serein"' -e 'keystroke "f" using command down' -e 'delay 0.3' -e 'keystroke "a" using command down' -e 'keystroke "Workspaces"' -e 'end tell' ;;
+      find-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
+      find-page-key) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "k"' ;;
       extension-command) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "y" using {option down, shift down}' ;;
       address) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "l" using command down' ;;
       new-tab) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "t" using command down' ;;

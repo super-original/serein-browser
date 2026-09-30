@@ -171,3 +171,22 @@ Single/bulk close and manual unload now bind confirmation to the captured docume
 ### Window and application consent follow-up (pending verification)
 
 Window closure and application quit now compare the complete tab/document snapshot captured when consent was requested. Window approval uses a one-shot close flag instead of clearing edit flags. Native window scenarios cover new-tab invalidation, cancellation and fresh approval. A separate supervised app launch exercises actual `NSApplication.terminate` cancellation, stale approval and final accepted exit; its own CI gate requires exit status 0 and persistence of both current tabs. This keeps an unexpected quit from erasing the main browser suite. The harness terminates only its directly launched fixture process on timeout.
+
+
+## Inert-preload diagnostic checkpoint, September 30
+
+### Source and results
+
+`502207897435bffb51d1a3099e9516b9c06e1b09`: [run 36758205114](https://github.com/super-original/serein-browser/actions/runs/36758205114) passes **58 unit tests, 291/303 browser checks, four independent quit checks and 12 bridge checks**. Actual environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
+
+[Download app](https://github.com/super-original/serein-browser/actions/runs/36758205114/artifacts/11117407734) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36758205114/artifacts/11117227944). Ad-hoc signed/hardened; not Developer ID signed or notarized. Development candidate with known defects.
+
+Previously verified at `21be7ae`: complete back/forward URL-list, current-position and zoom preservation across initial and three repeated extension recoveries; seven Find checks; eight extension-window close delegate checks; native window/quit consent with process exit/session save; selected-tab grids, balanced divider geometry, minimum-window bounds, focus, unload protection and closure. Actual keyboard commands, management-menu dispatch and private-window exclusion pass for MV2/MV3. These narrow fixtures do not establish universal extension compatibility.
+
+The twelve browser failures include missing MV2/MV3 `tabs.onZoomChange`, two populated-window `about:blank` URL assertions (one tab is returned, but its URL is empty), one intermittent Find focus failure, three repeated recovery failures from the inert-preload experiment, and four initialization-count checks. The latter incorrectly used old signed archives; regenerated archives are required to exercise the counters. The final recovery error screenshot was retrieved and inspected. Prior real-resource recovery at `21be7ae` passed history/zoom checks, but duplicate script initialization was unmeasured. Window creation, size-only bounds, resizing, focus, removal, private-denial and created/removed events pass through actual MV2/MV3 JavaScript APIs. The separate **actual desktop rendering gate fails** with zero content glyph pixels. DOM/internal snapshots are not desktop-rendering evidence. Plain WKWebView and Apple-signed Safari reproduce IOSurface failures on this free runner. No supported second free macOS 27 image has been identified; no private flags, security weakening, lower deployment target or engine substitution is used. [Prepared upstream report](MACOS27_RENDERING_REPORT.md) has not been posted.
+
+Grid, minimum-window and extension-management screenshots were inspected. Native grid columns now have eight-point gaps, with 327/326-point rows. [Side-by-side original screenshots and measurements](evidence/2026-09-30/grid/README.md) compare the inspected fresh Zen reference; their sidebar/focus differences are explicit. Page bodies remain blank.
+
+### Follow-up at the time
+
+Pending follow-up: real-resource preload with public per-navigation JavaScript suppression, regenerated signed fixtures/counters, Find focus restoration after view removal, and granted-HTTP populated-window coverage while retaining the failing `about:blank` assertion. Cross-launch normal-download resume persistence and a two-process byte-integrity/privacy gate require a fresh exact-head run.

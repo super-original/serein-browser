@@ -1,7 +1,7 @@
 import AppKit
 
 @MainActor enum FindVerification {
-    static func run(session:BrowserSession) async -> [RuntimeVerification.Result] {
+    static func run(session:BrowserSession,root:URL) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
         func check(_ name:String,_ passed:Bool,_ detail:String=""){results.append(.init(name:name,passed:passed,detail:"Public WKWebView.find against the deterministic fixture. "+detail))}
         func search(_ query:String,backwards:Bool=false) async -> Bool? {
@@ -39,6 +39,27 @@ import AppKit
         let view=session.current?.loadedWebView
         let responder=session.window?.firstResponder as? NSView
         check("find-close-restores-page-focus",!session.findVisible && view != nil && responder.map{candidate in candidate===view || view.map{candidate.isDescendant(of:$0)}==true}==true,"responder=\(String(describing:responder)) attached=\(view?.window === session.window) addressFocused=\(session.addressFocused)")
+        func keyboard(_ name:String) async -> Bool {
+            let finished=root.appendingPathComponent(name+".keyboard-finished")
+            try? FileManager.default.removeItem(at:finished)
+            try? name.write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+            for _ in 0..<80 {
+                if FileManager.default.fileExists(atPath:finished.path){return true}
+                try? await Task.sleep(for:.milliseconds(50))
+            }
+            return false
+        }
+        session.window?.makeKeyAndOrderFront(nil)
+        let entered=await keyboard("find-query")
+        for _ in 0..<30 where session.findText != "Workspaces" {try? await Task.sleep(for:.milliseconds(50))}
+        check("find-native-command-f-and-entry",entered && session.findVisible && session.findText=="Workspaces",session.findText)
+        _=try? await session.current?.webView.evaluateJavaScript("window.sereinFindKey = event => { if(event.key==='k'){document.documentElement.dataset.findKey='received';event.preventDefault();} }; document.addEventListener('keydown',window.sereinFindKey,true)")
+        let escaped=await keyboard("find-escape")
+        try? await Task.sleep(for:.milliseconds(200))
+        let typed=await keyboard("find-page-key")
+        let delivered=try? await session.current?.webView.evaluateJavaScript("document.documentElement.dataset.findKey || ''") as? String
+        check("find-native-escape-returns-web-keyboard",escaped && typed && !session.findVisible && delivered=="received",String(describing:delivered))
+        _=try? await session.current?.webView.evaluateJavaScript("document.removeEventListener('keydown',window.sereinFindKey,true);delete window.sereinFindKey;delete document.documentElement.dataset.findKey")
         return results
     }
 }

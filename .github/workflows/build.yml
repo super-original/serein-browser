@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/verify_runtime.sh', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/fixture_server.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', '.github/workflows/build.yml']
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/check_signed_fixtures.py', 'script/generate_signed_fixtures.py', 'script/verify_runtime.sh', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/fixture_server.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', '.github/workflows/build.yml']
   pull_request:
 permissions:
   contents: read
