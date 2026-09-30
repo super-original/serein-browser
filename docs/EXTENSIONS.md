@@ -10,7 +10,7 @@
 | Firefox Manifest V2 | Partial | XPI/unpacked loading; Firefox-specific semantics and APIs not implemented universally. |
 | Chrome Manifest V3 | Partial | Controlled service-worker fixture passes limited semantics. Lifetime, wakeup, DNR, offscreen and full Chrome API conformance not established. |
 | Firefox Manifest V3 | Untested semantics | Manifest number is accepted, which is not proof of Firefox MV3 lifecycle behavior. |
-| Safari Web Extensions | Partial | Shared manifest resources load through public WebKit; intact Safari Web Extension `.appex` installation is implemented pending CI. App Store acquisition and Safari native handlers remain unsupported. |
+| Safari Web Extensions | Partial | Shared manifest resources load through public WebKit; intact Safari Web Extension `.appex` installation passes controlled runtime checks. App Store acquisition and Safari native handlers remain unsupported. |
 | Native Safari App Extensions | Blocked / unsupported | No documented third-party hosting entry point found for arbitrary SafariServices native extension handlers. |
 | Legacy Safari `.safariextz` and earlier | Unsupported | No loader or compatibility runtime. |
 
@@ -218,8 +218,12 @@ At `029feec`, [run 36780698616](https://github.com/super-original/serein-browser
 
 Native tab folders do not implement the missing `browser.tabGroups` namespace. Folder hierarchy and controls are a browser feature; extension group APIs and exhaustive ordering/event semantics remain separate unfinished work.
 
-### Packaged Safari Web Extensions (pending verification)
+### Packaged Safari Web Extensions (controlled verification)
 
 The installer recognizes a selected `.appex` with `NSExtensionPointIdentifier = com.apple.Safari.web-extension`, `CFBundlePackageType = XPC!`, a bundle identifier, and a manifest under `Contents/Resources`. It retains the complete bundle and calls public `WKWebExtension(appExtensionBundle:)`, including WebKit’s resource validation. It does not flatten the bundle or normalize signed manifest bytes. Existing permission review, private exclusion, enable/disable and removal apply. Named native Safari App Extensions (`com.apple.Safari.extension`) and enclosing application packages receive an explicit unsupported-format error. Package copying additionally rejects nonregular/non-directory entries.
 
-An original ad-hoc signed fixture tests actual installation/cancellation, options, MV3 worker messaging, storage after disable/reload, unchanged manifest bytes, removal, and tampered-bundle rejection. These checks are pending macOS CI; no real Safari extension or App Store package has yet been verified. The fixture includes an inert native executable only to form a signable bundle; Serein does not load that executable. Safari `NSExtensionRequestHandling`, Safari-specific native messaging/containing-app integration, publisher trust/notarization policy, updates and runtime-ID equivalence remain unfinished or unsupported. Merely accepting a bundle is not full Safari compatibility.
+An original ad-hoc signed fixture tests actual installation/cancellation, options, MV3 worker messaging, storage after disable/reload, unchanged manifest bytes, removal, and tampered-bundle rejection. All 11 checks pass at `b3e2899` on actual macOS 27; installation screenshots were retrieved and inspected. No real Safari extension or App Store package has yet been verified. The fixture includes an inert native executable only to form a signable bundle; Serein does not load that executable. Safari `NSExtensionRequestHandling`, Safari-specific native messaging/containing-app integration, publisher trust/notarization policy, updates and runtime-ID equivalence remain unfinished or unsupported. Merely accepting a bundle is not full Safari compatibility.
+
+### Tab creation and opener follow-up (pending CI)
+
+The host initializes requested pinned state, clamped index, opener and highlight state before publishing tab creation. Public parent-tab getter/setter callbacks support same-window opener relationships; self/foreign parents reject, closing a parent clears its references, and cross-window moves clear nonmoving openers. Native popups and Glance carry opener metadata too. Controlled MV2/MV3 tests inspect actual created-event payloads and create/get/update/duplicate behavior, including cross-window rejection. These are pending runtime verification. Folder-visible ordering versus all-window extension indices and opener-change event delivery still require conformance work; this does not implement `tabGroups` or unblock the seven audited packages’ other missing API families.

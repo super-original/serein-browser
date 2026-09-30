@@ -19,9 +19,9 @@ extension ExtensionHost: WKWebExtensionControllerDelegate {
     func webExtensionController(_ controller: WKWebExtensionController,openNewTabUsing configuration: WKWebExtension.TabConfiguration,for context: WKWebExtensionContext,completionHandler: @escaping ((any WKWebExtensionTab)?,(any Error)?)->Void) {
         guard let session=(configuration.window as? ExtensionWindow)?.session ?? manager?.active,!session.state.isPrivate else{completionHandler(nil,ExtensionValidationError.invalid("No normal browsing window is available."));return}
         if let url=configuration.url,!canOpen(url,for:context) {completionHandler(nil,ExtensionValidationError.invalid("The extension may not open this URL scheme or another extension's private page."));return}
-        let id=session.newTab(url:configuration.url?.absoluteString ?? "about:blank",select:configuration.shouldBeActive)
-        if configuration.shouldBePinned {session.setKind(id,.pinned)}
-        if configuration.index<session.state.tabs.count,let old=session.state.tabs.firstIndex(where:{$0.id==id}) {let tab=session.state.tabs.remove(at:old);session.state.tabs.insert(tab,at:configuration.index)}
+        let parent=configuration.parentTab as? ExtensionTab
+        if configuration.parentTab != nil,parent?.session !== session {completionHandler(nil,ExtensionValidationError.invalid("The opener must be a tab in the same window."));return}
+        let id=session.newTab(url:configuration.url?.absoluteString ?? "about:blank",select:configuration.shouldBeActive,kind:configuration.shouldBePinned ? .pinned : .regular,index:configuration.index,opener:parent?.id,addToSelection:configuration.shouldAddToSelection)
         completionHandler(session.bridge(id),nil)
     }
     func canOpen(_ url:URL,for context:WKWebExtensionContext)->Bool {

@@ -11,6 +11,7 @@ public struct BrowserTab: Identifiable, Codable, Equatable, Sendable {
     public var homeURL: String?
     public var glanceParentID: UUID?
     public var folderID: UUID?
+    public var openerTabID: UUID?
     public init(id: UUID = UUID(), workspaceID: UUID, url: String = "about:blank", title: String = "New Tab", kind: TabKind = .regular) {
         self.id=id; self.workspaceID=workspaceID; self.url=url; self.title=title; self.kind=kind
         homeURL = kind == .regular ? nil : url
@@ -50,10 +51,18 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         let relevant=tabs.filter { $0.glanceParentID == nil && ($0.kind == .essential || $0.workspaceID == activeWorkspaceID) }
         return relevant.filter{$0.kind == .essential} + orderedPinnedTabs + relevant.filter{$0.kind == .regular}
     }
-    @discardableResult public mutating func newTab(url: String = "about:blank", select: Bool = true) -> UUID {
-        let tab=BrowserTab(workspaceID:activeWorkspaceID,url:url);tabs.append(tab)
+    @discardableResult public mutating func newTab(url: String = "about:blank", select: Bool = true,kind:TabKind = .regular,index:Int?=nil,opener:UUID?=nil) -> UUID {
+        var tab=BrowserTab(workspaceID:activeWorkspaceID,url:url,kind:kind)
+        tab.openerTabID=opener.flatMap{parent in tabs.contains{$0.id==parent} ? parent : nil}
+        let insertion=index.map{min(tabs.count,max(0,$0))} ?? tabs.count
+        tabs.insert(tab,at:insertion)
         if select { selectedTabID=tab.id;clearSplit() }
         return tab.id
+    }
+    @discardableResult public mutating func setOpener(_ id:UUID,to parent:UUID?)->Bool {
+        guard let index=tabs.firstIndex(where:{$0.id==id}) else{return false}
+        if let parent {guard parent != id,tabs.contains(where:{$0.id==parent}) else{return false}}
+        tabs[index].openerTabID=parent;return true
     }
     public mutating func select(_ id: UUID) {
         guard let requested=tabs.first(where:{$0.id==id}) else{return}
@@ -71,6 +80,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         let parent=tabs[index].glanceParentID
         let oldOrder=visibleTabs.map(\.id);let selectedIndex=oldOrder.firstIndex(of:id) ?? 0
         let removed=tabs.remove(at:index);forgetPinnedPosition(id)
+        for i in tabs.indices where tabs[i].openerTabID==id {tabs[i].openerTabID=nil}
         if remember {var closed=removed;closed.glanceParentID=nil;closedTabs.append(contentsOf:previews);closedTabs.append(closed);closedTabs=Array(closedTabs.suffix(25))}
         removeSplitTab(id)
         if selectedTabID==id {
@@ -86,10 +96,13 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         if !workspaces.contains(where:{$0.id==tab.workspaceID}) {tab.workspaceID=activeWorkspaceID}
         if tabs.contains(where:{$0.id==tab.id}) {tab.id=UUID()};tab.glanceParentID=nil
         if let folderID=tab.folderID,folder(folderID)?.workspaceID != tab.workspaceID {tab.folderID=nil}
+        if let opener=tab.openerTabID,!tabs.contains(where:{$0.id==opener}) {tab.openerTabID=nil}
         tabs.append(tab)
         if var child=preview {
             if tabs.contains(where:{$0.id==child.id}) {child.id=UUID()}
-            child.workspaceID=tab.workspaceID;child.glanceParentID=tab.id;tabs.append(child)
+            child.workspaceID=tab.workspaceID;child.glanceParentID=tab.id
+            if child.openerTabID==previousID {child.openerTabID=tab.id}
+            tabs.append(child)
         }
         select(tab.id);return tab.id
     }
@@ -176,6 +189,10 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         seen=[];tabs=tabs.filter{seen.insert($0.id).inserted}
         for i in tabs.indices {
             if !workspaces.contains(where:{$0.id==tabs[i].workspaceID}) {tabs[i].workspaceID=activeWorkspaceID}
+        }
+        let knownTabs=Set(tabs.map(\.id))
+        for i in tabs.indices {
+            if let opener=tabs[i].openerTabID,opener==tabs[i].id || !knownTabs.contains(opener) {tabs[i].openerTabID=nil}
         }
         repairGlances();repairFolders()
         sidebarWidth=min(500,max(180,sidebarWidth.isFinite ? sidebarWidth : 240))

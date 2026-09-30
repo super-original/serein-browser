@@ -36,12 +36,12 @@ import SereinCore
                 check("\(name)-tabs-query-keeps-unloaded-tab-asleep",session.runtimes[sleeping]==nil)
                 session.close(sleeping,ask:false)
                 let lifecycle=payload?["tabLifecycle"] as? [String:Bool]
-                for field in ["zoomSet","zoomReset","zoomEvent","createdPinned","duplicatePinned","distinctIDs","duplicateURL","createdEvents","removedEvents","multiSelected","firstHighlightActive","highlightedEvent"] {
+                for field in ["openerCreated","openerDuplicated","openerUpdated","selfOpenerRejected","creationIndex","createdEventProperties","zoomSet","zoomReset","zoomEvent","createdPinned","duplicatePinned","distinctIDs","duplicateURL","createdEvents","removedEvents","multiSelected","firstHighlightActive","highlightedEvent"] {
                     check("\(name)-tabs-\(field)",lifecycle?[field] == true,String(describing:lifecycle)+" selection="+String(describing:payload?["selectionDiagnostics"]))
                 }
                 check("\(name)-windows-tabs-permission-granted",context.hasPermission(WKWebExtension.Permission(rawValue:"tabs")),"about:blank permission status=\(context.permissionStatus(for:URL(string:"about:blank")!).rawValue)")
                 let windowLifecycle=payload?["windowLifecycle"] as? [String:Any]
-                for field in ["normalWindow","initialBounds","populatedTabs","grantedPopulatedURL","resized","focused","removed","privateRejected","createdEvent","removedEvent"] {
+                for field in ["crossWindowOpenerRejected","normalWindow","initialBounds","populatedTabs","grantedPopulatedURL","resized","focused","removed","privateRejected","createdEvent","removedEvent"] {
                     check("\(name)-windows-\(field)",windowLifecycle?[field] as? Bool==true,String(describing:windowLifecycle))
                 }
                 let secret=try await session.current!.webView.evaluateJavaScript("typeof window.sereinIsolatedSecret")

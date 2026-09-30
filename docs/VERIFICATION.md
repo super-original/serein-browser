@@ -2,33 +2,17 @@
 
 Full original-spec completion remains the goal and is not achieved. [Draft PR #1](https://github.com/super-original/serein-browser/pull/1) remains unmerged. [Historical checkpoints](VERIFICATION_HISTORY.md) preserve earlier results and failed experiments.
 
-## Latest package-format checkpoint
-
-`c0061e9e085134da25f020fc39f99d3aea5b3085`: [run 36787665204](https://github.com/super-original/serein-browser/actions/runs/36787665204) passes **108 unit tests and 409/431 browser checks**, plus **9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fresh fullscreen**. [App](https://github.com/super-original/serein-browser/actions/runs/36787665204/artifacts/11129749874) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36787665204/artifacts/11130104629).
-
-Actual folder-to-workspace conversion preserves the live loaded page; creation, nesting, persistence, cancellation, stale-document/membership consent, unpacking and deletion also pass. All 20 MV3 native-host checks pass. The first MV2 picker stays open with its JSON selected; the next revision targets the native Open button directly. Folder AX lookup by displayed name fails, so collapse/context-menu checks remain failed; the correction uses the explicit accessibility identifier. Retrieved/inspected captures 44/46 show the essential, matching 40-point folder/tab pitch and 14-point indentation; 48 shows legible native destructive consent, and 43 shows the registered host without a stale error. The essential tile width still differs from the reference. Web content remains blank and the desktop gate still fails.
-
-The Safari `.appex` fixture compiles, packages and signs, but WebKit rejects its missing `description` before installation consent. No runtime Safari bundle compatibility is claimed from this run. The description is added in the following revision. Its four layout unit tests pass; the remaining runtime outcomes still need execution.
-
-## Folder implementation checkpoint
-
-`de3df8af6e8a8617c33c5cccdab5be6a68c69bc6`: [run 36784268919](https://github.com/super-original/serein-browser/actions/runs/36784268919) passes **101 unit tests, 386/406 browser checks, 9/9 quit, 12/12 download restart, and 12/12 isolated bridge checks**. Fresh fullscreen remains 8/12; desktop rendering still fails. [Download this development app](https://github.com/super-original/serein-browser/actions/runs/36784268919/artifacts/11128744715) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36784268919/artifacts/11128809511).
-
-Folder creation through native text entry, live-page retention, nesting, session persistence, unpacking, cancellation, and document/membership-bound deletion pass. Captures 44–46 were retrieved and inspected at 1000×677: nesting and 14-point indentation are visible, while the attempted collapsed capture remains expanded. Three collapse checks and four native-host checks fail because their AppleScript input scripts use reserved `control` as a variable and do not compile. The following revision renames that variable and compiles embedded scripts before app launch. These failures are retained, not treated as passing. The other 13 failures match the earlier fullscreen/extension failures below.
-
-The pinned Zen 1.22.2b [reference run 36781892358](https://github.com/super-original/serein-browser/actions/runs/36781892358) supplies four additional inspected folder captures (expanded, collapsed with active child retained, nested, context menu). Native folder icons deliberately use SF Symbols. Live folder providers, custom icons, sharing, conversion to workspaces and drag insertion remain unfinished; native folders do not implement the WebExtensions `tabGroups` API.
-
-The next `5e43906` build passes, but runtime preflight stops before app launch: its initial extractor matched its own pattern string. The revised extractor anchors to actual `osascript` invocations and checks block headers. No browser checks or new screenshots are claimed from that run. Its retrieved evidence passes 9/9 quit, 12/12 download restart and 12/12 isolated bridge checks. The fullscreen probe could not produce results because it depended on the main harness compiling its pointer helper; the next revision compiles its own helper. The rendering step also has no screenshot to assess on this preflight-failed run.
-
-`dfe097fe74315fcf1eb304d3007d773f442d771c` [run 36786312390](https://github.com/super-original/serein-browser/actions/runs/36786312390) passes **104 unit tests, 375/393 browser checks, 9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fresh fullscreen checks**. The three new folder-conversion state tests pass. The two-window sheet ownership check passes, but actual folder name input fails; its later scenarios are not reached. Native-host input also fails. The inspected 42 capture shows only the desktop after the app exited; the input log says System Events cannot get Serein. The unbounded accessibility-tree scan outlived the app’s input waits. The next revision restores the previously successful native-picker keyboard sequence and bounds AppleScript calls. No runtime folder-conversion success is claimed. [App](https://github.com/super-original/serein-browser/actions/runs/36786312390/artifacts/11129998120) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36786312390/artifacts/11129703445).
-
 ## Latest verified source
 
-`029feec7e9fa9a81fb15f61602387ffc9d7352cc`: [run 36780698616](https://github.com/super-original/serein-browser/actions/runs/36780698616) passes **92 unit tests, 412/425 browser checks, 12/12 independent download-restart checks, 9/9 independent quit checks and 12/12 isolated bridge checks**. Fresh-process fullscreen is **8/12**. Environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
+`b3e2899c078124604009415fbc53050e9d30b98e`: [run 36789081403](https://github.com/super-original/serein-browser/actions/runs/36789081403) passes **108 unit tests, 404/421 browser checks, 9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fresh fullscreen checks**. Environment: macOS 27.0 26A428, Xcode 27.1 27A9269, Swift 6.4, SDK/minimum 27.0, ARM64.
 
-[Download app](https://github.com/super-original/serein-browser/actions/runs/36780698616/artifacts/11126989926) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36780698616/artifacts/11128345444). Ad-hoc signed/hardened, not Developer ID signed or notarized. This is a development candidate with known defects.
+[Download development app](https://github.com/super-original/serein-browser/actions/runs/36789081403/artifacts/11131721219) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36789081403/artifacts/11131571700). Ad-hoc signed/hardened; not Developer ID signed or notarized.
 
-## Newly verified native messaging
+All **19 folder checks** pass, including actual AX collapse, context-menu capture, creation/nesting/persistence, guarded deletion, unpacking and live folder-to-workspace conversion. All **11 Safari Web Extension bundle checks** pass: native installation/cancellation, unchanged signed manifest, options, MV3 worker messaging, persistent storage/identity after reload, tamper rejection and removal. [Inspected screenshots and pinned Zen comparisons](evidence/2026-09-30/folders-and-safari/README.md) show improved essential width and folder geometry, but still blank WebKit content.
+
+The 17 browser failures comprise the 13 retained fullscreen/extension failures below plus four native-host picker/scenario failures. The inspected picker capture remains in its Go-to-file popup. No native-host lifecycle success is inferred from this run; earlier isolated evidence is retained below.
+
+## Earlier verified native messaging (`029feec`)
 
 All **40 production native-host checks** pass across signed MV2/MV3 fixtures: real native consent/cancellation; owner-only persistent registration; one-shot child execution and cleanup; MV2 background-page/MV3 worker execution; ordered persistent-port messages and caller origin; unknown-host denial; permission revoke/regrant; registration revocation; extension disable and removal. The separate quit process opens a real native port, exercises cancel/stale/fresh consent, then verifies successful app exit, saved tabs and absence of its recorded child PID.
 
@@ -56,7 +40,7 @@ Native window placement/fullscreen/persistence/exit checks pass; the inspected e
 |---|---|---|
 | P0 | Actual macOS 27 desktop rendering | Rendered page screenshots and retained glyph gate; current free-runner system WebKit failure persists. |
 | P0 | Full extension compatibility | [Seven real packages still rejected](EXTENSIONS.md); missing engine/host APIs, Safari native/legacy formats, Firefox native identities, broad semantic and real-extension tests. |
-| P1 | Zen parity | Folders/live folders, split-group tabs, incremental divider trees, compact variants, nested previews, profiles, import and sync. Pinned folder reference capture is prepared; no folder implementation is claimed yet. |
+| P1 | Zen parity | Live folder providers, custom icons/share/import, arbitrary drag insertion, split-group tabs, incremental divider trees, compact variants, nested previews, profiles and sync. Basic nested folders and conversion now pass controlled checks. |
 | P1 | Permissions/media/recovery | Hardware capture/location, broader subframe consent, rendered fullscreen/media and actual process-crash recovery. |
 | P2 | Durability and memory | Cross-launch navigation stacks, safe automatic suspension, pause-on-quit and broader subprocess-aware performance measurement. |
 | P2 | Visual/accessibility/distribution | Dark/inactive/AX inspection, remaining focus/menu semantics, installation validation, signing/notarization. |
@@ -65,6 +49,6 @@ Most browser checks are in-process integration scenarios. Actual keyboard input 
 
 ## Current follow-up
 
-`3787bc1` ([run 36781898641](https://github.com/super-original/serein-browser/actions/runs/36781898641)) built but did not finish its combined browser suite: the native-picker stage stalled before final results. Independent quit/download checks still passed. No final browser pass count is assigned. The synchronous test-side `NSOpenPanel.ok` fallback is removed in favor of an external AX press; incremental native-host stages/results and a timeout screenshot/process sample will localize any recurrence. This is a diagnostic correction, not a claim that the stall's root cause is proven.
+Tab creation/opener metadata and event payload tests are pending exact-head CI. Native-host picker failures now remain separate failed checks while the same production validation and native consent can run independently with a controlled fixture URL. This does not turn failed picker automation into a pass. File reads are bounded to 1 MiB plus one rejection byte. Additional path-entry settling time addresses the observed unfinished Go-to-file dialog.
 
-The next revision also adds nested pinned folders with nine core cases and actual editor/AX/persistence/deletion scenarios. The pinned Zen folder reference succeeded and all four captures were inspected; browser folder runtime verification is pending. The full original-spec goal and all retained rendering/compatibility failures remain unchanged.
+The first bounded compiler cache saved 113,404,914 compressed bytes (about 108 MiB). No measured build-time improvement is claimed yet. Package resources/signatures and every test are still rebuilt or executed.

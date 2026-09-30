@@ -20,6 +20,9 @@ async function probeWindows(senderTabId) {
         await new Promise(resolve=>setTimeout(resolve,50));
       }
     }
+    let crossWindowOpenerRejected=false;
+    try {const invalid=await browser.tabs.create({windowId:created.id,openerTabId:senderTabId,active:false});await browser.tabs.remove(invalid.id);}
+    catch (_) {crossWindowOpenerRejected=true;}
     await browser.windows.update(created.id,{width:720,height:520,focused:true});
     const resized=await browser.windows.get(created.id);
     let privateRejected=false;
@@ -29,7 +32,7 @@ async function probeWindows(senderTabId) {
     await browser.windows.update(sender.windowId,{focused:true});
     await new Promise(resolve=>setTimeout(resolve,100));
     const remaining=await browser.windows.getAll();
-    return {normalWindow:queried.type==='normal' && queried.incognito===false,
+    return {crossWindowOpenerRejected,normalWindow:queried.type==='normal' && queried.incognito===false,
       initialBounds:queried.width===700 && queried.height===500,
       populatedTabs:queried.tabs?.length===1 && queried.tabs[0].url==='about:blank',
       grantedPopulatedURL:permitted?.tabs?.length===1 && permitted.tabs[0].url===permittedURL,
@@ -58,10 +61,10 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
     const previous = await browser.storage.local.get('count');
     const count = (previous.count || 0) + 1;
     await browser.storage.local.set({count});
-    const createdEvents = [], removedEvents = [], zoomEvents = [];
+    const createdEvents = [], createdDetails = [], removedEvents = [], zoomEvents = [];
     const onZoom = info => zoomEvents.push(info);
     browser.tabs.onZoomChange?.addListener(onZoom);
-    const onCreated = tab => createdEvents.push(tab.id);
+    const onCreated = tab => {createdEvents.push(tab.id);createdDetails.push(tab);};
     const onRemoved = id => removedEvents.push(id);
     browser.tabs.onCreated.addListener(onCreated);
     browser.tabs.onRemoved.addListener(onRemoved);
@@ -71,10 +74,16 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
     const onHighlighted = info => {if (created && duplicate && info.tabIds.includes(created.id) && info.tabIds.includes(duplicate.id)) highlightedEvent = true;};
     browser.tabs.onHighlighted.addListener(onHighlighted);
     try {
-      created = await browser.tabs.create({url:'about:blank', active:false, pinned:true});
+      created = await browser.tabs.create({url:'about:blank', active:false, pinned:true, index:0, openerTabId:sender.tab.id});
       const queried = await browser.tabs.get(created.id);
       duplicate = await browser.tabs.duplicate(created.id);
       const copied = await browser.tabs.get(duplicate.id);
+      let openerUpdated=false, selfOpenerRejected=false;
+      await browser.tabs.update(created.id,{openerTabId:duplicate.id});
+      openerUpdated=(await browser.tabs.get(created.id)).openerTabId===duplicate.id;
+      try {await browser.tabs.update(created.id,{openerTabId:created.id});}
+      catch (_) {selfOpenerRejected=true;}
+      await browser.tabs.update(created.id,{openerTabId:sender.tab.id});
       let zoomSet=false, zoomReset=false;
       if (typeof browser.tabs.setZoom === 'function' && typeof browser.tabs.getZoom === 'function') {
         try {
@@ -104,7 +113,10 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       await browser.tabs.update(sender.tab.id, {active:true});
       // Event delivery is asynchronous relative to promise resolution.
       await new Promise(resolve => setTimeout(resolve, 100));
-      tabLifecycle = {zoomSet,zoomReset,zoomEvent:zoomEvents.some(e=>e.tabId===created.id && e.oldZoomFactor===1 && e.newZoomFactor===1.25),multiSelected,firstHighlightActive,highlightedEvent,createdPinned:queried.pinned, duplicatePinned:copied.pinned,
+      tabLifecycle = {openerCreated:queried.openerTabId===sender.tab.id,openerDuplicated:copied.openerTabId===sender.tab.id,
+        openerUpdated,selfOpenerRejected,creationIndex:queried.index===0,
+        createdEventProperties:createdDetails.some(tab=>tab.id===created.id && tab.pinned===true && tab.active===false && tab.index===0 && tab.openerTabId===sender.tab.id),
+        zoomSet,zoomReset,zoomEvent:zoomEvents.some(e=>e.tabId===created.id && e.oldZoomFactor===1 && e.newZoomFactor===1.25),multiSelected,firstHighlightActive,highlightedEvent,createdPinned:queried.pinned, duplicatePinned:copied.pinned,
         distinctIDs:created.id !== duplicate.id, duplicateURL:copied.url === queried.url,
         createdEvents:createdEvents.includes(created.id) && createdEvents.includes(duplicate.id),
         removedEvents:removedEvents.includes(created.id) && removedEvents.includes(duplicate.id)};

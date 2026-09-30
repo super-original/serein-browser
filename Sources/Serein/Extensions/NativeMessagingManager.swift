@@ -58,20 +58,29 @@ struct NativeHostRegistration:Codable,Identifiable {
         panel.message="Choose an installed native application's Chrome host manifest. Its allowed origins must include this signed extension."
         panel.beginSheetModal(for:window){[weak self,weak session] response in
             guard response == .OK,let source=panel.url,let self,let session else{return}
-            do {
-                let access=source.startAccessingSecurityScopedResource();defer{if access{source.stopAccessingSecurityScopedResource()}}
-                let manifest=try NativeHostManifest(data:Data(contentsOf:source))
-                _=try manifest.origin(for:identity)
-                guard FileManager.default.isExecutableFile(atPath:manifest.path) else{throw ExtensionValidationError.invalid("The native application's executable was not found or is not executable.")}
-                session.confirm("Allow this native application?",detail:"\(record.name) will be able to exchange messages with \(manifest.name).\n\nExecutable:\n\(manifest.path)\n\nNative applications run with your account's access. Only register an application you installed and trust.",yes:"Allow") { [weak self] allowed in
-                    guard allowed,let self else{return}
-                    do {
-                        guard let current=self.host?.records.first(where:{$0.id==record.id}),current.packageIdentity==record.packageIdentity else{throw ExtensionValidationError.invalid("The extension changed while native-host consent was open.")}
-                        try self.register(manifest,for:current)
-                    } catch {self.host?.error=error.localizedDescription}
-                }
-            } catch {self.host?.error=error.localizedDescription}
+            self.reviewRegistration(source,for:record,in:session)
         }
+    }
+    /// Shared review after file selection; validation and consent also apply to
+    /// controlled fixture URLs supplied independently of file-picker automation.
+    func reviewRegistration(_ source:URL,for record:InstalledExtension,in session:BrowserSession) {
+        guard !session.state.isPrivate,session.dialogWindow != nil,let identity=record.packageIdentity,identity.format=="CRX3" else{return}
+        host?.error=nil
+        do {
+            let access=source.startAccessingSecurityScopedResource();defer{if access{source.stopAccessingSecurityScopedResource()}}
+            guard try source.resourceValues(forKeys:[.isRegularFileKey]).isRegularFile==true else{throw ExtensionValidationError.invalid("Choose a regular JSON manifest file.")}
+            let file=try FileHandle(forReadingFrom:source);defer{try? file.close()}
+            let manifest=try NativeHostManifest(data:file.read(upToCount:1024*1024+1) ?? Data())
+            _=try manifest.origin(for:identity)
+            guard FileManager.default.isExecutableFile(atPath:manifest.path) else{throw ExtensionValidationError.invalid("The native application's executable was not found or is not executable.")}
+            session.confirm("Allow this native application?",detail:"\(record.name) will be able to exchange messages with \(manifest.name).\n\nExecutable:\n\(manifest.path)\n\nNative applications run with your account's access. Only register an application you installed and trust.",yes:"Allow") { [weak self] allowed in
+                guard allowed,let self else{return}
+                do {
+                    guard let current=self.host?.records.first(where:{$0.id==record.id}),current.packageIdentity==record.packageIdentity else{throw ExtensionValidationError.invalid("The extension changed while native-host consent was open.")}
+                    try self.register(manifest,for:current)
+                } catch {self.host?.error=error.localizedDescription}
+            }
+        } catch {host?.error=error.localizedDescription}
     }
     /// Called after explicit consent, or by controlled fixture setup.
     func register(_ manifest:NativeHostManifest,for record:InstalledExtension) throws {

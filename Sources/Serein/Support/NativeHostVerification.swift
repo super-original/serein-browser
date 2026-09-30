@@ -86,9 +86,22 @@ import SereinCore
                     let picked=await keyboard()
                     stage("picker-input-returned")
                     await wait{containsConsent(session.dialogWindow?.attachedSheet)}
+                    let pickerConsent=containsConsent(session.dialogWindow?.attachedSheet)
+                    check(approve ? "picker-allow-input" : "picker-cancel-input",picked && pickerConsent,"Actual NSOpenPanel path entry and Open action")
+                    if !pickerConsent {
+                        await capture("native-host-picker-failure-mv\(version)")
+                        if let panel=session.dialogWindow?.attachedSheet {session.dialogWindow?.endSheet(panel,returnCode:.cancel)}
+                        await wait{session.dialogWindow?.attachedSheet==nil}
+                        guard session.dialogWindow?.attachedSheet==nil else{throw ExtensionValidationError.invalid("The failed native picker did not close.")}
+                        stage("review-controlled-fixture-after-picker-failure")
+                        // Retain the failed picker result, then independently exercise
+                        // the same production validation/consent using a known fixture.
+                        host.nativeMessaging.reviewRegistration(manifestFile,for:record,in:session)
+                        await wait{containsConsent(session.dialogWindow?.attachedSheet)}
+                    }
                     let alert=session.dialogWindow?.attachedSheet
                     let consent=containsConsent(alert)
-                    check(approve ? "registration-consent" : "registration-cancel-prompt",picked && consent && host.nativeMessaging.registrations(for:id).isEmpty)
+                    check(approve ? "registration-consent" : "registration-cancel-prompt",consent && host.nativeMessaging.registrations(for:id).isEmpty,pickerConsent ? "File-picker path" : "Controlled fixture URL; picker failure retained separately")
                     if version==2,!approve {await capture("42-native-host-consent")}
                     if consent,let alert {session.dialogWindow?.endSheet(alert,returnCode:approve ? .alertFirstButtonReturn : .alertSecondButtonReturn)}
                     else {throw ExtensionValidationError.invalid("Native-host consent sheet did not appear. \(host.error ?? "No host error")")}

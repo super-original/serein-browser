@@ -103,13 +103,14 @@ import SereinCore
             confirm("Close \(ids.count) selected tabs?",detail:"Edited pages may contain unsaved changes.",yes:"Close Tabs"){if $0 {closeAll()}}
         } else {closeAll()}
     }
-    @discardableResult func newTab(url:String="about:blank",select:Bool=true,configuration:WKWebViewConfiguration?=nil)->UUID {
+    @discardableResult func newTab(url:String="about:blank",select:Bool=true,configuration:WKWebViewConfiguration?=nil,kind:TabKind = .regular,index:Int?=nil,opener:UUID?=nil,addToSelection:Bool=false)->UUID {
         let previous=state.selectedTabID,highlighted=tabSelection.ids
-        let id=state.newTab(url:url,select:select)
+        let id=state.newTab(url:url,select:select,kind:kind,index:index,opener:opener)
         if let configuration {runtimes[id]=TabRuntime(id:id,session:self,configuration:configuration)}
+        if select {tabSelection.selectOnly(id)} else if addToSelection {tabSelection.set(id,selected:true)}
         extensions?.controller.didOpenTab(bridge(id))
+        if select || addToSelection {publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:select)}
         if select {
-            tabSelection.selectOnly(id);publishSelection(previousActive:previous,previousHighlighted:highlighted)
             addressFocused=url=="about:blank"
         }
         return id

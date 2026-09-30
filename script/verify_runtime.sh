@@ -125,8 +125,9 @@ on run arguments
     delay 0.4
     keystroke "a" using command down
     keystroke item 1 of arguments
+    delay 1.2
     key code 36
-    delay 0.6
+    delay 1.2
     key code 36
     repeat 8 times
       repeat with candidateWindow in windows

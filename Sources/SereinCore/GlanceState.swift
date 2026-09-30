@@ -26,7 +26,7 @@ extension BrowserWindowState {
     @discardableResult public mutating func openGlance(url:String,from parent:UUID)->UUID? {
         guard let owner=visibleTabs.first(where:{$0.id==parent}),glance(for:parent)==nil else{return nil}
         var preview=BrowserTab(workspaceID:owner.workspaceID,url:url)
-        preview.glanceParentID=parent
+        preview.glanceParentID=parent;preview.openerTabID=parent
         tabs.append(preview);clearSplit();selectedTabID=preview.id
         return preview.id
     }

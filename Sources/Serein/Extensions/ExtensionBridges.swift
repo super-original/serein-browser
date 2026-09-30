@@ -41,6 +41,16 @@ import SereinCore
     init(id: UUID,session: BrowserSession) {self.id=id;self.session=session}
     private var tab: BrowserTab? {session?.state.tabs.first{$0.id==id}}
     func window(for context: WKWebExtensionContext) -> (any WKWebExtensionWindow)? {session?.extensionWindow}
+    func parentTab(for context:WKWebExtensionContext)->(any WKWebExtensionTab)? {
+        guard let session,!session.state.isPrivate,let parent=tab?.openerTabID,session.state.tabs.contains(where:{$0.id==parent}) else{return nil}
+        return session.bridge(parent)
+    }
+    func setParentTab(_ parentTab:(any WKWebExtensionTab)?,for context:WKWebExtensionContext,completionHandler:@escaping ((any Error)?)->Void) {
+        guard let session,!session.state.isPrivate else{completionHandler(ExtensionValidationError.invalid("The tab is unavailable."));return}
+        let parent=parentTab as? ExtensionTab
+        guard parentTab==nil || parent?.session===session,session.state.setOpener(id,to:parent?.id) else{completionHandler(ExtensionValidationError.invalid("The opener must be a different tab in the same window."));return}
+        completionHandler(nil)
+    }
     func indexInWindow(for context: WKWebExtensionContext) -> Int {session?.state.tabs.firstIndex{$0.id==id} ?? NSNotFound}
     func webView(for context: WKWebExtensionContext) -> WKWebView? {session?.runtimes[id]?.loadedWebView}
     func title(for context: WKWebExtensionContext) -> String? {tab?.title}
@@ -78,8 +88,9 @@ import SereinCore
         guard let session,let tab else{completionHandler(nil,ExtensionValidationError.invalid("The tab no longer exists."));return}
         let destination=configuration.url ?? URL(string:tab.url)
         guard let destination,session.extensions?.canOpen(destination,for:context)==true else{completionHandler(nil,ExtensionValidationError.invalid("This duplicate URL is not permitted."));return}
-        let new=session.newTab(url:destination.absoluteString,select:configuration.shouldBeActive)
-        if configuration.shouldBePinned || tab.kind != .regular {session.setKind(new,.pinned)}
+        let parent=configuration.parentTab as? ExtensionTab
+        guard configuration.parentTab==nil || parent?.session===session else{completionHandler(nil,ExtensionValidationError.invalid("The opener must be in the same window."));return}
+        let new=session.newTab(url:destination.absoluteString,select:configuration.shouldBeActive,kind:configuration.shouldBePinned || tab.kind != .regular ? .pinned : .regular,index:configuration.index,opener:parent?.id ?? tab.openerTabID,addToSelection:configuration.shouldAddToSelection)
         completionHandler(session.bridge(new),nil)
     }
 }
