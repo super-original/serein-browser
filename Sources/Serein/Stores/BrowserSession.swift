@@ -105,10 +105,13 @@ import SereinCore
         if let window {alert.beginSheetModal(for:window){r in completion(r == .alertFirstButtonReturn)}}
         else {completion(false)}
     }
+    private func canUnload(_ id: UUID) -> Bool {
+        state.tabs.contains{$0.id==id} && id != state.selectedTabID && id != state.primarySplitTabID && id != state.secondaryTabID
+    }
     func unload(_ id: UUID) {
-        guard id != state.selectedTabID,id != state.secondaryTabID else{return}
+        guard canUnload(id) else{return}
         confirm("Unload this tab?",detail:"The page will reload when selected. Media will stop and unsaved page state will be lost.",yes:"Unload") { [weak self] yes in
-            guard yes,let self else{return};self.runtimes[id]?.dispose();self.runtimes[id]=nil
+            guard yes,let self,self.canUnload(id) else{return};self.runtimes[id]?.dispose();self.runtimes[id]=nil
         }
     }
 }

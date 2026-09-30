@@ -18,7 +18,7 @@ extension ExtensionHost: WKWebExtensionControllerDelegate {
         if configuration.index<session.state.tabs.count,let old=session.state.tabs.firstIndex(where:{$0.id==id}) {let tab=session.state.tabs.remove(at:old);session.state.tabs.insert(tab,at:configuration.index)}
         completionHandler(session.bridge(id),nil)
     }
-    private func canOpen(_ url:URL,for context:WKWebExtensionContext)->Bool {
+    func canOpen(_ url:URL,for context:WKWebExtensionContext)->Bool {
         ["http","https"].contains(url.scheme?.lowercased() ?? "") || url.absoluteString=="about:blank" || controller.extensionContext(for:url)===context
     }
     func webExtensionController(_ controller:WKWebExtensionController,openNewWindowUsing configuration:WKWebExtension.WindowConfiguration,for context:WKWebExtensionContext,completionHandler:@escaping ((any WKWebExtensionWindow)?,(any Error)?)->Void) {

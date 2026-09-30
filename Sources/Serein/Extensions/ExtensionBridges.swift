@@ -54,7 +54,7 @@ import SereinCore
     }
     func setPinned(_ pinned: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.setKind(id,pinned ? .pinned : .regular);completionHandler(nil)}
     func loadURL(_ url: URL,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {
-        guard ["http","https","about"].contains(url.scheme ?? "") || session?.extensions?.controller.extensionContext(for:url)===context else {completionHandler(ExtensionValidationError.invalid("This URL scheme is not permitted."));return}
+        guard session?.extensions?.canOpen(url,for:context) == true else {completionHandler(ExtensionValidationError.invalid("This URL scheme is not permitted."));return}
         session?.runtime(id).load(url);completionHandler(nil)
     }
     func reload(fromOrigin: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {if fromOrigin {session?.runtime(id).webView.reloadFromOrigin()} else {session?.runtime(id).webView.reload()};completionHandler(nil)}
@@ -63,6 +63,10 @@ import SereinCore
     func close(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.close(id);completionHandler(nil)}
     func duplicate(using configuration: WKWebExtension.TabConfiguration,for context: WKWebExtensionContext,completionHandler: @escaping ((any WKWebExtensionTab)?,(any Error)?)->Void) {
         guard let session,let tab else{completionHandler(nil,ExtensionValidationError.invalid("The tab no longer exists."));return}
-        let new=session.newTab(url:configuration.url?.absoluteString ?? tab.url,select:configuration.shouldBeActive);completionHandler(session.bridge(new),nil)
+        let destination=configuration.url ?? URL(string:tab.url)
+        guard let destination,session.extensions?.canOpen(destination,for:context)==true else{completionHandler(nil,ExtensionValidationError.invalid("This duplicate URL is not permitted."));return}
+        let new=session.newTab(url:destination.absoluteString,select:configuration.shouldBeActive)
+        if configuration.shouldBePinned || tab.kind != .regular {session.setKind(new,.pinned)}
+        completionHandler(session.bridge(new),nil)
     }
 }

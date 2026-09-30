@@ -97,10 +97,26 @@ import SereinCore
         session.select(second)
         check("split-secondary-focus-keeps-panes",session.state.primarySplitTabID==third && session.state.secondaryTabID==second && session.state.selectedTabID==second)
         await capture("07-split-secondary-focused")
+        let visiblePrimary=session.runtimes[third]
+        session.unload(third)
+        check("split-primary-cannot-unload",visiblePrimary != nil && session.window?.attachedSheet == nil && session.runtimes[third] === visiblePrimary)
+
         session.select(third);session.state.secondaryTabID=nil;session.state.primarySplitTabID=nil
         session.state.sidebar = .compact;session.compactRevealed=false;await capture("08-compact-hidden")
         session.compactRevealed=true;await capture("09-compact-revealed")
         session.state.sidebar = .collapsed;await capture("10-collapsed")
+        let inactive=session.newTab(url:fixture,select:false)
+        let inactiveRuntime=session.runtime(inactive)
+        _=inactiveRuntime.webView
+        session.unload(inactive)
+        let unloadSheet=session.window?.attachedSheet
+        check("inactive-unload-prompts",unloadSheet != nil)
+        session.select(inactive)
+        if let unloadSheet {session.window?.endSheet(unloadSheet,returnCode:.alertFirstButtonReturn)}
+        try? await Task.sleep(for:.milliseconds(100))
+        check("unload-revalidates-selection",session.runtimes[inactive] === inactiveRuntime)
+        session.close(inactive,ask:false)
+
         session.state.sidebar = .expanded;session.libraryPanel = .settings;await capture("11-settings");session.libraryPanel=nil
         session.findVisible=true;session.findText="Workspace";session.find();await capture("12-find");session.findVisible=false
         let unavailable="http://127.0.0.1:19876/unavailable"

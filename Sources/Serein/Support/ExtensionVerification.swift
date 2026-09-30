@@ -30,6 +30,10 @@ import SereinCore
                     if let value=try? await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null"),let text=value as? String,let data=text.data(using:.utf8) {payload=(try? JSONSerialization.jsonObject(with:data)) as? [String:Any];break}
                 }
                 check("\(name)-background-message-storage-tabs",payload?["ok"] as? Bool==true && payload?["senderTab"] as? Bool==true && (payload?["tabCount"] as? Int ?? 0)>0,String(describing:payload))
+                let lifecycle=payload?["tabLifecycle"] as? [String:Bool]
+                for field in ["createdPinned","duplicatePinned","distinctIDs","duplicateURL","createdEvents","removedEvents"] {
+                    check("\(name)-tabs-\(field)",lifecycle?[field] == true,String(describing:lifecycle))
+                }
                 let secret=try await session.current!.webView.evaluateJavaScript("typeof window.sereinIsolatedSecret")
                 check("\(name)-isolated-world",secret as? String=="undefined")
                 let firstCount=payload?["count"] as? Int ?? 0
