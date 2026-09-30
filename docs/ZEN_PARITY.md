@@ -74,7 +74,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Settings | P | Appearance, sidebar, website data clearing; advanced policies absent |
 | Glance / link preview | U | Not implemented |
 | Folders / live folders | U | Not implemented |
-| Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/unpin and workspace moves now have runtime regressions pending; full keyboard selection remains a gap |
+| Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/unpin and workspace moves verified at `e511f58` and later runs; full keyboard selection remains a gap |
 | Tab groups | U | Not implemented |
 | Containers / profiles / per-site isolation | U | Not implemented |
 | Zen Mods / themes / gradient editor | U | Not implemented; native glass adaptation is separate |
@@ -91,3 +91,7 @@ This checklist is intentionally not a claim of complete Zen parity.
 [Run 36705707876](https://github.com/super-original/serein-browser/actions/runs/36705707876) reproduced all 14 captures with the same pinned Zen 1.22.2b binary and settings on macOS 27. All 14 screenshots were retrieved and visually inspected. Light/dark, essentials/pins, address focus, context menu, workspace labels, split panes, compact overlay/hide, collapsed toolbar, settings and restricted-port error states are visible. The context menu is taller than the available area and scrolls; it is not a full-menu inventory. Workspace captures retain the fixture page while changing workspace labels; they do not prove cookie/container isolation.
 
 The measured sidebar remains 230 points and regular tab layout boxes 224×40. Full-window light captures match 1000×677 outer bounds and 1× scale. Serein's content starts at the same x≈246, but its bordered native address field is visually shorter than Zen's address surface. Essentials lack favicons and have different cell sizing; split-group tab representation and compact toolbar variants remain gaps. Zen shows a 2-point accent outline on the focused split pane; the continuation adopts that focus indicator using the native accent color. Native system traffic lights/materials intentionally differ. Serein's blank WebKit area remains a rendering defect/blocker, never a deliberate glass adaptation.
+
+### Additional grid baseline under capture
+
+The pinned [ZenViewSplitter source](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/split-view/ZenViewSplitter.mjs) caps split groups at four tabs. Its `calculateLayoutTree` places two tabs side by side, three as two stacked left panes plus one full-height right pane, and four as two stacked columns. The reference workflow now requests three/four-pane captures and records each browser rectangle; runtime evidence is pending. Serein still implements only two panes at this point.

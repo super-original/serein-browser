@@ -23,6 +23,7 @@ import SereinCore
                 let before=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 check("\(name)-host-permission-denied",before is NSNull)
                 guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("No extension context")}
+                results += await ExtensionWindowCloseVerification.run(manager:manager,context:context,name:name)
                 for pattern in context.webExtension.requestedPermissionMatchPatterns {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
                 session.current!.webView.reload()
                 var payload:[String:Any]?

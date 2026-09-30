@@ -32,16 +32,26 @@ import SwiftUI
     private func rememberFrame(){if let f=window?.frame{session.state.windowFrame=[f.origin.x,f.origin.y,f.width,f.height]}}
     func windowWillClose(_ notification: Notification) {session.manager?.windowClosed(self)}
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard session.runtimes.values.contains(where:{$0.hasUserEdits}) else{return true}
+        requestClose{_ in}
+        return false
+    }
+    func requestClose(completion:@escaping (Bool)->Void) {
+        guard session.manager?.windows.contains(where:{$0===self})==true else{completion(false);return}
+        let close:() -> Void = { [weak self] in
+            guard let self,self.session.manager?.windows.contains(where:{$0===self})==true else{completion(false);return}
+            self.window?.close()
+            completion(self.session.manager?.windows.contains(where:{$0===self})==false)
+        }
         if session.runtimes.values.contains(where:{$0.hasUserEdits}) {
             let documents=session.closeConsentSnapshot
             session.confirm("Close this window?",detail:"One or more pages have edits. Unsaved changes may be lost.",yes:"Close") { [weak self] allow in
-                guard allow,let self,self.session.closeConsentSnapshot==documents else{return}
+                guard allow,let self,self.session.closeConsentSnapshot==documents else{completion(false);return}
                 // Consent is already validated. performClose may be suppressed
                 // while AppKit is still dismissing the attached sheet.
-                self.window?.close()
-            };return false
-        }
-        return true
+                close()
+            }
+        } else {close()}
     }
 }
 

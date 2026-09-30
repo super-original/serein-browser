@@ -192,7 +192,7 @@ import SereinCore
                 check("repeat-options-history-count-\(cycle)",optionsRuntime.webView.backForwardList.backList.count==historyCount,"before=\(historyCount) after=\(optionsRuntime.webView.backForwardList.backList.count)")
             }
             if lastRecoveryFailed {try await captureRecoveryError("28-final-extension-recovery-error")}
-            results += await ExtensionReloadProbe.inspectHost(context:restored,dataStore:session.dataStore,version:"1.2")
+            results += await ExtensionReloadProbe.inspectHost(context:restored,dataStore:session.dataStore,version:"1.2",history:optionsRuntime.webView.interactionState)
             session.close(optionsTab,ask:false);session.close(restoredOptionsTab,ask:false)
             check("revocation-and-site-denial-preserved", !restored.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) && restored.permissionStatus(for: site) == .deniedExplicitly)
             restored.setPermissionStatus(.grantedExplicitly, for: site)

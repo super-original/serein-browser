@@ -3,9 +3,12 @@ import WebKit
 /// Controlled engine diagnostic, using a distinct controller and storage identity.
 /// This does not alter production permission admission or claim compatibility.
 @MainActor enum ExtensionReloadProbe {
-    static func inspectHost(context:WKWebExtensionContext, dataStore:WKWebsiteDataStore, version:String) async -> [RuntimeVerification.Result] {
+    static func inspectHost(context:WKWebExtensionContext, dataStore:WKWebsiteDataStore, version:String, history:Any?) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
-        for customize in [false,true] {
+        for (customize,restoreHistory) in [(false,false),(true,false),(false,true),(true,true)] {
+            if restoreHistory,history==nil {
+                results.append(.init(name:"host-extension-history-setup",passed:false,detail:"No opaque history was supplied"));continue
+            }
             guard let configuration=context.webViewConfiguration,let url=context.optionsPageURL else{return results}
             if customize {
                 configuration.websiteDataStore=dataStore
@@ -16,14 +19,14 @@ import WebKit
                 configuration.preferences.javaScriptCanOpenWindowsAutomatically=false
             }
             let view=WKWebView(frame:.zero,configuration:configuration)
-            view.load(url)
+            if restoreHistory,let history {view.interactionState=history} else {view.load(url)}
             var body=""
             for _ in 0..<50 {
                 body=(try? await view.evaluateJavaScript("document.body?.innerText ?? ''") as? String) ?? ""
                 if body=="Version "+version {break}
                 try? await Task.sleep(for:.milliseconds(100))
             }
-            results.append(.init(name:"host-extension-"+(customize ? "customized" : "raw")+"-options",passed:body=="Version "+version,detail:"url=\(String(describing:view.url)) body=\(body) ownOriginPermission=\(context.permissionStatus(for:url).rawValue)"))
+            results.append(.init(name:"host-extension-"+(customize ? "customized" : "raw")+(restoreHistory ? "-history" : "")+"-options",passed:body=="Version "+version,detail:"url=\(String(describing:view.url)) body=\(body) ownOriginPermission=\(context.permissionStatus(for:url).rawValue)"))
             view.stopLoading()
         }
         return results

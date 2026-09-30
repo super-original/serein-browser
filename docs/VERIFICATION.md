@@ -1,5 +1,12 @@
 # Verification and continuation backlog
 
+## Native close and quit verified
+
+`3b4cf1a267d8e3ae964a986a1f1d2e8f7d665439`, [run 36751909527](https://github.com/super-original/serein-browser/actions/runs/36751909527), passes 52 unit tests, **238/247 browser checks**, all four independent quit checks and 12 bridge checks. All five native window-close checks now pass. The supervised quit process exits with status zero and saves both tabs after fresh consent. Five Find checks pass (backward wrap, query replacement, empty result, old-tab result rejection, focus restoration); its first missing/existing-query checks fail. The follow-up ignores unchanged text-field binding writes, waits for field attachment in the fixture and reports actual callback values. Find's native screenshot was inspected; page content is still blank. The five extension-recovery and two zoom-event failures remain. [App](https://github.com/super-original/serein-browser/actions/runs/36751909527/artifacts/11114574215), [evidence](https://github.com/super-original/serein-browser/actions/runs/36751909527/artifacts/11114679098).
+
+Pending: extension window-close completion now waits for real removal/cancellation; raw-view probes restore the failing host's exact opaque history; additional Zen three/four-pane references are requested.
+
+
 ## Exact-head recovery and consent results
 
 `f9a4959eff9bff7221368b26367a443c0f82c815`, [run 36750626123](https://github.com/super-original/serein-browser/actions/runs/36750626123), builds and passes 52 unit tests, **232/240 browser checks** and all 12 bridge checks. Releasing old extension views does not fix the five recovery failures. Two zoom-event failures remain. Four window-consent checks pass, but the final accepted close does not remove the window; the follow-up closes directly after validated consent instead of issuing another close action during sheet dismissal. The separate quit test times out before producing results: its awaiting task cannot answer a modal termination loop. Its follow-up driver explicitly runs in modal and default run-loop modes. These fixes and Find query/tab/focus regression checks are pending. The exact-source Close Tab sheet and final recovery-error screenshots were inspected; desktop content still fails with zero glyph pixels. [App](https://github.com/super-original/serein-browser/actions/runs/36750626123/artifacts/11114697304), [evidence](https://github.com/super-original/serein-browser/actions/runs/36750626123/artifacts/11114921921).

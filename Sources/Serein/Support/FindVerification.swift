@@ -3,7 +3,7 @@ import AppKit
 @MainActor enum FindVerification {
     static func run(session:BrowserSession) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
-        func check(_ name:String,_ passed:Bool){results.append(.init(name:name,passed:passed,detail:"Public WKWebView.find against the deterministic fixture"))}
+        func check(_ name:String,_ passed:Bool,_ detail:String=""){results.append(.init(name:name,passed:passed,detail:"Public WKWebView.find against the deterministic fixture. "+detail))}
         func search(_ query:String,backwards:Bool=false) async -> Bool? {
             session.findText=query
             return await withCheckedContinuation {continuation in
@@ -11,8 +11,11 @@ import AppKit
             }
         }
         session.findVisible=true
-        check("find-missing-query",await search("serein-absent-find-token")==false && session.findResult=="No matches")
-        check("find-existing-query",await search("Workspaces")==true && session.findResult.isEmpty)
+        try? await Task.sleep(for:.milliseconds(250))
+        let missing=await search("serein-absent-find-token")
+        check("find-missing-query",missing==false && session.findResult=="No matches","result=\(String(describing:missing)) label=\(session.findResult)")
+        let found=await search("Workspaces")
+        check("find-existing-query",found==true && session.findResult.isEmpty,"result=\(String(describing:found)) label=\(session.findResult)")
         check("find-backwards-wrap",await search("Workspaces",backwards:true)==true)
         var staleFinished=false;var staleResult:Bool?
         session.findText="serein-absent-find-token"
