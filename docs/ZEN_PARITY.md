@@ -26,6 +26,7 @@ The reference workflow launches the actual downloaded Zen binary with geckodrive
 | 12 | Collapsed vertical tabs with top address toolbar |
 | 13 | Native running Zen preferences page |
 | 14 | Navigation error/restricted address page |
+| 15 | Active and pinned tab multiselection |
 
 Early captures were invalid: a network-consent dialog obscured them, and initial split/compact scenarios did not reach their intended state. These were inspected and corrected, not counted as successful references. The corrected split and compact captures are in [run 35241652810](https://github.com/super-original/serein-browser/actions/runs/35241652810). State names alone are never a visual assertion.
 
@@ -73,7 +74,8 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Settings | P | Appearance, sidebar, website data clearing; advanced policies absent |
 | Glance / link preview | U | Not implemented |
 | Folders / live folders | U | Not implemented |
-| Tab groups / multiselect | U | Not implemented |
+| Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/move and full keyboard selection remain gaps |
+| Tab groups | U | Not implemented |
 | Containers / profiles / per-site isolation | U | Not implemented |
 | Zen Mods / themes / gradient editor | U | Not implemented; native glass adaptation is separate |
 | Sync / account / import wizard | U | Not implemented |

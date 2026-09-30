@@ -18,6 +18,7 @@ for i in $(seq 1 2400); do
     KEYBOARD_NAME=$(cat "$ROOT/keyboard-request")
     rm "$ROOT/keyboard-request"
     case "$KEYBOARD_NAME" in
+      save-download) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
       address) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "l" using command down' ;;
       new-tab) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "t" using command down' ;;
       close-tab) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "w" using command down' ;;

@@ -1,9 +1,10 @@
+import AppKit
 import WebKit
 import Foundation
 import SereinCore
 
-/// Uses the production store/delegate with deterministic destination selection.
-/// This suite does not claim native Save-panel or cross-launch resume coverage.
+/// Exercises production downloads, including the native destination sheet.
+/// Resume data remains in memory; this does not claim cross-launch resume.
 @MainActor enum DownloadVerification {
     static func run(manager:BrowserManager,session:BrowserSession,root:URL) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
@@ -11,13 +12,36 @@ import SereinCore
         func wait(_ condition:@MainActor ()->Bool) async -> Bool {
             for _ in 0..<150 {if condition(){return true};try? await Task.sleep(for:.milliseconds(100))};return false
         }
-        func start(_ name:String,in owner:BrowserSession,destination:String) async -> DownloadItem {
+        func start(_ name:String,in owner:BrowserSession,destination:String?) async -> DownloadItem {
             await withCheckedContinuation {continuation in
                 owner.current!.webView.startDownload(using:URLRequest(url:URL(string:"http://127.0.0.1:8765/"+name)!)) {download in
-                    continuation.resume(returning:manager.downloads.add(download,in:owner,destination:root.appendingPathComponent(destination)))
+                    continuation.resume(returning:manager.downloads.add(download,in:owner,destination:destination.map{root.appendingPathComponent($0)}))
                 }
             }
         }
+        session.window?.makeKeyAndOrderFront(nil)
+        let native=await start("download.txt",in:session,destination:nil)
+        let presented=await wait{session.window?.attachedSheet is NSSavePanel}
+        check("download-save-panel-visible",presented)
+        if let panel=session.window?.attachedSheet as? NSSavePanel {
+            panel.directoryURL=root;panel.nameFieldStringValue="native-save-result.txt"
+            try? await Task.sleep(for:.milliseconds(300))
+            let capture="21-download-save-panel"
+            try? capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+            let captured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path)}
+            check("download-save-panel-capture",captured && FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".png").path))
+            try? "save-download".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+            _=await wait{native.finished}
+            check("download-native-save-completes",native.record.phase == .complete,native.status)
+            check("download-native-save-destination",native.destination?.standardizedFileURL == root.appendingPathComponent("native-save-result.txt").standardizedFileURL)
+            check("download-native-save-content",native.destination.flatMap{try? String(contentsOf:$0,encoding:.utf8)} == "Serein deterministic download fixture v1.\n")
+            if !native.finished {panel.cancel(nil)}
+        }
+        let cancelledPanel=await start("download.txt",in:session,destination:nil)
+        _=await wait{session.window?.attachedSheet is NSSavePanel}
+        (session.window?.attachedSheet as? NSSavePanel)?.cancel(nil)
+        _=await wait{cancelledPanel.finished}
+        check("download-native-save-cancel",cancelledPanel.record.phase == .cancelled && cancelledPanel.destination == nil,cancelledPanel.status)
         let item=await start("download.txt",in:session,destination:"download-result.txt")
         let completed=await wait{item.finished}
         check("download-production-completes",completed && item.record.phase == .complete,item.status)
