@@ -77,6 +77,9 @@ import SereinCore
             publishSelection(previousActive:state.selectedTabID,previousHighlighted:previous,refreshActive:false)
         } else {select(id)}
     }
+    var closeConsentSnapshot:[UUID:UUID?] {
+        Dictionary(uniqueKeysWithValues:state.tabs.map{($0.id,runtimes[$0.id]?.documentID)})
+    }
     func closeHighlighted() {
         let ids=state.tabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
         guard !ids.isEmpty else{return}
@@ -104,7 +107,7 @@ import SereinCore
         guard state.tabs.contains(where:{$0.id==id}) else{completion?(false);return}
         if ask,let runtime=runtimes[id],runtime.hasUserEdits {
             let document=runtime.documentID
-            confirm("Close this tab?",detail:"This page has been edited. Unsaved changes may be lost."){[weak self,weak runtime] allowed in
+            confirm("Close this tab?",detail:"This page has been edited. Unsaved changes may be lost.",yes:"Close Tab"){[weak self,weak runtime] allowed in
                 guard allowed,let self,let runtime,self.runtimes[id] === runtime,runtime.documentID==document else{completion?(false);return}
                 self.close(id,ask:false,completion:completion)
             }

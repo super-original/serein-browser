@@ -293,6 +293,8 @@ import SereinCore
         try? Data().write(to:root.appendingPathComponent("idle-start"))
         await pause(12_000)
         try? Data().write(to:root.appendingPathComponent("idle-end"))
+        results += await WindowConsentVerification.run(manager:manager)
+        session.window?.makeKeyAndOrderFront(nil)
         results += await SitePermissionVerification.run(session:session,root:root)
         results += await ExtensionVerification.run(manager:manager,session:session,root:root)
         ExtensionSelectionTrace.save(to:root)

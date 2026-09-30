@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     let session: BrowserSession
+    private var approvedClose=false
     init(session: BrowserSession) {
         self.session=session
         let window=SereinWindow(contentRect:NSRect(x:10,y:60,width:1000,height:677),styleMask:[.titled,.closable,.miniaturizable,.resizable,.fullSizeContentView],backing:.buffered,defer:false)
@@ -32,9 +33,12 @@ import SwiftUI
     private func rememberFrame(){if let f=window?.frame{session.state.windowFrame=[f.origin.x,f.origin.y,f.width,f.height]}}
     func windowWillClose(_ notification: Notification) {session.manager?.windowClosed(self)}
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if approvedClose {approvedClose=false;return true}
         if session.runtimes.values.contains(where:{$0.hasUserEdits}) {
+            let documents=session.closeConsentSnapshot
             session.confirm("Close this window?",detail:"One or more pages have edits. Unsaved changes may be lost.",yes:"Close") { [weak self] allow in
-                guard allow,let self else{return};for runtime in self.session.runtimes.values {runtime.hasUserEdits=false};self.window?.performClose(nil)
+                guard allow,let self,self.session.closeConsentSnapshot==documents else{return}
+                self.approvedClose=true;self.window?.performClose(nil)
             };return false
         }
         return true

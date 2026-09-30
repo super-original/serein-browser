@@ -27,7 +27,7 @@
 | Tab zoom | Partial / unsupported event | Native setter and public notification hook implemented; `tabs.onZoomChange` is absent in both tested backgrounds. Set/get/reset verified at `f3757e9`; modes/scopes and per-site persistence unimplemented |
 | Navigation events | Partial / untested semantics | WebKit engine events plus host tab changes; no exhaustive ordering/redirect/frame suite |
 | Content scripts / isolated worlds | Partially verified | Controlled DOM injection succeeds after grant; page cannot see extension-global variable |
-| Frames / dynamic scripting | Verification pending | Added same-origin and unrequested-origin iframe/isolated-world fixtures; nested-frame origin inheritance and executeScript conformance remain untested |
+| Frames / dynamic scripting | Partially verified | `53d93bc` passes same-origin injection, unrequested-origin exclusion and isolated globals in HTTP iframes for both generations; nested-frame origin inheritance and executeScript conformance remain untested |
 | MV2 persistent backgrounds | Partially verified | Message → storage → tabs query → response exercised |
 | MV3 service workers | Partially verified | Same controlled path; suspension, restart and queued-event semantics not established |
 | Runtime messaging | Partially verified | One-shot content-to-background messaging; ports/cross-extension semantics untested |

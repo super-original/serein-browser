@@ -26,13 +26,28 @@ import SereinCore
     @ObservationIgnored private weak var replacedResponder:NSResponder?
     private(set) var viewRevision=0
     @ObservationIgnored private var extensionReloadState:Any?
+    @ObservationIgnored private var extensionReloadZoom=1.0
+    @ObservationIgnored private var awaitingExtensionReload=false
+    var hasPendingExtensionReload:Bool {awaitingExtensionReload}
     @ObservationIgnored private var configurationContext: WKWebExtensionContext?
     var loadedWebView:WKWebView? {storedView}
     var webView: WKWebView {
         if let storedView {return storedView}
         let url=session?.state.tabs.first(where:{$0.id==id}).flatMap{URL(string:$0.url)}
         let view=makeView(for:url)
-        if let url,url.absoluteString != "about:blank" {provisionalURL=url;view.load(url)}
+        if let url,url.absoluteString != "about:blank" {
+            provisionalURL=url
+            if awaitingExtensionReload {
+                if configurationContext != nil {
+                    awaitingExtensionReload=false
+                    let state=extensionReloadState;extensionReloadState=nil
+                    view.pageZoom=extensionReloadZoom
+                    if let state {view.interactionState=state} else {view.load(url)}
+                } else {
+                    failedURL=url;failure="This extension is disabled. Re-enable it to reload this page."
+                }
+            } else {view.load(url)}
+        }
         return view
     }
     private func makeView(for url:URL?) -> WKWebView {
@@ -63,26 +78,37 @@ import SereinCore
     func captureExtensionReloadState(for context:WKWebExtensionContext) -> Bool {
         guard configurationContext === context else{return false}
         extensionReloadState=storedView?.interactionState
+        extensionReloadZoom=storedView?.pageZoom ?? 1
+        awaitingExtensionReload=true
+        if let current=storedView,let responder=current.window?.firstResponder as? NSView {
+            pendingPageFocus = responder === current || responder.isDescendant(of:current)
+            replacedResponder=responder
+        }
+        // Release every old extension page before a new context derives related
+        // views. Keep only public opaque state, never the old view/configuration.
+        dispose();configurationContext=nil;isLoading=false;progress=0;viewRevision += 1
         return true
     }
-    func discardExtensionReloadState(){extensionReloadState=nil}
     private func view(for url:URL,restoringCurrentPage:Bool=false) -> WKWebView {
         let current=webView
         let context=session?.extensions?.controller.extensionContext(for:url)
-        guard configurationContext !== context else{return current}
+        guard configurationContext !== context || awaitingExtensionReload else{return current}
+        let saved=awaitingExtensionReload
         let state=extensionReloadState ?? current.interactionState
-        extensionReloadState=nil
+        let zoom=saved ? extensionReloadZoom : current.pageZoom
+        extensionReloadState=nil;awaitingExtensionReload=false
         let responder=current.window?.firstResponder as? NSView
         let restoreFocus=responder.map{$0 === current || $0.isDescendant(of:current)} ?? false
         dispose()
-        pendingPageFocus=restoreFocus;replacedResponder=responder
+        pendingPageFocus=pendingPageFocus || restoreFocus
+        if let responder {replacedResponder=responder}
         let replacement=makeView(for:url)
-        if current.backForwardList.currentItem != nil,let state {
+        if saved || current.backForwardList.currentItem != nil,let state {
             replacement.interactionState=state
             // Restore the list, then let the caller request its destination.
             if !restoringCurrentPage {replacement.stopLoading()}
         }
-        replacement.pageZoom=current.pageZoom
+        replacement.pageZoom=zoom
         viewRevision += 1
         return replacement
     }
@@ -102,6 +128,7 @@ import SereinCore
     func goBack(){traverse(-1)}
     func goForward(){traverse(1)}
     private func traverse(_ offset:Int) {
+        if awaitingExtensionReload,let url=session?.state.tabs.first(where:{$0.id==id}).flatMap({URL(string:$0.url)}) {_=view(for:url)}
         guard let item=webView.backForwardList.item(at:offset) else{return}
         provisionalURL=item.url
         let view=view(for:item.url)
@@ -110,9 +137,13 @@ import SereinCore
     func reload(fromOrigin:Bool=false) {
         guard let url=failedURL ?? storedView?.url ?? session?.state.tabs.first(where:{$0.id==id}).flatMap({URL(string:$0.url)}) else{webView.reload();return}
         if url.isFileURL {openFile(url);return}
-        let previous=webView
         documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false
-        let restoring=previous.backForwardList.currentItem?.url==url && (extensionReloadState ?? previous.interactionState) != nil
+        if storedView==nil,awaitingExtensionReload,session?.extensions?.controller.extensionContext(for:url) != nil {
+            _=webView
+            return
+        }
+        let previous=webView
+        let restoring=(awaitingExtensionReload && extensionReloadState != nil) || (previous.backForwardList.currentItem?.url==url && previous.interactionState != nil)
         let view=view(for:url,restoringCurrentPage:restoring)
         if view !== previous,restoring {return}
         if view.backForwardList.currentItem?.url==url {if fromOrigin {view.reloadFromOrigin()} else {view.reload()}} else {view.load(url)}

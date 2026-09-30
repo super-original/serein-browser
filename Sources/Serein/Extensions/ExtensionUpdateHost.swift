@@ -83,14 +83,14 @@ extension ExtensionHost {
     func unloadPreservingPageState(_ context:WKWebExtensionContext) throws {
         let runtimes=(manager?.windows ?? []).filter{!$0.session.state.isPrivate}.flatMap{Array($0.session.runtimes.values)}.filter{$0.captureExtensionReloadState(for:context)}
         do {try controller.unload(context)}
-        catch {for runtime in runtimes {runtime.discardExtensionReloadState()};throw error}
+        catch {for runtime in runtimes {runtime.reload()};throw error}
     }
     func reloadResourcePages(base: URL) {
         for window in manager?.windows ?? [] where !window.session.state.isPrivate {
             let session = window.session
             for tab in session.state.tabs {
                 guard let url = URL(string: tab.url), url.scheme == base.scheme, url.host == base.host,
-                      let runtime = session.runtimes[tab.id], runtime.loadedWebView != nil else { continue }
+                      let runtime = session.runtimes[tab.id], runtime.loadedWebView != nil || runtime.hasPendingExtensionReload else { continue }
                 runtime.reload()
             }
         }
