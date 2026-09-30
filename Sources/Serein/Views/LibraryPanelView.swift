@@ -58,13 +58,14 @@ private struct ExtensionListView: View {
     var body: some View {
         VStack(alignment:.leading,spacing:12) {
             Text("WebExtensions · Compatibility varies by API and manifest. Native Safari App Extensions, legacy Safari formats, and CRX packages are not supported.").font(.callout).foregroundStyle(.secondary)
+            Text("Site access choices are saved until you change them.").font(.caption).foregroundStyle(.secondary)
             List(host.records) {record in
                 VStack(alignment:.leading,spacing:8) {
                     HStack {Text(record.name).bold();Text(record.version).foregroundStyle(.secondary);Spacer();Toggle("Enabled",isOn:Binding(get:{record.enabled},set:{enabled in Task{await host.setEnabled(record.id,enabled)}})).toggleStyle(.switch).fixedSize()}
                     HStack {
                         Button("Open Action"){host.perform(record.id,in:session)}.disabled(!record.enabled)
                         if let context=host.contexts[record.id],let url=context.optionsPageURL {Button("Options"){session.newTab(url:url.absoluteString);session.libraryPanel=nil}}
-                        Menu("Current Site") {Button("Allow Until Quit"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny Until Quit"){host.setCurrentSite(record.id,in:session,allow:false)}}.disabled(!record.enabled)
+                        Menu("Current Site") {Button("Allow on This Site"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny on This Site"){host.setCurrentSite(record.id,in:session,allow:false)}}.disabled(!record.enabled || !["http","https"].contains(session.current?.webView.url?.scheme?.lowercased() ?? ""))
                         Spacer()
                         Button("Remove…"){session.confirm("Remove \(record.name)?",detail:"The package and extension settings will be removed. Some extension website data may remain; use Clear Website Data in Settings to remove it.",yes:"Remove"){yes in if yes{Task{await host.remove(record.id)}}}}
                     }.font(.caption)

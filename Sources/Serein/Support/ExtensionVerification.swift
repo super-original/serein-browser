@@ -3,7 +3,7 @@ import WebKit
 import SereinCore
 
 @MainActor enum ExtensionVerification {
-    static func run(manager:BrowserManager,session:BrowserSession) async -> [RuntimeVerification.Result] {
+    static func run(manager:BrowserManager,session:BrowserSession,root:URL) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
         func check(_ name:String,_ passed:Bool,_ detail:String="") {results.append(.init(name:name,passed:passed,detail:detail))}
         for generation in [2,3] {
@@ -44,6 +44,19 @@ import SereinCore
                 let value=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 let after=(value as? String).flatMap{$0.data(using:.utf8)}.flatMap{try? JSONSerialization.jsonObject(with:$0) as? [String:Any]}
                 check("\(name)-storage-persists-reload",(after?["count"] as? Int ?? 0)>firstCount && firstCount>0)
+                if generation == 3 {
+                    session.libraryPanel = .extensions
+                    try await Task.sleep(for:.milliseconds(500))
+                    let capture="16-extension-management"
+                    try capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                    for _ in 0..<100 {
+                        if FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path) {break}
+                        try await Task.sleep(for:.milliseconds(100))
+                    }
+                    check("extension-management-capture",FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".png").path))
+                    session.libraryPanel=nil
+                    try await Task.sleep(for:.milliseconds(500))
+                }
                 // Persist engine changes, including revocation, without depending on shutdown.
                 guard let live=host.contexts[id] else{throw ExtensionValidationError.invalid("Missing reloaded context")}
                 live.setPermissionStatus(.unknown,for:WKWebExtension.Permission(rawValue:"tabs"))
@@ -63,6 +76,14 @@ import SereinCore
                 session.current!.webView.reload();try await Task.sleep(for:.seconds(1))
                 let revoked=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 check("\(name)-restored-denial-stops-injection",revoked is NSNull)
+                var expiredRecord=savedRecord
+                expiredRecord.permissionState?.granted["tabs"]=Date(timeIntervalSince1970:0)
+                let expiredData=try JSONEncoder().encode(expiredRecord)
+                let expiredOnDisk=try JSONDecoder().decode(InstalledExtension.self,from:expiredData)
+                try host.controller.unload(restored);host.contexts[id]=nil
+                try await host.load(expiredOnDisk)
+                check("\(name)-expired-grant-not-restored",host.contexts[id]?.hasPermission(WKWebExtension.Permission(rawValue:"tabs")) == false)
+
                 await host.setEnabled(id,false)
                 check("\(name)-disable-record",host.records.first{$0.id==id}?.enabled == false && host.contexts[id] == nil)
                 session.current!.webView.reload();try await Task.sleep(for:.seconds(1))
