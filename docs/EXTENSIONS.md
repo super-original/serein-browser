@@ -23,7 +23,7 @@
 | Updates | Unimplemented | No authenticated update protocol or permission-diff upgrade flow |
 | Permissions / host access | Partial | Install prompts; fixture denied hosts do not inject; runtime permission prompts; persistent explicit grants, denials, revocations and per-site overrides |
 | Private access | Unsupported by policy in this build | No extension controller in private web views; no opt-in UI |
-| Tabs / windows | Partial | Native bridges, navigation, creation, focus, closure, pinning, duplication and window state; query tested; event ordering/multiselect incomplete |
+| Tabs / windows | Partial | Native bridges, navigation, creation, focus, closure, pinning, duplication and window state; per-tab highlighted update/query/events tested; batch `tabs.highlight` absent; exhaustive ordering/concurrency unverified |
 | Navigation events | Partial / untested semantics | WebKit engine events plus host tab changes; no exhaustive ordering/redirect/frame suite |
 | Content scripts / isolated worlds | Partially verified | Controlled DOM injection succeeds after grant; page cannot see extension-global variable |
 | Frames / dynamic scripting | Untested | No nested-frame, origin-inheritance or executeScript conformance suite |
@@ -41,7 +41,7 @@
 | External messaging / devtools | Unsupported | Manifest installation fails with a clear error |
 | Commands | Partial | Public performCommand(for:) routed after native key equivalents; conflicts and real extension shortcut semantics unverified |
 | Notifications | Untested | No complete consent/delivery/action semantics suite |
-| Actions / popups / options | Partial | Native toolbar button and public WebKit popover/options routing; real UI scenarios pending |
+| Actions / popups / options | Partial | Native toolbar/popover routing and management dialogs exercised; popup DOM loads but actual desktop popup content is blank |
 
 The current upstream [WebExtension namespace source](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/WebProcess/Extensions/API/WebExtensionAPINamespace.cpp) contains compile-time/runtime feature gates for some families. Discovering a symbol there is **not** proof that the runner's system WebKit exports or enables it. No private flags are enabled.
 
@@ -147,3 +147,5 @@ The continuation found that `webView(for:)` and read-only zoom/size getters coul
 The lifecycle fixture serializes its destructive probe body: permission grants and reloads can produce overlapping content-script messages, which otherwise compete over the same selected tabs. This controls the test workload; it is not evidence of cross-extension event ordering or concurrent selection conformance.
 
 The separate native-message experiment passed all eight checks in [36719132526](https://github.com/super-original/serein-browser/actions/runs/36719132526), `f20b79b`: nativeMessaging recognized, pre-grant rejection before host execution, context-bound constant reply after explicit grant, and unknown-application rejection, for MV2 and MV3. It registers a real WebKit tab/window bridge, uses copied fixtures and a unique controller configuration. This proves a limited public transport path. Production native messaging remains rejected; no process launch, filesystem or browser-data adapter has been enabled.
+
+`8245e2a` [run 36719782728](https://github.com/super-original/serein-browser/actions/runs/36719782728) passes all 140 browser checks and all eight separate native-message transport checks. Both generations now pass exact two-tab highlighted queries, activation and highlighted-event checks with an explicitly serialized workload, preserve an unloaded tab during querying, and reset local storage to counter 1 after same-identity reinstall. `browser.tabs.highlight` is still absent. All seven real-package admission failures remain; these controlled results do not establish universal compatibility.

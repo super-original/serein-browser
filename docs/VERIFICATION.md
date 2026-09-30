@@ -2,7 +2,17 @@
 
 This browser is not complete. A passing build is not a production or extension-compatibility claim.
 
-## Latest continuation checkpoint
+## Current verified source
+
+Exact source `8245e2a985ea5e270538df7f7227523b0b294668`: [run 36719782728](https://github.com/super-original/serein-browser/actions/runs/36719782728) passed **33 unit tests, all 140 browser runtime checks, and all 8 isolated native-message checks**. The overall workflow fails solely at the unchanged actual-desktop gate: 0 dark content pixels, required >1000. [Download this ARM64 application](https://github.com/super-original/serein-browser/actions/runs/36719782728/artifacts/11097717919), macOS 27 minimum, ad-hoc signed/hardened, not notarized; artifact expires October 14. [Raw evidence](https://github.com/super-original/serein-browser/actions/runs/36719782728/artifacts/11097702508) expires October 7.
+
+New verified scope includes native Save-panel keyboard destination selection, exact path/bytes and cancellation; in-memory download resume/private ownership; command/range multiselection and bulk close; MV2/MV3 per-tab highlighting/query/event behavior; extension queries preserving an unloaded tab; and stale tab/document navigation-confirmation rejection. The fixture workload is serialized, so these are not concurrent event-ordering claims. `tabs.highlight` remains absent. The isolated native-message transport verifies denial/grant/context-bound reply and unknown-application rejection; production native messaging and browser API adapters remain unavailable.
+
+Exact-source Save-panel, network-error and multiselection desktop captures were retrieved through the connected GitHub artifact reader and visually inspected. The error destination and native Reload UI are visible; the Save sheet shows the requested filename/folder; native multiselection is visible. Web content remains blank. See [retained captures](evidence/2026-09-30/README.md).
+
+Diagnostic performance for this run: startup to fixture check 2.82 seconds; full integration workload median summed RSS 348.21 MiB, peak 409.31 MiB over 20 samples; warm idle median 362.11 MiB and 0.10% interval CPU over 10 seconds, including app/WebKit processes. RSS can double-count shared pages, VM hardware differs from physical Macs, and blank rendering invalidates representative browsing/energy claims. These measurements do not establish a performance improvement.
+
+## Earlier continuation checkpoint
 
 `cfc333d` [run 36717038331](https://github.com/super-original/serein-browser/actions/runs/36717038331) passed 33 unit tests and recorded **136/138 passing browser checks before the native-message experiment**. Native Save-panel keyboard selection, exact destination/content, cancellation and stale tab/document navigation confirmation passed; the Save-panel screenshot was inspected. Both extension multiselection query assertions failed. The isolated probe then terminated during fixture loading without final results; it is being moved into a separate process/required CI step. This checkpoint does not replace a fully passing runtime run or establish native-message support. The real desktop gate remains failed. Current-head results and downloadable baseline are distinguished in [draft PR #1](https://github.com/super-original/serein-browser/pull/1).
 
