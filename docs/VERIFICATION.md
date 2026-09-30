@@ -2,6 +2,10 @@
 
 This browser is not complete. A passing build is not a production or extension-compatibility claim.
 
+## Latest continuation checkpoint
+
+`cfc333d` [run 36717038331](https://github.com/super-original/serein-browser/actions/runs/36717038331) passed 33 unit tests and recorded **136/138 passing browser checks before the native-message experiment**. Native Save-panel keyboard selection, exact destination/content, cancellation and stale tab/document navigation confirmation passed; the Save-panel screenshot was inspected. Both extension multiselection query assertions failed. The isolated probe then terminated during fixture loading without final results; it is being moved into a separate process/required CI step. This checkpoint does not replace a fully passing runtime run or establish native-message support. The real desktop gate remains failed. Current-head results and downloadable baseline are distinguished in [draft PR #1](https://github.com/super-original/serein-browser/pull/1).
+
 ## Baseline audit (2026-09-30)
 
 The saved checkout and remote `main` both resolve to `8fcac24225c0cee2dde32ae0b5b8649bc2ee1706`. There were no open or closed PRs and no newer build runs at audit time. The September 17 [run](https://github.com/super-original/serein-browser/actions/runs/35246339695) passed build/unit/package and integration steps but failed **Gate actual desktop rendering**. Its diagnostic artifact has expired; the app artifact is not being preserved as requested. A fresh [baseline run](https://github.com/super-original/serein-browser/actions/runs/36704547843) passed all 43 app scenarios but reproduced the rendering failure on macOS 27 `26A428`.

@@ -21,5 +21,6 @@
   ],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "description": "Controlled protocol probe with no native program, file, or browser-data access."
 }

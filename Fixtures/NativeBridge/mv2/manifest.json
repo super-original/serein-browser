@@ -22,5 +22,6 @@
       "background.js"
     ],
     "persistent": true
-  }
+  },
+  "description": "Controlled protocol probe with no native program, file, or browser-data access."
 }

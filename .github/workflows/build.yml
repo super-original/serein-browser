@@ -24,7 +24,7 @@ jobs:
       - name: Run actual macOS 27 application and integration scenarios
         run: bash script/verify_runtime.sh
       - name: Probe isolated extension native messaging
-        if: always()
+        if: ${{ !cancelled() }}
         run: bash script/verify_native_bridge.sh
       - name: Gate actual desktop rendering
         if: always()

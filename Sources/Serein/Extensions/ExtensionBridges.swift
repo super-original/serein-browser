@@ -41,7 +41,11 @@ import SereinCore
     func title(for context: WKWebExtensionContext) -> String? {tab?.title}
     func url(for context: WKWebExtensionContext) -> URL? {tab.flatMap{URL(string:$0.url)}}
     func isPinned(for context: WKWebExtensionContext) -> Bool {tab?.kind != .regular}
-    func isSelected(for context: WKWebExtensionContext) -> Bool {session?.tabSelection.ids.contains(id) ?? false}
+    func isSelected(for context: WKWebExtensionContext) -> Bool {
+        let value=session?.tabSelection.ids.contains(id) ?? false
+        ExtensionSelectionTrace.record("query",id:id,value:value,count:session?.tabSelection.ids.count ?? 0)
+        return value
+    }
     func isLoadingComplete(for context: WKWebExtensionContext) -> Bool {!(session?.runtimes[id]?.isLoading ?? false)}
     func shouldBypassPermissions(for context: WKWebExtensionContext) -> Bool {false}
     func shouldGrantPermissionsOnUserGesture(for context: WKWebExtensionContext) -> Bool {true}
@@ -50,6 +54,7 @@ import SereinCore
     func setZoomFactor(_ value: Double,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).webView.pageZoom=min(5,max(0.25,value));completionHandler(nil)}
     func activate(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.select(id,preservingSelection:true);completionHandler(nil)}
     func setSelected(_ selected: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {
+        ExtensionSelectionTrace.record("set",id:id,value:selected,count:session?.tabSelection.ids.count ?? 0)
         if session?.setHighlighted(id,selected)==true {completionHandler(nil)} else {completionHandler(ExtensionValidationError.invalid("The tab no longer exists."))}
     }
     func setPinned(_ pinned: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.setKind(id,pinned ? .pinned : .regular);completionHandler(nil)}
@@ -68,5 +73,18 @@ import SereinCore
         let new=session.newTab(url:destination.absoluteString,select:configuration.shouldBeActive)
         if configuration.shouldBePinned || tab.kind != .regular {session.setKind(new,.pinned)}
         completionHandler(session.bridge(new),nil)
+    }
+}
+
+/// Bounded diagnostic recording, enabled only by the deterministic test launch.
+@MainActor enum ExtensionSelectionTrace {
+    struct Entry:Codable {let operation:String;let id:UUID;let value:Bool;let selectedCount:Int}
+    static var entries:[Entry]=[]
+    static func record(_ operation:String,id:UUID,value:Bool,count:Int) {
+        guard ProcessInfo.processInfo.arguments.contains("--integration-test"),entries.count<2000 else{return}
+        entries.append(Entry(operation:operation,id:id,value:value,selectedCount:count))
+    }
+    static func save(to root:URL) {
+        try? JSONEncoder().encode(entries).write(to:root.appendingPathComponent("extension-selection-trace.json"),options:.atomic)
     }
 }
