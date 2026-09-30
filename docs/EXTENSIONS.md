@@ -21,7 +21,7 @@
 | Install / validate | Implemented, partial formats | Path, duplicate, size, symlink and manifest checks; omitted required API permissions reject installation/restore with an explicit list; source consent; no publisher-signature validation |
 | Enable / disable / remove | Partial | Fixture disable stops injection; installed records persist; disabled-extension removal now erases data by durable identity; production disable/remove and same-identity storage-reset checks pass for controlled MV2/MV3 fixtures |
 | Updates | Unimplemented | No authenticated update protocol or permission-diff upgrade flow |
-| Permissions / host access | Partial | Install prompts; fixture denied hosts do not inject; runtime permission prompts; temporary per-site overrides |
+| Permissions / host access | Partial | Install prompts; fixture denied hosts do not inject; runtime permission prompts; persistent explicit grants, denials, revocations and per-site overrides |
 | Private access | Unsupported by policy in this build | No extension controller in private web views; no opt-in UI |
 | Tabs / windows | Partial | Native bridges, navigation, creation, focus, closure, pinning, duplication and window state; query tested; event ordering/multiselect incomplete |
 | Navigation events | Partial / untested semantics | WebKit engine events plus host tab changes; no exhaustive ordering/redirect/frame suite |
@@ -69,7 +69,7 @@ Evidence: [run 35244059174](https://github.com/super-original/serein-browser/act
 
 ## Release blockers
 
-A production compatibility release requires a much broader semantics suite and explicit host/engine gap resolution. Native Safari formats and engine-internal interception are major restrictions. Updating, signature validation, per-site persistent policies, private opt-in, native-host isolation and API coverage are additional unimplemented work. No full custom-engine build/distribution/security-update plan has been proven feasible within the required standard free runner resources.
+A production compatibility release requires a much broader semantics suite and explicit host/engine gap resolution. Native Safari formats and engine-internal interception are major restrictions. Updating, signature validation, private opt-in, native-host isolation and API coverage are additional unimplemented work. No full custom-engine build/distribution/security-update plan has been proven feasible within the required standard free runner resources.
 
 ## Continuation: required permissions and removal
 
@@ -102,7 +102,7 @@ These are capabilities requested by the exact packages, not a claim that every p
 
 ### Host-side permissions continuation
 
-Explicit runtime API and website permission grants, denials, and removals are now captured through public `WKWebExtensionContext` change notifications. Snapshots retain expiration dates and replace initial install grants on reload so revocation cannot silently become a grant again. Old installed records without a snapshot keep their original migration behavior. Tab-scoped `activeTab` gestures are not persisted. Per-site menu changes save immediately; private browsing remains excluded. Controlled tests exercise disk round-trip, revoked API access, restored site denial, and denied content-script injection. CI verification for this follow-up is pending.
+Explicit runtime API and website permission grants, denials, and removals are now captured through public `WKWebExtensionContext` change notifications. Snapshots retain expiration dates and replace initial install grants on reload so revocation cannot silently become a grant again. Old installed records without a snapshot keep their original migration behavior. Tab-scoped `activeTab` gestures are not persisted. Per-site menu changes save immediately; private browsing remains excluded. Controlled tests exercise disk round-trip, revoked API access, restored site denial, and denied content-script injection. Run 36708785208 passed all 73 runtime checks for this follow-up; browser.storage lifecycle checks also remain passing.
 
 ### Resolving the three command-parser failures
 
@@ -114,8 +114,8 @@ Serein now adds only `description: "Activate extension"` to empty, version-appro
 
 | Gap | Feasibility / next implementation boundary |
 |---|---|
-| Empty reserved action-command metadata | Host-side normalization implemented; no permissions removed. Runtime and real-package re-audit pending. |
-| Durable permissions and per-site revocation | Public context dictionaries/notifications permit host implementation; implemented, runtime verification pending. |
+| Empty reserved action-command metadata | Host-side normalization implemented; no permissions removed. Run 36709180847 verified controlled loading and re-audited the seven pinned packages. |
+| Durable permissions and per-site revocation | Public context dictionaries/notifications permit host implementation; implemented and verified in both controlled manifest generations. |
 | Downloads, history, sessions, tabGroups, theme | Browser models can supply much of the underlying behavior, but the inspected macOS 27 public `WKWebExtensionControllerDelegate` exposes no namespace-registration or corresponding API dispatch hook. A complete isolated extension execution/compatibility bridge or custom WebKit integration is needed; adding native browser buttons is insufficient. These are substantial implementation gaps, not proven impossible. |
 | Identity, idle, clipboard access | Potential host services with explicit consent, OAuth/clipboard/privacy semantics and event handling; same missing dispatch boundary. No blanket native access granted. |
 | Offscreen / sidebar / notifications | Current upstream namespace code has build/runtime gates; observed system permission omission cannot be repaired merely by implementing a delegate. A public system API path or a measured custom-WebKit plan must be established first. |

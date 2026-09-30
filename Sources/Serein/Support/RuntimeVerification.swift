@@ -89,9 +89,16 @@ import SereinCore
         session.setKind(second,.pinned);let third=session.newTab(url:fixture)
         _=await wait{session.current?.webView.title=="Field Notes"};await capture("04-pinned-and-normal")
         session.addressFocused=true;await capture("05-address-focused");session.addressFocused=false
-        let workspace=session.state.addWorkspace(name:"Research");session.switchWorkspace(workspace)
+        let workspace=session.addWorkspace(name:"Research")
         session.navigate(fixture);_=await wait{session.current?.webView.title=="Field Notes"};await capture("06-workspace")
         let normalWorkspace=session.state.tabs.first{$0.id==third}!.workspaceID
+        let moved=session.newTab(url:"http://127.0.0.1:8765/second.html")
+        session.moveTabToWorkspace(moved,normalWorkspace)
+        check("workspace-move-updates-address",session.state.selectedTabID != moved && session.address == (session.state.selectedTab?.url == "about:blank" ? "" : session.state.selectedTab?.url))
+        let temporary=session.addWorkspace(name:"Temporary verification workspace")
+        session.removeWorkspace(temporary)
+        check("workspace-removal-updates-selection",!session.state.workspaces.contains{$0.id==temporary} && session.current?.id == session.state.selectedTabID && session.address == (session.state.selectedTab?.url == "about:blank" ? "" : session.state.selectedTab?.url))
+        session.close(moved,ask:false)
         session.switchWorkspace(normalWorkspace);session.select(third);session.state.split(with:second)
         await capture("07-split")
         session.select(second)

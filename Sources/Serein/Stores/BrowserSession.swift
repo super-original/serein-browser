@@ -84,7 +84,26 @@ import SereinCore
         guard let old=state.tabs.firstIndex(where:{$0.id==id}) else{return}
         state.move(id,before:other);extensions?.controller.didMoveTab(bridge(id),from:old,in:extensionWindow)
     }
-    func switchWorkspace(_ id: UUID) {state.switchWorkspace(id);if let tab=state.selectedTabID {select(tab)}}
+    private func changeWorkspace(_ change: (inout BrowserWindowState)->Void) {
+        let previous=state.selectedTabID
+        let oldTabs=Set(state.tabs.map(\.id))
+        change(&state)
+        for tab in state.tabs where !oldTabs.contains(tab.id) {extensions?.controller.didOpenTab(bridge(tab.id))}
+        address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? ""
+        addressFocused=false
+        if let selected=state.selectedTabID {
+            _=runtime(selected).webView
+            if selected != previous {extensions?.controller.didActivateTab(bridge(selected),previousActiveTab:previous.map{bridge($0)})}
+        }
+    }
+    func switchWorkspace(_ id: UUID) {changeWorkspace{$0.switchWorkspace(id)}}
+    @discardableResult func addWorkspace(name: String) -> UUID {
+        var id:UUID!
+        changeWorkspace{id=$0.addWorkspace(name:name)}
+        return id
+    }
+    func removeWorkspace(_ id: UUID) {changeWorkspace{$0.removeWorkspace(id)}}
+    func moveTabToWorkspace(_ id: UUID,_ workspace: UUID) {changeWorkspace{$0.moveToWorkspace(id,workspace)}}
     func find(backwards: Bool = false) {
         let config=WKFindConfiguration();config.backwards=backwards;config.wraps=true
         current?.webView.find(findText,configuration:config) {[weak self] result in self?.findResult=result.matchFound ? "" : "No matches"}
@@ -105,7 +124,7 @@ import SereinCore
         if let window {alert.beginSheetModal(for:window){r in completion(r == .alertFirstButtonReturn)}}
         else {completion(false)}
     }
-    private func canUnload(_ id: UUID) -> Bool {
+    func canUnload(_ id: UUID) -> Bool {
         state.tabs.contains{$0.id==id} && id != state.selectedTabID && id != state.primarySplitTabID && id != state.secondaryTabID
     }
     func unload(_ id: UUID) {

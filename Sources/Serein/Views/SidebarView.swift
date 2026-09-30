@@ -62,7 +62,7 @@ struct SidebarView: View {
                         Button {session.switchWorkspace(space.id)} label:{Image(systemName:space.id==session.state.activeWorkspaceID ? "circle.fill" : "circle").font(.system(size:space.id==session.state.activeWorkspaceID ? 8 : 6))}.buttonStyle(.plain).frame(width:20,height:28).help(space.name).accessibilityLabel("Workspace \(space.name)")
                         .contextMenu {
                             Button("Rename…"){workspaceName=space.name;renamingWorkspace=space.id;creatingWorkspace=true}
-                            if session.state.workspaces.count>1 {Button("Remove Workspace (Keep Tabs)"){session.state.removeWorkspace(space.id)}}
+                            if session.state.workspaces.count>1 {Button("Remove Workspace (Keep Tabs)"){session.removeWorkspace(space.id)}}
                         }
                     }
                     Spacer(minLength:0)
@@ -79,7 +79,7 @@ struct SidebarView: View {
                 TextField("Name",text:$workspaceName).textFieldStyle(.bordered)
                 HStack {Button("Cancel"){creatingWorkspace=false}.keyboardShortcut(.cancelAction);Spacer();Button(renamingWorkspace == nil ? "Create" : "Rename"){
                     if let id=renamingWorkspace,let i=session.state.workspaces.firstIndex(where:{$0.id==id}) {session.state.workspaces[i].name=workspaceName.trimmingCharacters(in:.whitespacesAndNewlines)}
-                    else {let id=session.state.addWorkspace(name:workspaceName);session.switchWorkspace(id)}
+                    else {session.addWorkspace(name:workspaceName)}
                     creatingWorkspace=false
                 }.disabled(workspaceName.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty).keyboardShortcut(.defaultAction)}
             }.padding(24).frame(width:320)
@@ -114,9 +114,9 @@ private struct TabRow: View {
             Button(tab.kind == .pinned ? "Unpin Tab" : "Pin Tab"){session.setKind(tab.id,tab.kind == .pinned ? .regular : .pinned)}
             Button(tab.kind == .essential ? "Remove from Essentials" : "Add to Essentials"){session.setKind(tab.id,tab.kind == .essential ? .regular : .essential)}
             if let home=tab.homeURL {Button("Reset Pinned Tab"){if let url=URL(string:home){session.runtime(tab.id).load(url)}}}
-            Menu("Move to Workspace") {ForEach(session.state.workspaces){space in Button(space.name){session.state.moveToWorkspace(tab.id,space.id)}}}
+            Menu("Move to Workspace") {ForEach(session.state.workspaces){space in Button(space.name){session.moveTabToWorkspace(tab.id,space.id)}}}
             if !session.state.isPrivate {Button("Move to New Window"){session.manager?.moveTab(tab.id,from:session)}}
-            if tab.id != session.state.selectedTabID {Button("Split with Current Tab"){session.state.split(with:tab.id)};Button("Unload Tab…"){session.unload(tab.id)}}
+            if tab.id != session.state.selectedTabID {Button("Split with Current Tab"){session.state.split(with:tab.id)};Button("Unload Tab…"){session.unload(tab.id)}.disabled(!session.canUnload(tab.id))}
             Divider()
             Button("Close Tab"){session.close(tab.id)}
         }

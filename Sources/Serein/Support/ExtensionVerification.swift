@@ -47,6 +47,9 @@ import SereinCore
                 // Persist engine changes, including revocation, without depending on shutdown.
                 guard let live=host.contexts[id] else{throw ExtensionValidationError.invalid("Missing reloaded context")}
                 live.setPermissionStatus(.unknown,for:WKWebExtension.Permission(rawValue:"tabs"))
+                try await Task.sleep(for:.milliseconds(100))
+                let notificationRecords=try JSONDecoder().decode([InstalledExtension].self,from:Data(contentsOf:host.root.appendingPathComponent("extensions.json")))
+                check("\(name)-permission-notification-persists",notificationRecords.first{$0.id==id}?.permissionState?.granted["tabs"] == nil && notificationRecords.first{$0.id==id}?.permissionState != nil)
                 host.setCurrentSite(id,in:session,allow:false)
                 try await Task.sleep(for:.milliseconds(100))
                 let saved=try JSONDecoder().decode([InstalledExtension].self,from:Data(contentsOf:host.root.appendingPathComponent("extensions.json")))
