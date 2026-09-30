@@ -12,7 +12,7 @@ Blocking request interception, Firefox DNS, service-worker lifetime and offscree
 
 ## Measured source inventory, not a build-size claim
 
-The [recorded inventory](evidence/2026-09-30/webkit-source-inventory.json) pins WebKit `131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7`. Selected build-related Git trees contain 1,332,468,145 blob bytes (about 1.24 GiB). Truncated GitHub tree responses were expanded recursively. This excludes Git storage, generated products, dependencies and other directories; it measures neither peak disk/RAM nor build time.
+The [recorded inventory](evidence/2026-09-30/webkit-source-inventory.json) pins WebKit `131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7`. Selected build-related Git trees contain 1,332,468,145 blob bytes (about 1.24 GiB). Truncated GitHub tree responses were expanded recursively. Reproduce with `python3 script/webkit_source_inventory.py --output inventory.json` and authenticated read-only `gh` access. This excludes Git storage, generated products, dependencies and other directories; it measures neither peak disk/RAM nor build time.
 
 [GitHub's standard public-runner table](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) lists the free `xcode-27` preview at 3 ARM64 CPUs, 7 GB RAM and 14 GB storage. A recent Serein job reported approximately 38 GiB free; that observation is not a guaranteed allocation. No paid runner or user-machine installation is permitted.
 
