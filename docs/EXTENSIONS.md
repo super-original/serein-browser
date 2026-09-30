@@ -83,3 +83,19 @@ Removing an extension previously erased data only if a context was currently loa
 Current public WebKit extension-data types cover `browser.storage.local`, `browser.storage.session` and `browser.storage.sync`. Upstream [storage helper source](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/Extensions/WebExtensionController.cpp) explicitly leaves extension-page `window.localStorage`, `window.sessionStorage` and IndexedDB deletion as unfinished work. Serein does not claim comprehensive erasure through this API. The removal confirmation discloses remaining website data; the broader Clear Website Data setting uses the website-data-store API. Targeted per-extension cleanup of those website stores remains a gap.
 
 The same source explains a recoverable test failure: querying `.session` after unloading returns no session store and records an error. Removal now unloads the context and erases the persistent local/synchronized types by UUID, rather than querying the no-longer-loaded session type. Tests verify actual local-storage value reset on reinstall with the same identity; metadata-record disappearance is not used as a substitute.
+
+### Current real-package admission results
+
+[Run 36705846607](https://github.com/super-original/serein-browser/actions/runs/36705846607), commit `b36599d`, audited the same pinned versions/hashes in `Fixtures/extension-catalog.json`. **All seven real packages are currently rejected; none has passed functional compatibility scenarios.**
+
+| Package | Current exact rejection |
+|---|---|
+| uBlock Origin Chromium 1.75.0 | Required `privacy`, `webRequestBlocking` omitted by system WebKit |
+| uBlock Origin Firefox 1.75.0 | WebKit reports empty/invalid command manifest entry |
+| Stylus Chrome 2.4.13 | WebKit reports empty/invalid command manifest entry |
+| Violentmonkey 2.49.0 | WebKit reports empty/invalid command manifest entry |
+| Bitwarden Chrome 2026.9.0 | Required `clipboardRead`, `idle`, `offscreen`, `sidePanel`, `webRequestAuthProvider` omitted |
+| DownThemAll 4.15.1 | Required `downloads`, `downloads.open`, `history`, `sessions`, `theme` omitted |
+| Tab Session Manager 7.4.0 | Required `downloads`, `identity`, `tabGroups` omitted |
+
+These are capabilities requested by the exact packages, not a claim that every package in the same category is impossible to support. Future compatibility code must implement and test missing semantics; removing permission declarations to make installation appear successful would not meet the target.

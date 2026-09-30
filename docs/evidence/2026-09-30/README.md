@@ -17,3 +17,9 @@ The [corrected system probe](https://github.com/super-original/serein-browser/ac
 ![Pinned Zen split focus reference](zen-split.png)
 
 Zen outlines its focused split pane in the accent color. Serein adopts that focus cue; grouped split tabs remain unimplemented. No successful full-fidelity comparison is claimed while system WebKit desktop rendering fails.
+
+| Serein site settings | Native consent sheet |
+|---|---|
+| ![Site permission settings](site-settings.png) | ![Camera permission prompt](permission-prompt.png) |
+
+These two screenshots are from [run 36705846607](https://github.com/super-original/serein-browser/actions/runs/36705846607), source `b36599d`. Both were inspected. Settings use a scrollable native form; camera/microphone rows are visible and further choices continue below. The consent sheet shows both origins and distinct Allow Once, Deny and Always Allow choices. These are real native UI captures, with in-process test responses; no physical camera capture is claimed.

@@ -47,7 +47,7 @@ import AppKit
     @objc func sidebar(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .collapsed ? .expanded : .collapsed}
     @objc func compact(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .compact ? .expanded : .compact;s.compactRevealed=false}
     @objc func split(){guard let s=manager?.active,let other=s.state.visibleTabs.first(where:{$0.id != s.state.selectedTabID}) else{return};s.state.split(with:other.id)}
-    @objc func unsplit(){manager?.active?.state.secondaryTabID=nil}
+    @objc func unsplit(){manager?.active?.state.secondaryTabID=nil;manager?.active?.state.primarySplitTabID=nil}
     @objc func zoomIn(){if let v=manager?.active?.current?.webView{v.pageZoom=min(3,v.pageZoom+0.1)}}
     @objc func zoomOut(){if let v=manager?.active?.current?.webView{v.pageZoom=max(0.3,v.pageZoom-0.1)}}
     @objc func actualSize(){manager?.active?.current?.webView.pageZoom=1}

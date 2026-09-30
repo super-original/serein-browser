@@ -4,7 +4,7 @@ This browser is not complete. A passing build is not a production or extension-c
 
 ## Baseline audit (2026-09-30)
 
-The saved checkout and remote `main` both resolve to `8fcac24225c0cee2dde32ae0b5b8649bc2ee1706`. There were no open or closed PRs and no newer build runs at audit time. The September 17 [run](https://github.com/super-original/serein-browser/actions/runs/35246339695) passed build/unit/package and integration steps but failed **Gate actual desktop rendering**. Its diagnostic artifact has expired; the app artifact is not being preserved as requested. A fresh [baseline run](https://github.com/super-original/serein-browser/actions/runs/36704547843) was requested to obtain current evidence.
+The saved checkout and remote `main` both resolve to `8fcac24225c0cee2dde32ae0b5b8649bc2ee1706`. There were no open or closed PRs and no newer build runs at audit time. The September 17 [run](https://github.com/super-original/serein-browser/actions/runs/35246339695) passed build/unit/package and integration steps but failed **Gate actual desktop rendering**. Its diagnostic artifact has expired; the app artifact is not being preserved as requested. A fresh [baseline run](https://github.com/super-original/serein-browser/actions/runs/36704547843) passed all 43 app scenarios but reproduced the rendering failure on macOS 27 `26A428`.
 
 Implemented code and prior evidence cover navigation, basic tabs/workspaces, two-pane splits, persistence, private data stores, downloads and a limited system-WebKit extension host. See [Zen parity](ZEN_PARITY.md) and [extension scope](EXTENSIONS.md); their partial/unsupported entries remain requirements.
 
@@ -23,3 +23,18 @@ Implemented code and prior evidence cover navigation, basic tabs/workspaces, two
 ## Evidence conventions
 
 CI records runtime/SDK/compiler/architecture and Mach-O deployment target. App integration checks are in-process scenarios, except explicitly labeled native keyboard checks. Capture existence and DOM/title checks do not prove rendered content. The glyph-presence gate detects a blank-page regression; it does not establish Zen fidelity or accessibility. Site-permission store checks do not prove physical camera, microphone or location delivery on a hosted VM.
+
+
+## Verified continuation
+
+[Run 36706449602](https://github.com/super-original/serein-browser/actions/runs/36706449602) tests commit `ea3a4a0d4416c86033ad38094e30ef388ce6e5b1`: **26 unit tests and all 65 actual-app integration checks pass**. Release packaging/signature/deployment checks pass. The overall workflow correctly **fails** the desktop rendering gate (`darkContentPixels: 0`, required >1000).
+
+Verified new scope: exact-origin/capability policy separation, combined media decisions, persistence/reset, private-normal and private-private isolation, native consent-sheet presentation, Allow Once without persistence, stale prompt rejection, split focus/state preservation, required extension permission admission, production disable/remove paths and local-storage reset after reinstalling MV2/MV3 fixtures under the identical UUID. Both fixture counters restart at 1. In-process sheet responses do not establish AX consent automation or physical camera/microphone/location delivery.
+
+The same run's warm-idle diagnostic samples **314.99 MiB summed RSS** and **1.11% interval CPU** over 9 seconds, including the app and WebKit subprocesses. Conditions include the deterministic fixture, several tabs, and a hidden diagnostic WebKit window. RSS may double-count shared memory; CPU includes processes present at both sample endpoints. Failed desktop rendering invalidates a normal browser workload comparison. These are diagnostic measurements, not performance or energy claims.
+
+The [platform probe](https://github.com/super-original/serein-browser/actions/runs/36705841148) proves the same blank-page defect in system Safari and an unhardened WKWebView witness. [All 14 refreshed Zen references](https://github.com/super-original/serein-browser/actions/runs/36705707876) were visually inspected; the same fixture renders in Zen. [Retained inspected comparisons](evidence/2026-09-30/README.md) show the evidence directly.
+
+Native permission settings and consent sheets were inspected, as were focused primary/secondary split outlines. That inspection found an extra titlebar-safe-area inset inside native split panes; a follow-up change removes the nested top safe area and requires another actual capture before calling the geometry fixed.
+
+Full extension compatibility remains unmet: all seven pinned real packages are rejected for exact reasons in [the current matrix](EXTENSIONS.md#current-real-package-admission-results). Safari native/legacy formats and unsupported engine API semantics have not been implemented. Full Zen parity, accessibility states, media/device behavior, crash injection, normal-workload performance and signed/notarized distribution remain release blockers. No claim that independent backlog items are complete is implied by the platform failure.

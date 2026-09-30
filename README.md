@@ -31,4 +31,6 @@ For a contributor who already has Xcode 27 on a separate development machine, th
 
 ⌘L addresses/searches; ⌘T creates a tab; ⌘W closes it; ⇧⌘T reopens it; ⌘N opens a window; ⇧⌘N opens a private window; ⌘F finds text. ⇧⌘S toggles the expanded sidebar; ⌥⌘C toggles compact mode; ⌥⌘S splits with another tab. Tabs have native context menus for pinning, essentials, duplication, movement, unloading, and closing. Workspace controls are at the sidebar's bottom.
 
+Camera, microphone and location choices are available under Browser Menu → Settings → Site Permissions. Choices are scoped to the exact requesting and top-level sites; private-window choices are discarded with that window. Settings changes apply to future requests; reload a page to end an existing grant.
+
 Serein has original branding and source code. Zen's name and reference captures identify the comparison target; no affiliation or endorsement is claimed. See [licenses](docs/LICENSES.md).

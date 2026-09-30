@@ -25,7 +25,10 @@ struct BrowserView: View {
                     if session.state.sidebar == .collapsed {NavigationBar(session:session).padding(.leading,48).frame(height:38)}
                     if session.findVisible {FindBar(session:session)}
                     if let second=session.state.secondaryTabID,let selected=session.state.primarySplitTabID {
-                        HSplitView {PagePane(session:session,id:selected).frame(minWidth:230);PagePane(session:session,id:second).frame(minWidth:230)}
+                        HSplitView {
+                            PagePane(session:session,id:selected).frame(minWidth:230).ignoresSafeArea(.container,edges:.top)
+                            PagePane(session:session,id:second).frame(minWidth:230).ignoresSafeArea(.container,edges:.top)
+                        }
                     } else if let selected=session.state.selectedTabID {PagePane(session:session,id:selected)}
                 }
                 .padding(.vertical,8).padding(.trailing,8)
