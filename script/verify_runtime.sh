@@ -64,6 +64,10 @@ APPLESCRIPT
       suggestion-up) osascript -e 'tell application "System Events" to tell process "Serein" to key code 126' ;;
       suggestion-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
       suggestion-return) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
+      split-divider-drag)
+        read -r SPLIT_X SPLIT_Y SPLIT_END_X SPLIT_END_Y < "$ROOT/split-drag-points"
+        /tmp/serein-pointer "$SPLIT_X" "$SPLIT_Y" "$SPLIT_END_X" "$SPLIT_END_Y" > "$ROOT/split-divider-pointer.log" 2>&1
+        ;;
       glance-option-click)
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
         /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" > "$ROOT/glance-pointer-input.log" 2>&1

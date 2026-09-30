@@ -34,6 +34,8 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     public var primarySplitTabID: UUID?
     // Optional for decoding sessions written before multi-pane support.
     public var additionalSplitTabIDs: [UUID]?
+    // Root, left-column and right-column divider proportions; legacy sessions default to halves.
+    public var splitFractions:[Double]?
     public var sidebar: SidebarMode = .expanded
     public var sidebarWidth: Double = 230
     public var closedTabs: [BrowserTab] = []
@@ -161,15 +163,24 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         return [primarySplitTabID,secondaryTabID]+(additionalSplitTabIDs ?? [])
     }
     public mutating func clearSplit() {
-        primarySplitTabID=nil;secondaryTabID=nil;additionalSplitTabIDs=nil
+        primarySplitTabID=nil;secondaryTabID=nil;additionalSplitTabIDs=nil;splitFractions=nil
     }
     @discardableResult public mutating func setSplitTabs(_ ids:[UUID]) -> Bool {
         guard (2...4).contains(ids.count),Set(ids).count==ids.count,
               ids.allSatisfy({id in visibleTabs.contains{$0.id==id}}) else{return false}
+        if splitTabIDs != ids {splitFractions=nil}
         primarySplitTabID=ids[0];secondaryTabID=ids[1]
         additionalSplitTabIDs=ids.count>2 ? Array(ids.dropFirst(2)) : nil
         if !ids.contains(where:{$0==selectedTabID}) {selectedTabID=ids[0]}
         return true
+    }
+    public func splitFraction(at index:Int)->Double {
+        guard let values=splitFractions,values.indices.contains(index),values[index].isFinite else{return 0.5}
+        return min(0.9,max(0.1,values[index]))
+    }
+    public mutating func setSplitFraction(_ value:Double,at index:Int) {
+        guard (0..<3).contains(index),splitTabIDs.count>=2,value.isFinite else{return}
+        var values=(0..<3).map{splitFraction(at:$0)};values[index]=min(0.9,max(0.1,value));splitFractions=values
     }
     private mutating func removeSplitTab(_ id:UUID) {
         let ids=splitTabIDs
@@ -195,6 +206,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
             if let opener=tabs[i].openerTabID,opener==tabs[i].id || !knownTabs.contains(opener) {tabs[i].openerTabID=nil}
         }
         repairGlances();repairFolders()
+        if splitFractions != nil {splitFractions=(0..<3).map{splitFraction(at:$0)}}
         sidebarWidth=min(500,max(180,sidebarWidth.isFinite ? sidebarWidth : 240))
         if !visibleTabs.contains(where:{$0.id==sidebarSelectedTabID}) {selectedTabID=visibleTabs.first?.id}
         if selectedTabID==nil {newTab()}

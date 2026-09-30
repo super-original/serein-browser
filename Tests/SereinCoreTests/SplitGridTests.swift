@@ -49,4 +49,22 @@ final class SplitGridTests:XCTestCase {
         state.additionalSplitTabIDs=[a,UUID(),c,d]
         state.repair();XCTAssertEqual(state.splitTabIDs,[a,b,c,d])
     }
+    func testDividerFractionsSurviveSessionButResetForNewComposition() throws {
+        var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab(),c=state.newTab()
+        XCTAssertTrue(state.setSplitTabs([a,b]));state.setSplitFraction(0.37,at:0)
+        let restored=try SavedSession.decode(SavedSession(windows:[state]).encoded()).windows[0]
+        XCTAssertEqual(restored.splitFraction(at:0),0.37)
+        XCTAssertTrue(state.setSplitTabs([a,b]));XCTAssertEqual(state.splitFraction(at:0),0.37)
+        XCTAssertTrue(state.setSplitTabs([a,b,c]));XCTAssertEqual(state.splitFraction(at:0),0.5)
+        state.clearSplit();XCTAssertNil(state.splitFractions)
+    }
+    func testDividerRepairBoundsInvalidAndLegacyValues() {
+        var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab();state.setSplitTabs([a,b])
+        XCTAssertEqual(state.splitFraction(at:0),0.5)
+        state.splitFractions=[.nan,-5,5,0.2];state.repair()
+        XCTAssertEqual(state.splitFractions,[0.5,0.1,0.9])
+        state.setSplitFraction(.infinity,at:0);state.setSplitFraction(0.2,at:-1)
+        XCTAssertEqual(state.splitFractions,[0.5,0.1,0.9])
+    }
+
 }
