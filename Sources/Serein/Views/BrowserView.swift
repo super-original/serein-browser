@@ -26,8 +26,8 @@ struct BrowserView: View {
                     if session.findVisible {FindBar(session:session)}
                     if let second=session.state.secondaryTabID,let selected=session.state.primarySplitTabID {
                         HSplitView {
-                            PagePane(session:session,id:selected).frame(minWidth:230).ignoresSafeArea(.container,edges:.top)
-                            PagePane(session:session,id:second).frame(minWidth:230).ignoresSafeArea(.container,edges:.top)
+                            PagePane(session:session,id:selected).frame(minWidth:230).padding(.top,8).ignoresSafeArea(.container,edges:.top)
+                            PagePane(session:session,id:second).frame(minWidth:230).padding(.top,8).ignoresSafeArea(.container,edges:.top)
                         }
                     } else if let selected=session.state.selectedTabID {PagePane(session:session,id:selected)}
                 }
