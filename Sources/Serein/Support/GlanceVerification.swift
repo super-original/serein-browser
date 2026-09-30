@@ -134,8 +134,9 @@ import WebKit
         let currentParent=session.runtime(owner).webView
         window.makeKeyAndOrderFront(nil)
         await wait{currentParent.window === window && currentParent.bounds.width>200 && currentParent.bounds.height>200 && currentParent.url?.query=="glance-owner" && !currentParent.isLoading}
+        check("reopened-owner-attaches-to-window",currentParent.window === window && currentParent.bounds.width>200,"frame=\(currentParent.frame)")
         let externalPoint=try? await currentParent.evaluateJavaScript("(()=>{const a=document.querySelector('a[target]');a.href='http://localhost:8765/second.html?external-glance';a.scrollIntoView({block:'center'});const r=a.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()") as? [String:Double]
-        if let externalPoint,let x=externalPoint["x"],let y=externalPoint["y"],let screen=NSScreen.screens.first {
+        if currentParent.window === window,currentParent.bounds.width>200,let externalPoint,let x=externalPoint["x"],let y=externalPoint["y"],let screen=NSScreen.screens.first {
             window.makeKeyAndOrderFront(nil)
             let local=NSPoint(x:x,y:currentParent.isFlipped ? y : currentParent.bounds.height-y)
             let location=window.convertPoint(toScreen:currentParent.convert(local,to:nil))

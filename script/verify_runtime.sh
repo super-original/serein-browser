@@ -55,6 +55,11 @@ APPLESCRIPT
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
         /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" plain > "$ROOT/glance-external-pointer-input.log" 2>&1
         ;;
+      fullscreen-enter)
+        read -r FULLSCREEN_X FULLSCREEN_Y < "$ROOT/fullscreen-click-point"
+        /tmp/serein-pointer "$FULLSCREEN_X" "$FULLSCREEN_Y" plain > "$ROOT/fullscreen-pointer-input.log" 2>&1
+        ;;
+      fullscreen-exit) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;
       glance-next-tab) osascript -e 'tell application "System Events" to tell process "Serein" to key code 48 using control down' ;;
       glance-previous-tab) osascript -e 'tell application "System Events" to tell process "Serein" to key code 48 using {control down, shift down}' ;;
       glance-escape) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' ;;

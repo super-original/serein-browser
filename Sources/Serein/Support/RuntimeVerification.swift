@@ -296,6 +296,7 @@ import SereinCore
         try? Data().write(to:root.appendingPathComponent("idle-end"))
         results += await SplitGridVerification.run(manager:manager,root:root)
         results += await GlanceVerification.run(manager:manager,root:root)
+        results += await FullscreenVerification.run(manager:manager,root:root)
         results += await WindowConsentVerification.run(manager:manager)
         session.window?.makeKeyAndOrderFront(nil)
         results += await SitePermissionVerification.run(session:session,root:root)

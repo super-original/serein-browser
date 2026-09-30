@@ -60,7 +60,7 @@ struct PagePane: View {
     var body: some View {
         let runtime=session.runtime(id)
         ZStack {
-            WebContentView(runtime:runtime).id("\(id)-\(runtime.viewRevision)")
+            WebContentView(runtime:runtime).id(runtime.viewRevision).id(ObjectIdentifier(runtime))
             if session.state.tabs.first(where:{$0.id==id})?.url=="about:blank" {
                 VStack(spacing:12) {
                     Image(systemName:session.state.isPrivate ? "hand.raised" : "sparkle").font(.system(size:32,weight:.light))
