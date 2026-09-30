@@ -137,6 +137,13 @@ import SereinCore
                 session.current!.webView.reload();try await Task.sleep(for:.seconds(1))
                 let disabled=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 check("\(name)-disable-stops-injection",disabled is NSNull)
+                // Reinstallation may inject into an already loaded matching page.
+                // Leave the probe document first so the reset counter has one producer.
+                session.navigate("about:blank",ask:false)
+                for _ in 0..<50 {
+                    if session.current?.webView.url?.absoluteString=="about:blank",session.current?.isLoading==false {break}
+                    try await Task.sleep(for:.milliseconds(100))
+                }
                 await host.remove(id)
                 let remaining=await host.controller.dataRecords(ofTypes:WKWebExtensionController.allExtensionDataTypes.subtracting([.session]))
                 check("\(name)-remove-disabled-data-errors",remaining.filter{$0.uniqueIdentifier==id.uuidString}.allSatisfy{$0.errors.isEmpty},"WebKit can retain an empty metadata record after removing storage.")
@@ -146,7 +153,7 @@ import SereinCore
                 // the same identity and prove the old storage counter is gone.
                 try host.prepare(source,at:target)
                 try await host.load(granted);host.records.append(granted)
-                session.current!.webView.reload()
+                session.navigate("http://127.0.0.1:8765/index.html?extension=\(name)-denied")
                 var resetCount:Int?
                 for _ in 0..<50 {
                     try await Task.sleep(for:.milliseconds(100))

@@ -1,6 +1,9 @@
+// Permission changes/reloads can overlap content-script probes.
+// Serialize this fixture's destructive lifecycle scenario, not browser events.
+let probeQueue = Promise.resolve();
 browser.runtime.onMessage.addListener((message, sender, reply) => {
   if (message.type !== 'probe') return false;
-  (async () => {
+  probeQueue = probeQueue.then(async () => {
     const previous = await browser.storage.local.get('count');
     const count = (previous.count || 0) + 1;
     await browser.storage.local.set({count});
@@ -51,6 +54,6 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
     }
     const tabs = await browser.tabs.query({});
     reply({ok:true,count,tabsHighlightAvailable:typeof browser.tabs.highlight === "function",tabLifecycle,selectionDiagnostics,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
-  })().catch(error => reply({ok:false,error:String(error)}));
+  }).catch(error => reply({ok:false,error:String(error)}));
   return true;
 });
