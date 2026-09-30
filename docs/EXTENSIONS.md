@@ -20,13 +20,14 @@
 |---|---|---|
 | Install / validate | Implemented, partial formats | Path, duplicate, size, symlink and manifest checks; omitted required API permissions reject installation/restore with an explicit list; source consent; CRX3 signature verification tested, no XPI publisher-signature validation |
 | Enable / disable / remove | Partial | Fixture disable stops injection; installed records persist; disabled-extension removal now erases data by durable identity; production disable/remove and same-identity storage-reset checks pass for controlled MV2/MV3 fixtures |
-| Updates | Partial | Reviewed local same-developer CRX3 updates; storage/identity/denials verified; options refresh and native cross-origin history verified. No automatic store or unsigned/XPI update protocol |
+| Updates | Partial | Reviewed local same-developer CRX3 updates; storage/identity/denials verified; options refresh and native cross-origin navigation exercised, but repeated context recovery/history is still failing. No automatic store or unsigned/XPI update protocol |
 | Permissions / host access | Partial | Install prompts; fixture denied hosts do not inject; runtime permission prompts; persistent explicit grants, denials, revocations and per-site overrides |
 | Private access | Unsupported by policy in this build | No extension controller in private web views; no opt-in UI |
 | Tabs / windows | Partial | Native bridges, navigation, creation, focus, closure, pinning, duplication and window state; per-tab highlighted update/query/events tested; batch `tabs.highlight` absent; exhaustive ordering/concurrency unverified |
+| Tab zoom | Partial / unsupported event | Native setter and public notification hook implemented; `tabs.onZoomChange` is absent in both tested backgrounds. Set/get/reset verified at `f3757e9`; modes/scopes and per-site persistence unimplemented |
 | Navigation events | Partial / untested semantics | WebKit engine events plus host tab changes; no exhaustive ordering/redirect/frame suite |
 | Content scripts / isolated worlds | Partially verified | Controlled DOM injection succeeds after grant; page cannot see extension-global variable |
-| Frames / dynamic scripting | Untested | No nested-frame, origin-inheritance or executeScript conformance suite |
+| Frames / dynamic scripting | Verification pending | Added same-origin and unrequested-origin iframe/isolated-world fixtures; nested-frame origin inheritance and executeScript conformance remain untested |
 | MV2 persistent backgrounds | Partially verified | Message → storage → tabs query → response exercised |
 | MV3 service workers | Partially verified | Same controlled path; suspension, restart and queued-event semantics not established |
 | Runtime messaging | Partially verified | One-shot content-to-background messaging; ports/cross-extension semantics untested |
@@ -86,14 +87,14 @@ The same source explains a recoverable test failure: querying `.session` after u
 
 ### Current real-package admission results
 
-[Run 36705846607](https://github.com/super-original/serein-browser/actions/runs/36705846607), commit `b36599d`, audited the same pinned versions/hashes in `Fixtures/extension-catalog.json`. **All seven real packages are currently rejected; none has passed functional compatibility scenarios.**
+[Run 36746894298](https://github.com/super-original/serein-browser/actions/runs/36746894298), commit `17c03c2`, re-audited the pinned versions/hashes in `Fixtures/extension-catalog.json` after reserved-command normalization. **All seven real packages are currently rejected; none has passed functional compatibility scenarios.**
 
 | Package | Current exact rejection |
 |---|---|
 | uBlock Origin Chromium 1.75.0 | Required `privacy`, `webRequestBlocking` omitted by system WebKit |
-| uBlock Origin Firefox 1.75.0 | WebKit reports empty/invalid command manifest entry |
-| Stylus Chrome 2.4.13 | WebKit reports empty/invalid command manifest entry |
-| Violentmonkey 2.49.0 | WebKit reports empty/invalid command manifest entry |
+| uBlock Origin Firefox 1.75.0 | Required `dns`, `privacy`, `webRequestBlocking` omitted |
+| Stylus Chrome 2.4.13 | Required `identity`, `idle`, `offscreen`, `sidePanel`, `webRequestBlocking` omitted |
+| Violentmonkey 2.49.0 | Required `webRequestBlocking` omitted |
 | Bitwarden Chrome 2026.9.0 | Required `clipboardRead`, `idle`, `offscreen`, `sidePanel`, `webRequestAuthProvider` omitted |
 | DownThemAll 4.15.1 | Required `downloads`, `downloads.open`, `history`, `sessions`, `theme` omitted |
 | Tab Session Manager 7.4.0 | Required `downloads`, `identity`, `tabGroups` omitted |
@@ -177,3 +178,11 @@ Resource navigation follow-up: host origin handoffs now preflight MV2/MV3 web-ac
 Native zoom controls and the public extension tab delegate now use the same setter and report `.zoomFactor` changes to WebKit. Zero restores Serein’s default factor of 1; invalid/nonfinite factors and missing tabs return an error instead of reporting success. Controlled MV2/MV3 checks exercise 1.25 set/get, zero reset, and old/new values in `tabs.onZoomChange`. These changes await exact-head runtime evidence. Per-origin zoom persistence, zoom settings modes/scopes, and complete cross-browser range differences are not implemented or claimed. See [Firefox setZoom contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/setZoom) and [Chrome zoom event contract](https://developer.chrome.com/docs/extensions/reference/api/tabs#event-onZoomChange).
 
 Run [36746894298](https://github.com/super-original/serein-browser/actions/runs/36746894298) at `17c03c2` establishes that `tabs.onZoomChange` is **undefined** in both system-WebKit background environments, despite the public native `.zoomFactor` notification hook. That unsupported event is now isolated from other lifecycle tests, with a failing compatibility assertion retained. Set/get/reset were not reached in that run and are not yet verified.
+
+The inspected [upstream tabs interface](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/WebProcess/Extensions/Interfaces/WebExtensionAPITabs.idl) exposes `getZoom`/`setZoom` but has no `onZoomChange` event member. This corroborates the observed gap, without treating upstream main as the shipped system implementation. A native property notification alone cannot install a missing JavaScript namespace member; no public namespace-registration hook has been established.
+
+### Subframe boundary fixtures (verification pending)
+
+Both controlled generations declare a separate `all_frames` script for the permitted loopback host. A deterministic parent loads same-origin `127.0.0.1` and unrequested `localhost` children. Reports are accepted only from the expected frame window and origin; checks require permitted-frame injection, no unrequested-frame marker, and no extension-global visibility in page JavaScript. No third-party extension packages or credentials are involved. These are HTTP iframe/isolated-world checks, not comprehensive sandbox, nested-frame, `about:blank`, `srcdoc`, or dynamic-injection conformance. [Content-script frame and world semantics](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts#specify-frames).
+
+At `f3757e9`, [run 36747921197](https://github.com/super-original/serein-browser/actions/runs/36747921197), both MV2/MV3 zoom set/get (1.25) and zero reset to 1 pass. Both zoom-event assertions fail as expected for the missing interface; unrelated lifecycle scenarios run again and pass. No event polyfill or full zoom-settings compatibility is claimed.

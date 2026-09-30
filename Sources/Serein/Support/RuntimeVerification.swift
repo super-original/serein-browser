@@ -211,6 +211,7 @@ import SereinCore
         session.close(closing){closeResult=$0}
         let closeSheet=session.window?.attachedSheet
         check("edited-close-waits-for-consent",closeSheet != nil && closeResult==nil)
+        await capture("27-edited-close-confirmation")
         closingRuntime.load(URL(string:fixture+"?replacement-before-close")!)
         if let closeSheet {session.window?.endSheet(closeSheet,returnCode:.alertFirstButtonReturn)}
         _=await wait{closeResult != nil}

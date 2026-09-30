@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>Frame boundary fixture</title>
+<iframe id="allowed" src="http://127.0.0.1:8765/frame-child.html"></iframe>
+<iframe id="outside" src="http://localhost:8765/frame-child.html"></iframe>
+<script>
+window.frameEvidence={};
+addEventListener('message',event=>{
+  for(const id of ['allowed','outside']) {
+    const frame=document.getElementById(id);
+    const origin=id==='allowed'?'http://127.0.0.1:8765':'http://localhost:8765';
+    if(event.source===frame.contentWindow && event.origin===origin && event.data?.type==='serein-frame')
+      window.frameEvidence[id]=event.data;
+  }
+});
+</script>

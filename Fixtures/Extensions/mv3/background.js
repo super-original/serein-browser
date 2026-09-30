@@ -15,6 +15,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
     browser.tabs.onCreated.addListener(onCreated);
     browser.tabs.onRemoved.addListener(onRemoved);
     let created, duplicate, tabLifecycle, selectionDiagnostics;
+    let zoomDiagnostic="";
     let highlightedEvent = false;
     const onHighlighted = info => {if (created && duplicate && info.tabIds.includes(created.id) && info.tabIds.includes(duplicate.id)) highlightedEvent = true;};
     browser.tabs.onHighlighted.addListener(onHighlighted);
@@ -25,11 +26,13 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       const copied = await browser.tabs.get(duplicate.id);
       let zoomSet=false, zoomReset=false;
       if (typeof browser.tabs.setZoom === 'function' && typeof browser.tabs.getZoom === 'function') {
-        await browser.tabs.setZoom(created.id, 1.25);
-        zoomSet = await browser.tabs.getZoom(created.id) === 1.25;
-        await browser.tabs.setZoom(created.id, 0);
-        zoomReset = await browser.tabs.getZoom(created.id) === 1;
-      }
+        try {
+          await browser.tabs.setZoom(created.id, 1.25);
+          zoomSet = await browser.tabs.getZoom(created.id) === 1.25;
+          await browser.tabs.setZoom(created.id, 0);
+          zoomReset = await browser.tabs.getZoom(created.id) === 1;
+        } catch (error) { zoomDiagnostic=String(error); }
+      } else { zoomDiagnostic="setZoom or getZoom is missing"; }
 
       // This system WebKit omits tabs.highlight. Exercise the supported
       // per-tab update path separately, without claiming that API exists.
@@ -64,7 +67,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
       }
     }
     const tabs = await browser.tabs.query({});
-    reply({ok:true,count,tabsHighlightAvailable:typeof browser.tabs.highlight === "function",tabLifecycle,selectionDiagnostics,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
+    reply({ok:true,count,tabsHighlightAvailable:typeof browser.tabs.highlight === "function",tabLifecycle,selectionDiagnostics,zoomDiagnostic,tabCount:tabs.length,senderTab:typeof sender.tab?.id === 'number'});
   }).catch(error => reply({ok:false,error:String(error)}));
   return true;
 });

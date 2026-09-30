@@ -39,7 +39,7 @@ import WebKit
             for _ in 0..<50 {
                 do {
                     let text=try await view.evaluateJavaScript("document.body?.innerText ?? ''") as? String
-                    if let text,text=="Version "+version {return (true,text)}
+                    if let text,text=="Version "+version,!view.isLoading {return (true,text)}
                     detail=text ?? "non-string document"
                 } catch{detail=error.localizedDescription}
                 try? await Task.sleep(for:.milliseconds(100))
@@ -48,7 +48,8 @@ import WebKit
         }
         do {
             var base:URL?
-            for phase in ["fresh", "reload", "restricted-reload"] {
+            var history:Any?
+            for phase in ["fresh", "reload", "history-reload", "warm-history-reload", "restricted-reload"] {
                 let ext=try await WKWebExtension(resourceBaseURL:directory)
                 let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=identifier
                 if let base {context.baseURL=base}
@@ -59,8 +60,19 @@ import WebKit
                 try controller.load(context);loaded=context;base=context.baseURL
                 guard let configuration=context.webViewConfiguration,let url=context.optionsPageURL else{throw NSError(domain:"ExtensionReloadProbe",code:1)}
                 var view:WKWebView?=WKWebView(frame:.zero,configuration:configuration)
-                view!.load(url)
+                if phase=="history-reload",let history {
+                    view!.interactionState=history
+                } else {
+                    view!.load(url)
+                    if phase=="warm-history-reload",let history {
+                        let preload=await document(view!)
+                        results.append(.init(name:"isolated-extension-history-preload",passed:preload.0,detail:preload.1))
+                        view!.interactionState=history
+                    }
+                }
+                try? await Task.sleep(for:.milliseconds(200))
                 let result=await document(view!)
+                if phase=="fresh",result.0 {history=view!.interactionState}
                 results.append(.init(name:"isolated-extension-"+phase+"-options",passed:result.0,detail:result.1+" ownOriginPermission=\(context.permissionStatus(for:url).rawValue) errors="+context.errors.map(\.localizedDescription).joined(separator:"; ")))
                 view?.stopLoading();view=nil
                 try controller.unload(context);loaded=nil

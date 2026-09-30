@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>Frame child fixture</title><p>Frame boundary.</p>
+<script>
+let attempts=0;
+const timer=setInterval(()=>{
+  parent.postMessage({type:'serein-frame',marker:document.documentElement.dataset.sereinFrame || '',pageSecret:typeof window.sereinFrameSecret},'http://127.0.0.1:8765');
+  if(++attempts===30) clearInterval(timer);
+},100);
+</script>

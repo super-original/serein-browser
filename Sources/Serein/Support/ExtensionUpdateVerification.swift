@@ -160,11 +160,10 @@ import SereinCore
                 "url=\(String(describing:runtime.loadedWebView?.url)) saved=\(session.state.tabs.first{$0.id==runtime.id}?.url ?? "missing") title=\(runtime.title) failure=\(runtime.failure ?? "none") loading=\(runtime.isLoading) revision=\(runtime.viewRevision)"
             }
             check("open-options-refresh-after-reenable",refreshed,diagnostic(optionsRuntime))
-            if !refreshed {
+            func captureRecoveryError(_ capture:String) async throws {
                 let selected=session.state.selectedTabID
                 session.select(optionsTab)
                 try await Task.sleep(for:.milliseconds(300))
-                let capture="25-extension-recovery-error"
                 try capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
                 for _ in 0..<100 {
                     if FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path){break}
@@ -172,6 +171,7 @@ import SereinCore
                 }
                 if let selected {session.select(selected)}
             }
+            if !refreshed {try await captureRecoveryError("25-extension-recovery-error")}
             var restoredText:String?
             for _ in 0..<50 {
                 restoredText=try? await restoredOptionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
@@ -179,15 +179,19 @@ import SereinCore
                 try await Task.sleep(for:.milliseconds(100))
             }
             check("unavailable-options-retry-after-context-load",restoredText=="Version 1.2",(restoredText ?? "no document")+" "+diagnostic(restoredOptionsRuntime))
+            var lastRecoveryFailed=false
             let historyCount=optionsRuntime.webView.backForwardList.backList.count
             for cycle in 1...3 {
                 await host.setEnabled(id,false)
                 await host.setEnabled(id,true)
                 guard let latest=host.contexts[id] else{throw ExtensionValidationError.invalid("Context did not return during reload cycle")}
                 restored=latest
-                check("repeat-options-recovery-\(cycle)",await waitForOptions("Version 1.2"),diagnostic(optionsRuntime))
+                let recovered=await waitForOptions("Version 1.2")
+                lastRecoveryFailed = !recovered
+                check("repeat-options-recovery-\(cycle)",recovered,diagnostic(optionsRuntime))
                 check("repeat-options-history-count-\(cycle)",optionsRuntime.webView.backForwardList.backList.count==historyCount,"before=\(historyCount) after=\(optionsRuntime.webView.backForwardList.backList.count)")
             }
+            if lastRecoveryFailed {try await captureRecoveryError("28-final-extension-recovery-error")}
             results += await ExtensionReloadProbe.inspectHost(context:restored,dataStore:session.dataStore,version:"1.2")
             session.close(optionsTab,ask:false);session.close(restoredOptionsTab,ask:false)
             check("revocation-and-site-denial-preserved", !restored.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) && restored.permissionStatus(for: site) == .deniedExplicitly)
