@@ -42,6 +42,10 @@ import SereinCore
         }
         do {
             guard let before = host.records.first(where: { $0.id == id }), let originalContext = host.contexts[id] else { throw ExtensionValidationError.invalid("Signed fixture is not installed") }
+            var previousRequests = before; previousRequests.permissions = []; previousRequests.hosts = []
+            let expired = ExtensionPermissionState(granted: [:], denied: ["storage": .distantPast], grantedHosts: [:], deniedHosts: ["http://127.0.0.1/*": .distantPast])
+            let merged = try expired.updating(from: previousRequests, to: originalContext.webExtension)
+            check("expired-denials-do-not-block-reviewed-grants", merged.denied.isEmpty && merged.deniedHosts.isEmpty && merged.granted["storage"] != nil && !merged.grantedHosts.isEmpty)
             let broad = try WKWebExtension.MatchPattern(string: "*://*/*")
             let narrow = try WKWebExtension.MatchPattern(string: "https://example.test/*")
             check("host-scope-containment", broad.matches(narrow) && !narrow.matches(broad))
@@ -70,22 +74,49 @@ import SereinCore
             check("cancel-preserves-package", !cancelled && host.records.first(where: { $0.id == id })?.version == "1.0" && host.contexts[id] === originalContext)
             guard let options = originalContext.optionsPageURL else { throw ExtensionValidationError.invalid("Fixture options page unavailable") }
             let optionsTab = session.newTab(url: options.absoluteString, select: false)
-            let optionsView = session.runtime(optionsTab).webView
+            let optionsRuntime = session.runtime(optionsTab)
+            let optionsView = optionsRuntime.webView
             for _ in 0..<50 {
                 if optionsView.title == "Signed extension options" { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
+            let initialOptions = try? await optionsView.evaluateJavaScript("document.body.innerText") as? String
+            check("initial-options-document", initialOptions == "Version 1.0", initialOptions ?? "no document")
             let updated = try await apply("signed-update.crx", accept: true, capture: "23-signed-update-consent")
             check("new-version-loaded", updated && host.records.first(where: { $0.id == id })?.version == "1.1" && host.contexts[id] != nil, host.error ?? "")
             let preserved = try await state(version: "1.1")
             check("identity-and-storage-preserved", host.contexts[id]?.uniqueIdentifier == before.runtimeIdentifier && preserved)
             var optionText: String?
             for _ in 0..<50 {
-                optionText = try? await optionsView.evaluateJavaScript("document.body.innerText") as? String
+                optionText = try? await optionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
                 if optionText == "Version 1.1" { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
             check("resource-origin-and-open-page-preserved", host.contexts[id]?.baseURL == originalContext.baseURL && optionText == "Version 1.1", optionText ?? "no options document")
+            func waitForOptions(_ expected:String) async -> Bool {
+                for _ in 0..<50 {
+                    if let text=try? await optionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String,text==expected{return true}
+                    try? await Task.sleep(for:.milliseconds(100))
+                }
+                return false
+            }
+            let ordinary=URL(string:"http://127.0.0.1:8765/index.html?options-history=1")!
+            optionsRuntime.load(ordinary)
+            for _ in 0..<50 {
+                if optionsRuntime.webView.url==ordinary,!optionsRuntime.webView.isLoading{break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("options-to-ordinary-document",optionsRuntime.webView.url==ordinary && optionsRuntime.webView.title != "Signed extension options")
+            optionsRuntime.goBack()
+            check("back-to-options-document",await waitForOptions("Version 1.1"))
+            optionsRuntime.goForward()
+            for _ in 0..<50 {
+                if optionsRuntime.webView.url==ordinary,!optionsRuntime.webView.isLoading{break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("forward-to-ordinary-document",optionsRuntime.webView.url==ordinary)
+            optionsRuntime.load(options)
+            check("ordinary-to-options-document",await waitForOptions("Version 1.1"))
             session.close(optionsTab, ask: false)
             check("new-permission-consented", host.contexts[id]?.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) == true)
             check("old-package-cleaned-after-commit", !FileManager.default.fileExists(atPath: before.directory(in: host.root).path))

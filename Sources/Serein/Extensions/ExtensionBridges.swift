@@ -63,8 +63,8 @@ import SereinCore
         session?.runtime(id).load(url);completionHandler(nil)
     }
     func reload(fromOrigin: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {if fromOrigin {session?.runtime(id).webView.reloadFromOrigin()} else {session?.runtime(id).webView.reload()};completionHandler(nil)}
-    func goBack(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).webView.goBack();completionHandler(nil)}
-    func goForward(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).webView.goForward();completionHandler(nil)}
+    func goBack(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).goBack();completionHandler(nil)}
+    func goForward(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).goForward();completionHandler(nil)}
     func close(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.close(id);completionHandler(nil)}
     func duplicate(using configuration: WKWebExtension.TabConfiguration,for context: WKWebExtensionContext,completionHandler: @escaping ((any WKWebExtensionTab)?,(any Error)?)->Void) {
         guard let session,let tab else{completionHandler(nil,ExtensionValidationError.invalid("The tab no longer exists."));return}

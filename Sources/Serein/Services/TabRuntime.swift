@@ -18,14 +18,30 @@ import SereinCore
     private(set) var documentID=UUID()
     @ObservationIgnored weak var session: BrowserSession?
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
-    @ObservationIgnored private let initialConfiguration: WKWebViewConfiguration?
+    @ObservationIgnored private var initialConfiguration: WKWebViewConfiguration?
     @ObservationIgnored private var storedView: WKWebView?
     @ObservationIgnored private var editBridge: EditBridge?
     @ObservationIgnored private var permittedFileRoot: URL?
+    private(set) var viewRevision=0
+    @ObservationIgnored private var configurationContext: WKWebExtensionContext?
     var loadedWebView:WKWebView? {storedView}
     var webView: WKWebView {
         if let storedView {return storedView}
-        let config=initialConfiguration ?? WKWebViewConfiguration()
+        let url=session?.state.tabs.first(where:{$0.id==id}).flatMap{URL(string:$0.url)}
+        let view=makeView(for:url)
+        if let url,url.absoluteString != "about:blank" {view.load(url)}
+        return view
+    }
+    private func makeView(for url:URL?) -> WKWebView {
+        let context=url.flatMap{session?.extensions?.controller.extensionContext(for:$0)}
+        configurationContext=context
+        let config=context?.webViewConfiguration ?? initialConfiguration ?? WKWebViewConfiguration()
+        initialConfiguration=nil
+        // Context configurations may share a user-content controller. Keep this tab's
+        // native message handler private to its view without altering engine settings.
+        let content=WKUserContentController()
+        for script in config.userContentController.userScripts {content.addUserScript(script)}
+        config.userContentController=content
         if let session {config.websiteDataStore=session.dataStore;config.webExtensionController=session.extensions?.controller}
         config.preferences.isElementFullscreenEnabled=true
         config.preferences.javaScriptCanOpenWindowsAutomatically=false
@@ -36,16 +52,36 @@ import SereinCore
         view.wantsLayer=true
         view.navigationDelegate=self;view.uiDelegate=self;view.allowsBackForwardNavigationGestures=true
         observations=[view.observe(\.title,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.url,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.isLoading,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.estimatedProgress,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}}]
-        if let tab=session?.state.tabs.first(where:{$0.id==id}),let url=URL(string:tab.url),tab.url != "about:blank" {view.load(url)}
         return view
     }
     init(id: UUID, session: BrowserSession, configuration: WKWebViewConfiguration? = nil) {self.id=id;self.session=session;initialConfiguration=configuration;super.init()}
-    func load(_ url: URL) {documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false;webView.load(url)}
-    func reload() {if let failedURL {if failedURL.isFileURL {openFile(failedURL)} else {load(failedURL)}} else {webView.reload()}}
+    private func view(for url:URL) -> WKWebView {
+        let current=webView
+        let context=session?.extensions?.controller.extensionContext(for:url)
+        guard configurationContext !== context else{return current}
+        let state=current.interactionState
+        dispose()
+        let replacement=makeView(for:url)
+        replacement.interactionState=state
+        viewRevision += 1
+        return replacement
+    }
+    func load(_ url: URL) {
+        let view=view(for:url)
+        documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false;view.load(url)
+    }
+    func goBack(){traverse(-1)}
+    func goForward(){traverse(1)}
+    private func traverse(_ offset:Int) {
+        guard let item=webView.backForwardList.item(at:offset) else{return}
+        let view=view(for:item.url)
+        if let restored=view.backForwardList.item(at:offset){view.go(to:restored)}
+    }
+    func reload() {if let failedURL {if failedURL.isFileURL {openFile(failedURL)} else {load(failedURL)}} else if let url=storedView?.url ?? session?.state.tabs.first(where:{$0.id==id}).flatMap({URL(string:$0.url)}) {view(for:url).reloadFromOrigin()} else {webView.reload()}}
     func openFile(_ url:URL) {
         let root=url.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
         permittedFileRoot=root;documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false
-        webView.loadFileURL(url,allowingReadAccessTo:root)
+        view(for:url).loadFileURL(url,allowingReadAccessTo:root)
     }
     func synchronize() {
         guard let view=storedView else{return}
@@ -65,14 +101,15 @@ import SereinCore
     func userContentController(_ userContentController: WKUserContentController,didReceive message: WKScriptMessage) {runtime?.hasUserEdits=true}
 }
 extension TabRuntime: WKNavigationDelegate {
-    func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {documentID=UUID();failedURL=nil;failure=nil;crashed=false;synchronize()}
-    func webView(_ webView: WKWebView,didCommit navigation: WKNavigation!) {provisionalURL=nil;failedURL=nil;hasUserEdits=false;synchronize()}
+    func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {guard webView === storedView else{return};documentID=UUID();failedURL=nil;failure=nil;crashed=false;synchronize()}
+    func webView(_ webView: WKWebView,didCommit navigation: WKNavigation!) {guard webView === storedView else{return};provisionalURL=nil;failedURL=nil;hasUserEdits=false;synchronize()}
     func webView(_ webView: WKWebView,didFinish navigation: WKNavigation!) {
+        guard webView === storedView else{return}
         synchronize()
         if let session,let url=webView.url {session.manager?.library.visit(title:title,url:url.absoluteString,isPrivate:session.state.isPrivate)}
     }
-    func webView(_ webView: WKWebView,didFailProvisionalNavigation navigation: WKNavigation!,withError error: Error) {failed(error)}
-    func webView(_ webView: WKWebView,didFail navigation: WKNavigation!,withError error: Error) {failed(error)}
+    func webView(_ webView: WKWebView,didFailProvisionalNavigation navigation: WKNavigation!,withError error: Error) {if webView === storedView {failed(error)}}
+    func webView(_ webView: WKWebView,didFail navigation: WKNavigation!,withError error: Error) {if webView === storedView {failed(error)}}
     private func failed(_ error: Error) {
         let error=error as NSError
         if error.domain != NSURLErrorDomain || error.code != NSURLErrorCancelled {
@@ -81,10 +118,23 @@ extension TabRuntime: WKNavigationDelegate {
         }
         synchronize()
     }
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {documentID=UUID();failedURL=provisionalURL ?? webView.url;provisionalURL=nil;crashed=true;failure="The web content process stopped. Reload to recover this tab.";isLoading=false}
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {guard webView === storedView else{return};documentID=UUID();failedURL=provisionalURL ?? webView.url;provisionalURL=nil;crashed=true;failure="The web content process stopped. Reload to recover this tab.";isLoading=false}
     func webView(_ webView: WKWebView,decidePolicyFor action: WKNavigationAction,decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy)->Void) {
-        guard let url=action.request.url else {decisionHandler(.cancel);return}
-        if session?.extensions?.controller.extensionContext(for:url) != nil {if action.targetFrame?.isMainFrame==true {provisionalURL=url};decisionHandler(.allow);return}
+        guard webView === storedView,let url=action.request.url else {decisionHandler(.cancel);return}
+        let destinationContext=session?.extensions?.controller.extensionContext(for:url)
+        if action.targetFrame?.isMainFrame==true,!action.shouldPerformDownload,
+           configurationContext !== destinationContext,
+           destinationContext != nil || ["http","https","about"].contains(url.scheme?.lowercased() ?? "") {
+            decisionHandler(.cancel)
+            let request=action.request
+            Task { @MainActor [weak self,weak webView] in
+                guard let self,let webView,webView === self.storedView else{return}
+                let replacement=self.view(for:url)
+                replacement.load(request)
+            }
+            return
+        }
+        if destinationContext != nil {if action.targetFrame?.isMainFrame==true {provisionalURL=url};decisionHandler(.allow);return}
         if ["http","https","about","blob","data"].contains(url.scheme?.lowercased() ?? "") {
             if !action.shouldPerformDownload,action.targetFrame?.isMainFrame==true {provisionalURL=url}
             decisionHandler(action.shouldPerformDownload ? .download : .allow);return

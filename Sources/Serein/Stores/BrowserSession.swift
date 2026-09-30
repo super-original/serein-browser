@@ -129,7 +129,12 @@ import SereinCore
             }
             return
         }
-        guard let url=AddressResolver.resolve(input),let runtime=current else{return}
+        let entered=URL(string:input.trimmingCharacters(in:.whitespacesAndNewlines))
+        if entered?.scheme?.lowercased()=="webkit-extension",entered.flatMap({extensions?.controller.extensionContext(for:$0)})==nil {
+            error="This extension page is unavailable in this window.";return
+        }
+        let target=entered.flatMap{extensions?.controller.extensionContext(for:$0)} != nil ? entered : AddressResolver.resolve(input)
+        guard let url=target,let runtime=current else{return}
         address=url.absoluteString;addressFocused=false;runtime.load(url)
     }
     func setKind(_ id: UUID, _ kind: TabKind) {

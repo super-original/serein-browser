@@ -61,7 +61,7 @@ private struct PagePane: View {
     var body: some View {
         let runtime=session.runtime(id)
         ZStack {
-            WebContentView(runtime:runtime).id(id)
+            WebContentView(runtime:runtime).id("\(id)-\(runtime.viewRevision)")
             if session.state.tabs.first(where:{$0.id==id})?.url=="about:blank" {
                 VStack(spacing:12) {
                     Image(systemName:session.state.isPrivate ? "hand.raised" : "sparkle").font(.system(size:32,weight:.light))
@@ -88,16 +88,17 @@ struct WebContentView: NSViewRepresentable {
         let view=runtime.webView
         let gesture=NSClickGestureRecognizer(target:context.coordinator,action:#selector(Coordinator.focus))
         gesture.delaysPrimaryMouseButtonEvents=false;gesture.delegate=context.coordinator
-        view.addGestureRecognizer(gesture);context.coordinator.gesture=gesture
+        view.addGestureRecognizer(gesture);context.coordinator.gesture=gesture;context.coordinator.view=view
         let container=NSView(frame:NSRect(x:0,y:0,width:800,height:600))
         view.frame=container.bounds;view.autoresizingMask=[.width,.height]
         container.addSubview(view)
         return container
     }
     func makeCoordinator() -> Coordinator {Coordinator(runtime:runtime)}
-    static func dismantleNSView(_ view:NSView,coordinator:Coordinator) {if let gesture=coordinator.gesture {coordinator.runtime.webView.removeGestureRecognizer(gesture)}}
+    static func dismantleNSView(_ view:NSView,coordinator:Coordinator) {if let gesture=coordinator.gesture {coordinator.view?.removeGestureRecognizer(gesture)}}
     @MainActor final class Coordinator:NSObject,NSGestureRecognizerDelegate {
         let runtime:TabRuntime
+        weak var view:WKWebView?
         var gesture:NSClickGestureRecognizer?
         init(runtime:TabRuntime){self.runtime=runtime}
         @objc func focus(){if runtime.session?.state.secondaryTabID != nil,runtime.session?.state.selectedTabID != runtime.id{runtime.session?.select(runtime.id)}}

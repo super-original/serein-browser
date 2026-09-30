@@ -19,19 +19,22 @@ struct ExtensionPermissionState: Codable {
     }
     @MainActor func updating(from record: InstalledExtension, to ext: WKWebExtension) throws -> Self {
         var result = self
+        let now = Date()
         let required = Set(ext.requestedPermissions.map(\.rawValue))
         let available = required.union(ext.optionalPermissions.map(\.rawValue))
-        result.granted = granted.filter { available.contains($0.key) }
-        result.denied = denied.filter { available.contains($0.key) }
+        result.granted = granted.filter { available.contains($0.key) && $0.value > now }
+        result.denied = denied.filter { available.contains($0.key) && $0.value > now }
         for permission in required.subtracting(record.permissions) where result.denied[permission] == nil {
             result.granted[permission] = .distantFuture
         }
         let allowed = ext.requestedPermissionMatchPatterns.union(ext.optionalPermissionMatchPatterns)
         result.grantedHosts = try grantedHosts.filter { entry in
+            guard entry.value > now else { return false }
             let pattern = try WKWebExtension.MatchPattern(string: entry.key)
             return allowed.contains { $0.matches(pattern) }
         }
         // Retain all explicit site denials, including narrower exceptions to a new host grant.
+        result.deniedHosts = deniedHosts.filter { $0.value > now }
         let newHosts = Set(ext.requestedPermissionMatchPatterns.map(\.string)).subtracting(record.hosts)
         for host in newHosts where result.deniedHosts[host] == nil { result.grantedHosts[host] = .distantFuture }
         return result

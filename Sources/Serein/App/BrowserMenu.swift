@@ -35,8 +35,8 @@ import AppKit
     @objc func address(){manager?.active?.compactRevealed=true;manager?.active?.addressFocused=true}
     @objc func reload(){manager?.active?.current?.reload()}
     @objc func stop(){manager?.active?.current?.webView.stopLoading()}
-    @objc func back(){manager?.active?.current?.webView.goBack()}
-    @objc func forward(){manager?.active?.current?.webView.goForward()}
+    @objc func back(){manager?.active?.current?.goBack()}
+    @objc func forward(){manager?.active?.current?.goForward()}
     @objc func find(){manager?.active?.findVisible=true}
     @objc func history(){manager?.active?.libraryPanel = .history}
     @objc func bookmarks(){manager?.active?.libraryPanel = .bookmarks}
