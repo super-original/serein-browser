@@ -40,3 +40,9 @@ These two screenshots are from [run 36705846607](https://github.com/super-origin
 [Run 36710657986](https://github.com/super-original/serein-browser/actions/runs/36710657986), `54ae12a`, verified the production Remove confirmation appears above the library sheet and Cancel preserves the extension. The actual Install chooser also opened and canceled successfully. All 100 runtime checks passed; the separate desktop content gate remained failed.
 
 ![Actual extension removal confirmation](extension-removal-confirmation.png)
+
+## Download controls
+
+[Run 36712970628](https://github.com/super-original/serein-browser/actions/runs/36712970628), `3582856`: actual paused-download management sheet, inspected for legible status, Resume/Cancel controls and privacy/persistence explanation. The same run passed 30 unit tests and 117 runtime checks, including production pause/resume and complete 8 MiB byte integrity. Private download activity did not modify the normal download-history file's content or modification time. No cross-launch resume or native Save-panel automation is claimed.
+
+![Actual paused download controls](downloads-paused.png)

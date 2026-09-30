@@ -47,7 +47,7 @@ import SereinCore
     func download(_ download:WKDownload,decideDestinationUsing response:URLResponse,suggestedFilename:String,completionHandler:@escaping @MainActor @Sendable (URL?)->Void) {
         guard !retired,self.download === download else{completionHandler(nil);return}
         record.name=(suggestedFilename as NSString).lastPathComponent
-        if let destination {record.phase = .downloading;changed();completionHandler(destination);return}
+        if let destination {record.name=destination.lastPathComponent;record.phase = .downloading;changed();completionHandler(destination);return}
         let panel=NSSavePanel();savePanel=panel;panel.nameFieldStringValue=name;panel.canCreateDirectories=true
         let complete:(NSApplication.ModalResponse)->Void = { [weak self] response in
             guard let self,!self.retired else{completionHandler(nil);return}

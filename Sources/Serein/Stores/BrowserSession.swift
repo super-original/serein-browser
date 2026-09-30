@@ -5,6 +5,7 @@ import SereinCore
 
 @MainActor @Observable final class BrowserSession {
     var state: BrowserWindowState { didSet {manager?.scheduleSave()} }
+    var tabSelection=TabSelection()
     var address = ""
     var addressFocused=false
     var findVisible=false
@@ -25,6 +26,7 @@ import SereinCore
         self.state=state;self.manager=manager
         sitePermissions=state.isPrivate ? SitePermissionStore() : manager.sitePermissions
         dataStore=state.isPrivate ? .nonPersistent() : .default()
+        tabSelection.selectOnly(state.selectedTabID)
         address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? ""
     }
     var current: TabRuntime? {state.selectedTabID.map {runtime($0)}}
@@ -38,40 +40,85 @@ import SereinCore
         if let tab=extensionTabs[id] {return tab}
         let tab=ExtensionTab(id:id,session:self);extensionTabs[id]=tab;return tab
     }
-    func select(_ id: UUID) {
-        let previous=state.selectedTabID.map {bridge($0)}
-        state.select(id);address=state.selectedTab?.url ?? "";addressFocused=false
-        if address=="about:blank" {address=""}
-        _=runtime(id).webView
-        extensions?.controller.didActivateTab(bridge(id),previousActiveTab:previous)
+    private func publishSelection(previousActive:UUID?,previousHighlighted:Set<UUID>,refreshActive:Bool=true) {
+        let valid=Set(state.tabs.map(\.id));tabSelection.retain(valid)
+        if refreshActive {address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? "";addressFocused=false}
+        if let id=state.selectedTabID,refreshActive {
+            _=runtime(id).webView
+            if previousActive != id {extensions?.controller.didActivateTab(bridge(id),previousActiveTab:previousActive.flatMap{valid.contains($0) ? bridge($0) : nil})}
+        }
+        let removed=previousHighlighted.subtracting(tabSelection.ids).intersection(valid)
+        let added=tabSelection.ids.subtracting(previousHighlighted)
+        if !removed.isEmpty {extensions?.controller.didDeselectTabs(state.tabs.filter{removed.contains($0.id)}.map{bridge($0.id)})}
+        if !added.isEmpty {extensions?.controller.didSelectTabs(state.tabs.filter{added.contains($0.id)}.map{bridge($0.id)})}
     }
-    @discardableResult func newTab(url: String = "about:blank", select: Bool = true, configuration: WKWebViewConfiguration? = nil) -> UUID {
-        let previous=state.selectedTabID.map{bridge($0)}
+    func select(_ id:UUID,preservingSelection:Bool=false) {
+        guard state.tabs.contains(where:{$0.id==id}) else{return}
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        state.select(id)
+        if preservingSelection {tabSelection.set(id,selected:true)} else {tabSelection.selectOnly(id)}
+        publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:!preservingSelection || previous != id)
+    }
+    @discardableResult func setHighlighted(_ id:UUID,_ selected:Bool)->Bool {
+        guard state.tabs.contains(where:{$0.id==id}) else{return false}
+        let previous=tabSelection.ids
+        tabSelection.set(id,selected:selected)
+        publishSelection(previousActive:state.selectedTabID,previousHighlighted:previous,refreshActive:false)
+        return true
+    }
+    func clickTab(_ id:UUID,modifiers:NSEvent.ModifierFlags) {
+        guard state.visibleTabs.contains(where:{$0.id==id}) else{return}
+        if modifiers.contains(.shift) {
+            let previous=state.selectedTabID,highlighted=tabSelection.ids
+            tabSelection.range(to:id,in:state.visibleTabs.map(\.id),additive:modifiers.contains(.command))
+            state.select(id);publishSelection(previousActive:previous,previousHighlighted:highlighted)
+        } else if modifiers.contains(.command) {
+            let previous=tabSelection.ids;tabSelection.toggle(id)
+            publishSelection(previousActive:state.selectedTabID,previousHighlighted:previous,refreshActive:false)
+        } else {select(id)}
+    }
+    func closeHighlighted() {
+        let ids=state.tabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
+        guard !ids.isEmpty else{return}
+        let closeAll: @MainActor ()->Void = { [weak self] in for id in ids {self?.close(id,ask:false)} }
+        if ids.contains(where:{runtimes[$0]?.hasUserEdits == true}) {
+            confirm("Close \(ids.count) selected tabs?",detail:"Edited pages may contain unsaved changes.",yes:"Close Tabs"){if $0 {closeAll()}}
+        } else {closeAll()}
+    }
+    @discardableResult func newTab(url:String="about:blank",select:Bool=true,configuration:WKWebViewConfiguration?=nil)->UUID {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
         let id=state.newTab(url:url,select:select)
         if let configuration {runtimes[id]=TabRuntime(id:id,session:self,configuration:configuration)}
         extensions?.controller.didOpenTab(bridge(id))
         if select {
-            address=url=="about:blank" ? "" : url
+            tabSelection.selectOnly(id);publishSelection(previousActive:previous,previousHighlighted:highlighted)
             addressFocused=url=="about:blank"
-            _=runtime(id).webView
-            extensions?.controller.didActivateTab(bridge(id),previousActiveTab:previous)
         }
         return id
     }
-    func close(_ id: UUID, ask: Bool = true) {
+    func close(_ id:UUID,ask:Bool=true) {
+        guard state.tabs.contains(where:{$0.id==id}) else{return}
         if ask,let runtime=runtimes[id],runtime.hasUserEdits {
-            confirm("Close this tab?",detail:"This page has been edited. Unsaved changes may be lost.") { [weak self] allowed in if allowed {self?.close(id,ask:false)} }
+            confirm("Close this tab?",detail:"This page has been edited. Unsaved changes may be lost."){[weak self] allowed in if allowed {self?.close(id,ask:false)}}
             return
         }
-        let tab=bridge(id);let previous=state.selectedTabID
-        extensions?.controller.didCloseTab(tab,windowIsClosing:false)
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        extensions?.controller.didCloseTab(bridge(id),windowIsClosing:false)
         runtimes[id]?.dispose();runtimes[id]=nil;extensionTabs[id]=nil
         let before=Set(state.tabs.map(\.id));state.close(id)
         for added in state.tabs where !before.contains(added.id) {extensions?.controller.didOpenTab(bridge(added.id))}
-        if previous != state.selectedTabID,let next=state.selectedTabID {select(next)}
+        tabSelection.retain(Set(state.tabs.map(\.id)))
+        if previous==id || tabSelection.ids.isEmpty {tabSelection.selectOnly(state.selectedTabID)}
+        publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:previous != state.selectedTabID)
     }
-    func reopen() {if let id=state.reopen() {extensions?.controller.didOpenTab(bridge(id));select(id)}}
-    func duplicate(_ id: UUID) {if let new=state.duplicate(id) {extensions?.controller.didOpenTab(bridge(new));select(new)}}
+    func reopen() {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        if let id=state.reopen() {extensions?.controller.didOpenTab(bridge(id));tabSelection.selectOnly(id);publishSelection(previousActive:previous,previousHighlighted:highlighted)}
+    }
+    func duplicate(_ id:UUID) {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        if let new=state.duplicate(id) {extensions?.controller.didOpenTab(bridge(new));tabSelection.selectOnly(new);publishSelection(previousActive:previous,previousHighlighted:highlighted)}
+    }
     func navigate(_ input: String,ask:Bool = true) {
         if ask,current?.hasUserEdits==true {confirm("Leave this page?",detail:"Unsaved changes may be lost.",yes:"Leave"){[weak self] allowed in if allowed{self?.navigate(input,ask:false)}};return}
         guard let url=AddressResolver.resolve(input),let runtime=current else{return}
@@ -84,17 +131,13 @@ import SereinCore
         guard let old=state.tabs.firstIndex(where:{$0.id==id}) else{return}
         state.move(id,before:other);extensions?.controller.didMoveTab(bridge(id),from:old,in:extensionWindow)
     }
-    private func changeWorkspace(_ change: (inout BrowserWindowState)->Void) {
-        let previous=state.selectedTabID
+    private func changeWorkspace(_ change:(inout BrowserWindowState)->Void) {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
         let oldTabs=Set(state.tabs.map(\.id))
         change(&state)
         for tab in state.tabs where !oldTabs.contains(tab.id) {extensions?.controller.didOpenTab(bridge(tab.id))}
-        address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? ""
-        addressFocused=false
-        if let selected=state.selectedTabID {
-            _=runtime(selected).webView
-            if selected != previous {extensions?.controller.didActivateTab(bridge(selected),previousActiveTab:previous.map{bridge($0)})}
-        }
+        tabSelection.selectOnly(state.selectedTabID)
+        publishSelection(previousActive:previous,previousHighlighted:highlighted)
     }
     func switchWorkspace(_ id: UUID) {changeWorkspace{$0.switchWorkspace(id)}}
     @discardableResult func addWorkspace(name: String) -> UUID {

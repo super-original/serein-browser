@@ -10,20 +10,32 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
     browser.tabs.onCreated.addListener(onCreated);
     browser.tabs.onRemoved.addListener(onRemoved);
     let created, duplicate, tabLifecycle;
+    let highlightedEvent = false;
+    const onHighlighted = info => {if (created && duplicate && info.tabIds.includes(created.id) && info.tabIds.includes(duplicate.id)) highlightedEvent = true;};
+    browser.tabs.onHighlighted.addListener(onHighlighted);
     try {
       created = await browser.tabs.create({url:'about:blank', active:false, pinned:true});
       const queried = await browser.tabs.get(created.id);
       duplicate = await browser.tabs.duplicate(created.id);
       const copied = await browser.tabs.get(duplicate.id);
+      await browser.tabs.highlight({windowId:queried.windowId, tabs:[queried.index,copied.index]});
+      const highlighted = await browser.tabs.query({windowId:queried.windowId,highlighted:true});
+      const active = await browser.tabs.query({windowId:queried.windowId,active:true});
+      const multiSelected = highlighted.length === 2 && highlighted.some(t=>t.id===created.id) && highlighted.some(t=>t.id===duplicate.id);
+      const firstHighlightActive = active.length === 1 && active[0].id === created.id;
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const senderTab = await browser.tabs.get(sender.tab.id);
+      await browser.tabs.highlight({windowId:senderTab.windowId,tabs:[senderTab.index]});
       await browser.tabs.remove([created.id, duplicate.id]);
       await browser.tabs.update(sender.tab.id, {active:true});
       // Event delivery is asynchronous relative to promise resolution.
       await new Promise(resolve => setTimeout(resolve, 100));
-      tabLifecycle = {createdPinned:queried.pinned, duplicatePinned:copied.pinned,
+      tabLifecycle = {multiSelected,firstHighlightActive,highlightedEvent,createdPinned:queried.pinned, duplicatePinned:copied.pinned,
         distinctIDs:created.id !== duplicate.id, duplicateURL:copied.url === queried.url,
         createdEvents:createdEvents.includes(created.id) && createdEvents.includes(duplicate.id),
         removedEvents:removedEvents.includes(created.id) && removedEvents.includes(duplicate.id)};
     } finally {
+      browser.tabs.onHighlighted.removeListener(onHighlighted);
       browser.tabs.onCreated.removeListener(onCreated);
       browser.tabs.onRemoved.removeListener(onRemoved);
       for (const tab of [created, duplicate]) if (tab) {

@@ -41,16 +41,16 @@ import SereinCore
     func title(for context: WKWebExtensionContext) -> String? {tab?.title}
     func url(for context: WKWebExtensionContext) -> URL? {tab.flatMap{URL(string:$0.url)}}
     func isPinned(for context: WKWebExtensionContext) -> Bool {tab?.kind != .regular}
-    func isSelected(for context: WKWebExtensionContext) -> Bool {session?.state.selectedTabID==id}
+    func isSelected(for context: WKWebExtensionContext) -> Bool {session?.tabSelection.ids.contains(id) ?? false}
     func isLoadingComplete(for context: WKWebExtensionContext) -> Bool {!(session?.runtimes[id]?.isLoading ?? false)}
     func shouldBypassPermissions(for context: WKWebExtensionContext) -> Bool {false}
     func shouldGrantPermissionsOnUserGesture(for context: WKWebExtensionContext) -> Bool {true}
     func size(for context: WKWebExtensionContext) -> CGSize {session?.runtimes[id]?.webView.bounds.size ?? .zero}
     func zoomFactor(for context: WKWebExtensionContext) -> Double {Double(session?.runtime(id).webView.pageZoom ?? 1)}
     func setZoomFactor(_ value: Double,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).webView.pageZoom=min(5,max(0.25,value));completionHandler(nil)}
-    func activate(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.select(id);completionHandler(nil)}
+    func activate(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.select(id,preservingSelection:true);completionHandler(nil)}
     func setSelected(_ selected: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {
-        if selected {session?.select(id);completionHandler(nil)} else {completionHandler(ExtensionValidationError.invalid("Tab multiselection is not implemented."))}
+        if session?.setHighlighted(id,selected)==true {completionHandler(nil)} else {completionHandler(ExtensionValidationError.invalid("The tab no longer exists."))}
     }
     func setPinned(_ pinned: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.setKind(id,pinned ? .pinned : .regular);completionHandler(nil)}
     func loadURL(_ url: URL,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {

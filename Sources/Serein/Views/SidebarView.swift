@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import SereinCore
 
 struct SidebarView: View {
@@ -98,16 +99,16 @@ private struct TabRow: View {
     @State private var hovering=false
     var body: some View {
         HStack(spacing:10) {
-            Button {session.select(tab.id)} label: {
+            Button {session.clickTab(tab.id,modifiers:NSApp.currentEvent?.modifierFlags ?? [])} label: {
                 HStack(spacing:10) {
                     Image(systemName:tab.kind == .essential ? "star.fill" : "globe").font(.system(size:14)).frame(width:16,height:16)
                     if !compact {Text(tab.title).font(.system(size:13,weight:session.state.selectedTabID==tab.id ? .semibold : .regular)).lineLimit(1);Spacer(minLength:0)}
                 }.frame(maxWidth:.infinity,alignment:compact ? .center : .leading).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)")
+            }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)").accessibilityAddTraits(session.tabSelection.ids.contains(tab.id) ? .isSelected : [])
             if !compact,hovering,tab.kind == .regular {Button("Close Tab",systemImage:"xmark"){session.close(tab.id)}.labelStyle(.iconOnly).font(.system(size:10)).buttonStyle(.plain)}
         }
         .padding(.horizontal,10).frame(height:36)
-        .background(session.state.selectedTabID==tab.id ? Color.primary.opacity(0.09) : hovering ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
+        .background(session.state.selectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
         .onHover{hovering=$0}.help(tab.title+"\n"+tab.url)
         .contextMenu {
             Button("Duplicate Tab"){session.duplicate(tab.id)}
@@ -118,6 +119,7 @@ private struct TabRow: View {
             if !session.state.isPrivate {Button("Move to New Window"){session.manager?.moveTab(tab.id,from:session)}}
             if tab.id != session.state.selectedTabID {Button("Split with Current Tab"){session.state.split(with:tab.id)};Button("Unload Tab…"){session.unload(tab.id)}.disabled(!session.canUnload(tab.id))}
             Divider()
+            if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {Button("Close \(session.tabSelection.ids.count) Selected Tabs"){session.closeHighlighted()}}
             Button("Close Tab"){session.close(tab.id)}
         }
     }
