@@ -37,7 +37,7 @@ import SereinCore
     private var tab: BrowserTab? {session?.state.tabs.first{$0.id==id}}
     func window(for context: WKWebExtensionContext) -> (any WKWebExtensionWindow)? {session?.extensionWindow}
     func indexInWindow(for context: WKWebExtensionContext) -> Int {session?.state.tabs.firstIndex{$0.id==id} ?? NSNotFound}
-    func webView(for context: WKWebExtensionContext) -> WKWebView? {session?.runtime(id).webView}
+    func webView(for context: WKWebExtensionContext) -> WKWebView? {session?.runtimes[id]?.loadedWebView}
     func title(for context: WKWebExtensionContext) -> String? {tab?.title}
     func url(for context: WKWebExtensionContext) -> URL? {tab.flatMap{URL(string:$0.url)}}
     func isPinned(for context: WKWebExtensionContext) -> Bool {tab?.kind != .regular}
@@ -49,8 +49,8 @@ import SereinCore
     func isLoadingComplete(for context: WKWebExtensionContext) -> Bool {!(session?.runtimes[id]?.isLoading ?? false)}
     func shouldBypassPermissions(for context: WKWebExtensionContext) -> Bool {false}
     func shouldGrantPermissionsOnUserGesture(for context: WKWebExtensionContext) -> Bool {true}
-    func size(for context: WKWebExtensionContext) -> CGSize {session?.runtimes[id]?.webView.bounds.size ?? .zero}
-    func zoomFactor(for context: WKWebExtensionContext) -> Double {Double(session?.runtime(id).webView.pageZoom ?? 1)}
+    func size(for context: WKWebExtensionContext) -> CGSize {session?.runtimes[id]?.loadedWebView?.bounds.size ?? .zero}
+    func zoomFactor(for context: WKWebExtensionContext) -> Double {Double(session?.runtimes[id]?.loadedWebView?.pageZoom ?? 1)}
     func setZoomFactor(_ value: Double,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.runtime(id).webView.pageZoom=min(5,max(0.25,value));completionHandler(nil)}
     func activate(for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.select(id,preservingSelection:true);completionHandler(nil)}
     func setSelected(_ selected: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {

@@ -22,6 +22,7 @@ import SereinCore
     @ObservationIgnored private var storedView: WKWebView?
     @ObservationIgnored private var editBridge: EditBridge?
     @ObservationIgnored private var permittedFileRoot: URL?
+    var loadedWebView:WKWebView? {storedView}
     var webView: WKWebView {
         if let storedView {return storedView}
         let config=initialConfiguration ?? WKWebViewConfiguration()
@@ -35,11 +36,11 @@ import SereinCore
         view.wantsLayer=true
         view.navigationDelegate=self;view.uiDelegate=self;view.allowsBackForwardNavigationGestures=true
         observations=[view.observe(\.title,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.url,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.isLoading,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}},view.observe(\.estimatedProgress,options:[.new]){[weak self] _,_ in Task {@MainActor in self?.synchronize()}}]
-        if let tab=session?.state.tabs.first(where:{$0.id==id}),let url=URL(string:tab.url),tab.url != "about:blank" {view.load(URLRequest(url:url))}
+        if let tab=session?.state.tabs.first(where:{$0.id==id}),let url=URL(string:tab.url),tab.url != "about:blank" {view.load(url)}
         return view
     }
     init(id: UUID, session: BrowserSession, configuration: WKWebViewConfiguration? = nil) {self.id=id;self.session=session;initialConfiguration=configuration;super.init()}
-    func load(_ url: URL) {documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false;webView.load(URLRequest(url:url))}
+    func load(_ url: URL) {documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false;webView.load(url)}
     func reload() {if let failedURL {if failedURL.isFileURL {openFile(failedURL)} else {load(failedURL)}} else {webView.reload()}}
     func openFile(_ url:URL) {
         let root=url.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL

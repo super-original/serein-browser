@@ -139,3 +139,7 @@ The macOS 27 public `WKWebExtensionTab.setSelected` contract explicitly requires
 ### Exact macOS 27 selection API gap
 
 Run [36713799565](https://github.com/super-original/serein-browser/actions/runs/36713799565), commit `7ce1cad`, found `browser.tabs.highlight` undefined in both MV2 and MV3 backgrounds. Native command-click/range selection and bulk close passed, but the new extension call aborted its lifecycle scenario; those failures are not counted as verified compatibility. The next fixture exercises `tabs.update({highlighted:…})` independently. A working update path would not establish `tabs.highlight` support.
+
+### Lazy tab queries and fixture isolation
+
+The continuation found that `webView(for:)` and read-only zoom/size getters could create a web view for an unloaded tab. Those getters now report only an already loaded view (or the default zoom/empty size). Explicit activation/navigation still loads the tab; script injection into an unloaded tab is unavailable until it is loaded. New MV2/MV3 scenarios keep a background fixture tab unloaded while querying tabs. The destructive lifecycle fixture is scoped to its dedicated query URL so unrelated local pages cannot run concurrent tab/storage probes. Prior multiselection/count failures are retained as failed evidence; the corrected scenarios require a fresh run.

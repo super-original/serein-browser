@@ -5,7 +5,26 @@ import SereinCore
 /// A separate diagnostic controller, never the production extension host.
 /// It can only return a constant protocol reply; it cannot execute programs,
 /// read browser data, access files, or route to any other application.
+@MainActor private final class NativeProbeTab:NSObject,WKWebExtensionTab {
+    let view:WKWebView
+    weak var owner:NativeProbeWindow?
+    init(view:WKWebView){self.view=view}
+    func webView(for context:WKWebExtensionContext)->WKWebView? {view}
+    func window(for context:WKWebExtensionContext)->(any WKWebExtensionWindow)? {owner}
+    func indexInWindow(for context:WKWebExtensionContext)->Int {0}
+    func url(for context:WKWebExtensionContext)->URL? {view.url}
+}
+@MainActor private final class NativeProbeWindow:NSObject,WKWebExtensionWindow {
+    let tab:NativeProbeTab
+    init(view:WKWebView){tab=NativeProbeTab(view:view);super.init();tab.owner=self}
+    func tabs(for context:WKWebExtensionContext)->[any WKWebExtensionTab] {[tab]}
+    func activeTab(for context:WKWebExtensionContext)->(any WKWebExtensionTab)? {tab}
+    func isPrivate(for context:WKWebExtensionContext)->Bool {false}
+}
 @MainActor private final class NativeBridgeProbeDelegate:NSObject,WKWebExtensionControllerDelegate {
+    var window:NativeProbeWindow?
+    func webExtensionController(_ controller:WKWebExtensionController,openWindowsFor context:WKWebExtensionContext)->[any WKWebExtensionWindow] {window.map{[$0]} ?? []}
+    func webExtensionController(_ controller:WKWebExtensionController,focusedWindowFor context:WKWebExtensionContext)->(any WKWebExtensionWindow)? {window}
     var expectedContext=""
     var allowed=0
     var rejected=0
@@ -50,6 +69,9 @@ import SereinCore
                 let config=WKWebViewConfiguration();config.webExtensionController=controller
                 let view=WKWebView(frame:NSRect(x:0,y:0,width:640,height:480),configuration:config)
                 defer {view.stopLoading()}
+                let window=NativeProbeWindow(view:view);delegate.window=window
+                controller.didOpenWindow(window);controller.didOpenTab(window.tab)
+                defer {controller.didCloseWindow(window);delegate.window=nil}
                 func probe(_ stage:String) async -> [String:Any]? {
                     view.load(URLRequest(url:URL(string:"http://127.0.0.1:8765/index.html?native=\(version)-\(stage)")!))
                     for _ in 0..<100 {

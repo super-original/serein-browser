@@ -17,6 +17,7 @@ import SereinCore
                 let record=InstalledExtension(id:id,name:name,version:manifest.version,enabled:true,permissions:["storage","tabs"],hosts:[])
                 try await host.load(record)
                 host.records.append(record)
+                let sleeping=session.newTab(url:"http://127.0.0.1:8765/index.html?sleeping",select:false)
                 session.navigate("http://127.0.0.1:8765/index.html?extension=\(name)-denied")
                 try await Task.sleep(for:.seconds(2))
                 let before=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
@@ -30,6 +31,8 @@ import SereinCore
                     if let value=try? await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null"),let text=value as? String,let data=text.data(using:.utf8) {payload=(try? JSONSerialization.jsonObject(with:data)) as? [String:Any];break}
                 }
                 check("\(name)-background-message-storage-tabs",payload?["ok"] as? Bool==true && payload?["senderTab"] as? Bool==true && (payload?["tabCount"] as? Int ?? 0)>0,String(describing:payload))
+                check("\(name)-tabs-query-keeps-unloaded-tab-asleep",session.runtimes[sleeping]==nil)
+                session.close(sleeping,ask:false)
                 let lifecycle=payload?["tabLifecycle"] as? [String:Bool]
                 for field in ["createdPinned","duplicatePinned","distinctIDs","duplicateURL","createdEvents","removedEvents","multiSelected","firstHighlightActive","highlightedEvent"] {
                     check("\(name)-tabs-\(field)",lifecycle?[field] == true,String(describing:lifecycle)+" selection="+String(describing:payload?["selectionDiagnostics"]))

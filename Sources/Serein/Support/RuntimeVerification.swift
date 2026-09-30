@@ -103,7 +103,7 @@ import SereinCore
         check("close-highlighted-tabs",!session.state.tabs.contains{$0.id==closeA || $0.id==closeB} && session.tabSelection.ids.isSubset(of:Set(session.state.tabs.map(\.id))))
         session.select(third)
         session.addressFocused=true;await capture("05-address-focused");session.addressFocused=false
-        let workspace=session.addWorkspace(name:"Research")
+        session.addWorkspace(name:"Research")
         session.navigate(fixture);_=await wait{session.current?.webView.title=="Field Notes"};await capture("06-workspace")
         let normalWorkspace=session.state.tabs.first{$0.id==third}!.workspaceID
         let moved=session.newTab(url:"http://127.0.0.1:8765/second.html")
