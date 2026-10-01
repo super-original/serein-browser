@@ -84,6 +84,60 @@ import SereinCore
         try? "51-cross-window-drag".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("51-cross-window-drag.capture-finished").path)}
         runtime.hasUserEdits=false
+        results += await selectedTabs(manager:manager,root:root)
         return results
     }
+    private static func selectedTabs(manager:BrowserManager,root:URL) async->[RuntimeVerification.Result] {
+        var results:[RuntimeVerification.Result]=[]
+        func check(_ name:String,_ pass:Bool){results.append(.init(name:"sidebar-group-drop-"+name,passed:pass,detail:""))}
+        func wait(_ condition:@MainActor ()->Bool) async {for _ in 0..<160{if condition(){return};try? await Task.sleep(for:.milliseconds(50))}}
+        let source=manager.newWindow(),destination=manager.newWindow()
+        defer{source.window?.close();destination.window?.close()}
+        let first=source.state.selectedTabID!,middle=source.newTab(),last=source.newTab(),target=destination.state.selectedTabID!
+        let firstRuntime=source.runtime(first),lastRuntime=source.runtime(last)
+        let firstView=firstRuntime.webView,lastView=lastRuntime.webView
+        firstRuntime.load(URL(string:"http://127.0.0.1:8765/index.html?group-first")!)
+        lastRuntime.load(URL(string:"http://127.0.0.1:8765/index.html?group-last")!)
+        await wait{firstView.title=="Field Notes" && lastView.title=="Field Notes" && !firstView.isLoading && !lastView.isLoading}
+        _=try? await firstView.evaluateJavaScript("window.groupSentinel='first'")
+        _=try? await lastView.evaluateJavaScript("window.groupSentinel='last'")
+        source.clickTab(first,modifiers:[]);source.clickTab(last,modifiers:.command)
+        let payload=source.sidebarDrag(last,kind:.tab)
+        check("captures-noncontiguous-order",payload.selectedTabs==[first,last])
+        let stale=SidebarDragItem(token:payload.token,window:payload.window,item:last,kind:.tab,selectedTabs:[first,UUID(),last])
+        check("stale-group-rejected-atomically",!destination.acceptSidebarDrop([stale],at:.beforeTab(target)) && source.state.tabs.map(\.id)==[first,middle,last] && destination.state.tabs.map(\.id)==[target])
+        let duplicate=SidebarDragItem(token:payload.token,window:payload.window,item:last,kind:.tab,selectedTabs:[first,last,last])
+        check("duplicate-member-rejected",!destination.acceptSidebarDrop([duplicate],at:.beforeTab(target)))
+        check("self-target-rejected",!source.acceptSidebarDrop([payload],at:.afterTab(first)) && source.state.tabs.map(\.id)==[first,middle,last])
+        source.window?.setFrame(NSRect(x:380,y:70,width:640,height:600),display:true)
+        destination.window?.setFrame(NSRect(x:10,y:70,width:640,height:600),display:true)
+        source.window?.makeKeyAndOrderFront(nil)
+        try? await Task.sleep(for:.milliseconds(250))
+        let name="sidebar-selected-group-drag",done=root.appendingPathComponent(name+".keyboard-finished")
+        try? "tab-\(last)\ntab-\(target)\n".write(to:root.appendingPathComponent("sidebar-drag-identifiers"),atomically:true,encoding:.utf8)
+        try? name.write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+        await wait{FileManager.default.fileExists(atPath:done.path)}
+        await wait{destination.state.tabs.contains{$0.id==last}}
+        check("actual-native-group-drag",FileManager.default.fileExists(atPath:done.path) && !FileManager.default.fileExists(atPath:root.appendingPathComponent(name+".keyboard-failed").path) && destination.state.visibleTabs.map(\.id)==[first,last,target])
+        if !destination.state.tabs.contains(where:{$0.id==last}) {
+            check("controlled-after-gesture-failure",destination.acceptSidebarDrop([payload],at:.beforeTab(target)))
+        }
+        check("preserves-source-and-highlight",source.state.visibleTabs.map(\.id)==[middle] && destination.tabSelection.ids==Set([first,last]) && destination.state.selectedTabID==last)
+        let firstValue=try? await firstView.evaluateJavaScript("window.groupSentinel") as? String
+        let lastValue=try? await lastView.evaluateJavaScript("window.groupSentinel") as? String
+        check("preserves-both-live-documents",destination.runtimes[first] === firstRuntime && destination.runtimes[last] === lastRuntime && firstRuntime.loadedWebView === firstView && lastRuntime.loadedWebView === lastView && firstValue=="first" && lastValue=="last")
+        let group=destination.sidebarDrag(last,kind:.tab)
+        check("after-placement-preserves-order",destination.acceptSidebarDrop([group],at:.afterTab(target)) && destination.state.visibleTabs.map(\.id)==[target,first,last])
+        let privateWindow=manager.newWindow(isPrivate:true)
+        check("private-boundary-rejects-entire-group",!privateWindow.acceptSidebarDrop([group],at:.beforeTab(privateWindow.state.selectedTabID!)) && destination.state.visibleTabs.map(\.id)==[target,first,last])
+        privateWindow.window?.close()
+        if let folder=destination.createFolder(name:"Selected pages") {
+            check("group-folder-preserves-order",destination.acceptSidebarDrop([group],at:.folder(folder)) && destination.state.folderTabIDs(folder)==[first,last] && destination.tabSelection.ids==Set([first,last]))
+        } else {check("group-folder-setup",false)}
+        destination.window?.makeKeyAndOrderFront(nil)
+        try? "56-selected-tab-drop".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+        await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("56-selected-tab-drop.capture-finished").path)}
+        return results
+    }
+
 }

@@ -118,7 +118,7 @@ APPLESCRIPT
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
         /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" plain > "$ROOT/glance-external-pointer-input.log" 2>&1
         ;;
-      sidebar-cross-window-drag|sidebar-reorder-after)
+      sidebar-cross-window-drag|sidebar-reorder-after|sidebar-selected-group-drag)
         SOURCE_IDENTIFIER=$(sed -n '1p' "$ROOT/sidebar-drag-identifiers")
         TARGET_IDENTIFIER=$(sed -n '2p' "$ROOT/sidebar-drag-identifiers")
         DROP_PLACEMENT=before

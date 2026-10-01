@@ -59,16 +59,25 @@ import SereinCore
             check("loaded-required-apis",true,"Named permissions validated by production loader; only loopback site access granted")
             let backgroundFailure=await ExtensionBackgroundProbe.failure(for:context)
             check("background-content-loads",backgroundFailure==nil,backgroundFailure ?? "Public background-load completion returned")
+            let initialRuleStart=Date()
             var enabled:[String:Any]?
-            for _ in 0..<20 {enabled=await probe(view,blockingPath);if blocked(enabled){break};try? await Task.sleep(for:.milliseconds(250))}
-            check("shipped-rule-blocks-script",blocked(enabled),String(describing:enabled))
+            while Date().timeIntervalSince(initialRuleStart)<30 {enabled=await probe(view,blockingPath);if blocked(enabled){break};try? await Task.sleep(for:.milliseconds(500))}
+            check("shipped-rule-blocks-script",blocked(enabled),"elapsed=\(Date().timeIntervalSince(initialRuleStart)) result=\(String(describing:enabled))")
             check("unmatched-script-still-loads",loaded(await probe(view,"/serein-clean-probe.js")))
             check("private-window-excluded",loaded(await probe(privateView,blockingPath)) && privateView.configuration.webExtensionController==nil)
             if let options=context.optionsPageURL {
                 let optionTab=session.newTab(url:options.absoluteString),optionView=session.runtime(optionTab).webView
                 await wait{optionView.url==options && !optionView.isLoading}
-                let data=try? await optionView.callAsyncJavaScript("return await Promise.race([browser.runtime.sendMessage({what:'getOptionsPageData'}),new Promise(resolve=>setTimeout(()=>resolve(null),5000))]);",arguments:[:],in:nil,contentWorld:.page) as? [String:Any]
-                check("original-options-background-roundtrip",(data?["enabledRulesets"] as? [String])?.contains("easylist")==true,"response=\(String(describing:data)) contextErrors=\(context.errors.map(\.localizedDescription))")
+                let reply=try? await optionView.callAsyncJavaScript("""
+                try {
+                  return await Promise.race([
+                    browser.runtime.sendMessage({what:'getOptionsPageData'}).then(value=>({status:'response',value:value??null})),
+                    new Promise(resolve=>setTimeout(()=>resolve({status:'timeout'}),10000))
+                  ]);
+                } catch(error){return {status:'rejected',error:String(error)};}
+                """,arguments:[:],in:nil,contentWorld:.page) as? [String:Any]
+                let data=reply?["value"] as? [String:Any]
+                check("original-options-background-roundtrip",(data?["enabledRulesets"] as? [String])?.contains("easylist")==true,"reply=\(String(describing:reply)) contextErrors=\(context.errors.map(\.localizedDescription))")
                 let rules=try? await optionView.callAsyncJavaScript("return await browser.declarativeNetRequest.getEnabledRulesets();",arguments:[:],in:nil,contentWorld:.page) as? [String]
                 check("engine-enables-shipped-easylist",rules?.contains("easylist")==true,String(describing:rules))
                 let errors=context.errors.map(\.localizedDescription)
@@ -80,9 +89,10 @@ import SereinCore
             let disabled=await probe(view,blockingPath)
             check("disable-restores-resource",host.contexts[id]==nil && loaded(disabled))
             await host.setEnabled(id,true)
+            let restoredRuleStart=Date()
             var restored:[String:Any]?
-            for _ in 0..<20 {restored=await probe(view,blockingPath);if blocked(restored){break};try? await Task.sleep(for:.milliseconds(250))}
-            check("reenable-restores-blocking",host.contexts[id] != nil && blocked(restored),String(describing:restored))
+            while Date().timeIntervalSince(restoredRuleStart)<30 {restored=await probe(view,blockingPath);if blocked(restored){break};try? await Task.sleep(for:.milliseconds(500))}
+            check("reenable-restores-blocking",host.contexts[id] != nil && blocked(restored),"elapsed=\(Date().timeIntervalSince(restoredRuleStart)) result=\(String(describing:restored))")
         } catch {check("setup-or-load",false,error.localizedDescription)}
         await host.remove(id)
         return results

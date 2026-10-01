@@ -72,6 +72,7 @@ import SereinCore
             let initial=await api("get-static")
             check("static-ruleset-enabled",initial?["enabled"] as? [String]==["static"],String(describing:initial))
             check("static-blocks-script",await blocked("static"))
+            check("implicit-resource-types-block-script",await blocked("implicit"))
             check("unmatched-script-loads",loaded(await probe(page,"control")))
             check("private-store-excluded",loaded(await probe(privatePage,"static")) && privatePage.configuration.webExtensionController==nil)
             let disabled=await api("disable-static")

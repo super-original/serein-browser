@@ -237,8 +237,14 @@ struct InstalledExtension: Identifiable, Codable {
             try FileManager.default.removeItem(at:record.directory(in: root));nativeMessaging.removeRegistrations(for:id);records.removeAll{$0.id==id};save()
         } catch {self.error=error.localizedDescription}
     }
+    func hasAction(_ id:UUID)->Bool {
+        _=actionRevision
+        guard let manifest=contexts[id]?.webExtension.manifest else{return false}
+        return ["action","browser_action","page_action"].contains{manifest[$0] is [String:Any]}
+    }
     func actionEnabled(_ id: UUID,in session: BrowserSession) -> Bool {
         _=actionRevision
+        guard hasAction(id),!session.state.isPrivate else{return false}
         return contexts[id]?.action(for:session.state.selectedTabID.map{session.bridge($0)})?.isEnabled ?? false
     }
     func performFromLibrary(_ id: UUID,in session: BrowserSession) async {
@@ -267,7 +273,7 @@ struct InstalledExtension: Identifiable, Codable {
         return false
     }
     func perform(_ id: UUID,in session: BrowserSession) {
-        guard !session.state.isPrivate,let context=contexts[id],let tab=session.state.selectedTabID,
+        guard actionEnabled(id,in:session),let context=contexts[id],let tab=session.state.selectedTabID,
               isCurrentPermissionPrompt(context:context,session:session,tab:session.bridge(tab)) else{return}
         context.userGesturePerformed(in:session.bridge(tab));context.performAction(for:session.bridge(tab))
     }

@@ -1,1 +1,25 @@
-[{"id":1,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"dnr=static","resourceTypes":["script"]}}]
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "dnr=static",
+      "resourceTypes": [
+        "script"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 10,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "urlFilter": "dnr=implicit"
+    }
+  }
+]

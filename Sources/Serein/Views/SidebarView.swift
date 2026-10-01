@@ -51,9 +51,9 @@ struct SidebarView: View {
                     ForEach(session.state.visibleTabs.filter{$0.kind == .regular}){tab in tabRow(tab)}
                 }
             }.scrollIndicators(.hidden)
-            if let host=session.extensions,!host.records.filter({$0.enabled}).isEmpty {
+            if let host=session.extensions,!host.records.filter({$0.enabled && host.hasAction($0.id)}).isEmpty {
                 ScrollView(.horizontal) {
-                    HStack(spacing:6) {ForEach(host.records.filter{$0.enabled}){record in ExtensionActionButton(record:record,session:session,revision:host.actionRevision).frame(width:28,height:28)}}
+                    HStack(spacing:6) {ForEach(host.records.filter{$0.enabled && host.hasAction($0.id)}){record in ExtensionActionButton(record:record,session:session,revision:host.actionRevision).frame(width:28,height:28)}}
                 }.scrollIndicators(.hidden).frame(height:32)
             }
             HStack(spacing:6) {

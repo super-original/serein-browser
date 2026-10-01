@@ -15,6 +15,7 @@ import SereinCore
             let record=InstalledExtension(id:id,name:"Background failure fixture",version:"1.0",enabled:true,permissions:[],hosts:[])
             host.records.append(record);try await host.load(record)
             guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("Missing error fixture context")}
+            check("no-placeholder-action",!host.hasAction(id) && !host.actionEnabled(id,in:session))
             let failure=await ExtensionBackgroundProbe.failure(for:context)
             await wait{!(host.contextErrors[id] ?? []).isEmpty}
             check("background-failure-detected",failure != nil && !context.errors.isEmpty,failure ?? "No load error")
