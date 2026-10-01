@@ -49,6 +49,11 @@ import SereinCore
                 }
                 let secret=try await session.current!.webView.evaluateJavaScript("typeof window.sereinIsolatedSecret")
                 check("\(name)-isolated-world",secret as? String=="undefined")
+                if name=="mv3" {
+                    let world=try? await session.current!.webView.evaluateJavaScript("({marker:document.documentElement.dataset.sereinMainWorldMarker || '',global:window.sereinMainWorldProbe || ''})") as? [String:String]
+                    check("mv3-main-world-script-executes",world?["marker"]=="executed",String(describing:world))
+                    check("mv3-main-world-global-visible",world?["global"]=="page-global",String(describing:world))
+                }
                 results += await ExtensionFrameVerification.run(session:session,generation:generation)
                 results += await ExtensionResourceVerification.run(context:context,session:session,generation:generation)
                 let firstCount=payload?["count"] as? Int ?? 0

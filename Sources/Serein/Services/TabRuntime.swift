@@ -217,8 +217,9 @@ import SereinCore
     }
     func synchronize() {
         guard let view=storedView else{return}
-        title=view.title ?? "New Tab";isLoading=view.isLoading;progress=view.estimatedProgress;canGoBack=view.canGoBack;canGoForward=view.canGoForward
-        session?.update(id,url:(failedURL ?? provisionalURL ?? view.url)?.absoluteString,title:view.title)
+        let displayURL=failedURL ?? provisionalURL ?? view.url
+        title=PageDisplayTitle.resolve(view.title,url:displayURL);isLoading=view.isLoading;progress=view.estimatedProgress;canGoBack=view.canGoBack;canGoForward=view.canGoForward
+        session?.update(id,url:displayURL?.absoluteString,title:title)
     }
     func suspend() {
         guard let view=storedView else{return}

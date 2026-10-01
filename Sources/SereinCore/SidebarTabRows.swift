@@ -6,6 +6,14 @@ public struct SidebarTabRow:Identifiable,Equatable,Sendable {
     init(_ ids:[UUID]) {precondition(!ids.isEmpty);id=ids[0];tabIDs=ids}
 }
 extension BrowserWindowState {
+    /// Keyboard traversal follows rendered rows, respecting collapsed folders,
+    /// and stops at the ends instead of wrapping through hidden tabs.
+    public func sidebarNeighbor(of id:UUID,direction:Int)->UUID? {
+        let order=sidebarTabIDs
+        guard [-1,1].contains(direction),let index=order.firstIndex(of:id) else{return nil}
+        return order[min(order.count-1,max(0,index+direction))]
+    }
+
     /// Preserve tab/API order. Mixed-category or separated split members remain
     /// individual rows until persistent general-purpose groups are implemented.
     public var regularSidebarRows:[SidebarTabRow] {

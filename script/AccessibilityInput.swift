@@ -84,6 +84,15 @@ if mode=="press" {
     guard matching.count==1 else{fail("Expected exactly one \(identifier) control\n"+describe(items))}
     guard AXUIElementPerformAction(matching[0],kAXPressAction as CFString) == .success else{fail("AXPress failed")}
     print("Pressed \(identifier) through \(exact.isEmpty ? "unique native label" : "identifier")")
+} else if mode=="focus-tab" {
+    let identifier=arguments[3]
+    guard identifier.hasPrefix("tab-"),UUID(uuidString:String(identifier.dropFirst(4))) != nil else{fail("Expected fixture tab identifier")}
+    let items=controls(),matches=items.filter{text($0,kAXIdentifierAttribute)==identifier && text($0,kAXRoleAttribute)==kAXButtonRole}
+    guard matches.count==1 else{fail("Expected one native tab control\n"+describe(items))}
+    guard AXUIElementSetAttributeValue(matches[0],kAXFocusedAttribute as CFString,kCFBooleanTrue) == .success else{fail("Could not focus native tab control")}
+    Thread.sleep(forTimeInterval:0.2)
+    guard let current=focused(),text(current,kAXIdentifierAttribute)==identifier else{fail("Native focus did not reach fixture tab")}
+    print("Focused native tab")
 } else if mode=="split-tabs" {
     let identifiers=arguments[3].split(separator:",").map(String.init)
     guard (2...4).contains(identifiers.count),Set(identifiers).count==identifiers.count,

@@ -182,3 +182,11 @@ Expanded/compact-revealed sidebars now present contiguous regular split members 
 ### Bookmark editing continuation
 
 The next native bookmark editor exposes name/address editing from Command-D and the bookmark library. Creation remains a draft until Save; Cancel preserves existing data. Updates retain identity/creation date, reject stale edits from other windows, and publish only after atomic persistence succeeds. Credential-bearing URL userinfo is removed as in the existing library policy. This native sheet is a deliberate macOS form treatment; Zen's bookmark folders, tags and full edit-popup geometry are not yet reproduced. At `c366ef2`, all five store checks and eight native command/edit/persistence/capture checks pass. The actual editor and updated library screenshots were retrieved and inspected; fields and controls are readable and unclipped.
+
+### Sidebar keyboard selection (pending)
+
+Native tab buttons now use window-local SwiftUI focus and public [onKeyPress](https://developer.apple.com/documentation/swiftui/view/onkeypress(keys:phases:action:)) handling (available since macOS 14, retained as the applicable public API on macOS 27). Up/Down follows rendered tab order, stops at edges and excludes hidden workspace/folder rows. Shift extends/contracts the existing anchor range; an ordinary arrow replaces selection. Return selects the focused tab and returns to its page; Escape returns to the active page without changing the highlighted group. Command/Control/Option combinations remain available to native menus and system handling. Pending page-focus requests cannot override newer sidebar keyboard focus. This adds keyboard accessibility; exact Zen key-event parity is not yet established.
+
+Two core tests cover boundary/hidden-row order and range contraction. Eight actual native-focus/keyboard/capture checks are prepared, including preserved live views and page-responder restoration. No passing runtime claim yet.
+
+Untitled loaded pages now use a filename or host instead of retaining “New Tab”; empty/new tabs retain that label. Explicit document titles remain authoritative. Fallbacks omit URL userinfo/query/fragment and avoid data/opaque payloads. Two core tests and the actual JSON-page label check are prepared after the defect was observed in `5959e2c`'s desktop screenshot.

@@ -148,6 +148,13 @@ SPLITINPUT
       folder-name)
         native_input fill folder-name "Research notes" > "$ROOT/folder-name-input.log" 2>&1 || touch "$ROOT/folder-name.keyboard-failed"
         ;;
+      sidebar-focus)
+        native_input focus-tab "$(cat "$ROOT/sidebar-focus-identifier")" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
+      sidebar-extend-down) osascript -e 'tell application "System Events" to tell process "Serein" to key code 125 using shift down' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
+      sidebar-contract-up) osascript -e 'tell application "System Events" to tell process "Serein" to key code 126 using shift down' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
+      sidebar-down) osascript -e 'tell application "System Events" to tell process "Serein" to key code 125' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
+      sidebar-page-focus) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
       bookmark-open) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "d" using command down' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
       bookmark-cancel) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
       bookmark-title-save|bookmark-title-cancelled|bookmark-url-save)

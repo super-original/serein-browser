@@ -22,4 +22,27 @@ final class SidebarTabRowsTests:XCTestCase {
         state.sidebar = .expanded;XCTAssertEqual(state.regularSidebarRows.map(\.tabIDs),[[b,c]])
         _=state.addWorkspace(name:"Other");XCTAssertFalse(state.regularSidebarRows.flatMap(\.tabIDs).contains(b))
     }
+    func testKeyboardNeighborsStopAtEdgesAndExcludeHiddenRows() throws {
+        var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab(select:false),c=state.newTab(select:false)
+        let folder=try XCTUnwrap(state.createFolder(name:"Research",tabIDs:[a,b]))
+        state.toggleFolder(folder)
+        XCTAssertEqual(state.sidebarTabIDs,[a,c])
+        XCTAssertEqual(state.sidebarNeighbor(of:a,direction:-1),a)
+        XCTAssertEqual(state.sidebarNeighbor(of:a,direction:1),c)
+        XCTAssertEqual(state.sidebarNeighbor(of:c,direction:1),c)
+        XCTAssertNil(state.sidebarNeighbor(of:b,direction:1))
+        XCTAssertNil(state.sidebarNeighbor(of:a,direction:0))
+        _=state.addWorkspace(name:"Other")
+        XCTAssertNil(state.sidebarNeighbor(of:a,direction:1))
+    }
+    func testKeyboardRangeExtendsAndContractsThroughRenderedOrder() {
+        var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab(select:false),c=state.newTab(select:false)
+        var selection=TabSelection();selection.selectOnly(a)
+        selection.range(to:state.sidebarNeighbor(of:a,direction:1)!,in:state.sidebarTabIDs)
+        XCTAssertEqual(selection.ids,Set([a,b]))
+        selection.range(to:state.sidebarNeighbor(of:b,direction:1)!,in:state.sidebarTabIDs)
+        XCTAssertEqual(selection.ids,Set([a,b,c]))
+        selection.range(to:state.sidebarNeighbor(of:c,direction:-1)!,in:state.sidebarTabIDs)
+        XCTAssertEqual(selection.ids,Set([a,b]));XCTAssertEqual(selection.anchor,a)
+    }
 }

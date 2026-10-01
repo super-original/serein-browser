@@ -6,6 +6,7 @@ struct SidebarView: View {
     @Bindable var session: BrowserSession
     @Environment(\.appearsActive) private var active
     @State private var workspaceName=""
+    @FocusState private var focusedTab:UUID?
     @State private var creatingWorkspace=false
     @State private var renamingWorkspace: UUID?
     private var collapsed: Bool {session.state.sidebar == .collapsed}
@@ -37,32 +38,35 @@ struct SidebarView: View {
                     if session.state.isPrivate {Image(systemName:"hand.raised").help("Private Browsing")}
                 }.padding(.horizontal,8).padding(.top,8).padding(.bottom,12)
             }
-            ScrollView {
-                LazyVStack(spacing:4) {
-                    ForEach(session.state.pinnedSidebarRows){row in
-                        Group {
-                            if row.isFolder,let folder=session.state.folder(row.id) {FolderRow(session:session,folder:folder,compact:collapsed)}
-                            else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
-                        }.padding(.leading,collapsed ? 0 : CGFloat(row.depth)*14)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing:4) {
+                        ForEach(session.state.pinnedSidebarRows){row in
+                            Group {
+                                if row.isFolder,let folder=session.state.folder(row.id) {FolderRow(session:session,folder:folder,compact:collapsed)}
+                                else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
+                            }.padding(.leading,collapsed ? 0 : CGFloat(row.depth)*14)
+                        }
+                        Divider().padding(.vertical,8)
+                        Button {session.newTab()} label:{HStack(spacing:10){Image(systemName:"plus");if !collapsed {Text("New Tab");Spacer()}}.frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,10).frame(height:36)}
+                            .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityIdentifier("new-tab")
+                        ForEach(session.state.regularSidebarRows) { row in
+                            if row.tabIDs.count>1 {
+                                HStack(spacing:4) {
+                                    ForEach(row.tabIDs,id:\.self) { id in
+                                        if let tab=session.state.tabs.first(where:{$0.id==id}) {tabRow(tab,joined:true)}
+                                    }
+                                }.padding(4)
+                                    .background(Color.primary.opacity(0.045),in:.rect(cornerRadius:10))
+                                    .accessibilityElement(children:.contain)
+                                    .accessibilityLabel("Split View, \(row.tabIDs.count) tabs")
+                                    .accessibilityIdentifier("split-tab-group")
+                            } else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
+                        }
                     }
-                    Divider().padding(.vertical,8)
-                    Button {session.newTab()} label:{HStack(spacing:10){Image(systemName:"plus");if !collapsed {Text("New Tab");Spacer()}}.frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,10).frame(height:36)}
-                        .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityIdentifier("new-tab")
-                    ForEach(session.state.regularSidebarRows) { row in
-                        if row.tabIDs.count>1 {
-                            HStack(spacing:4) {
-                                ForEach(row.tabIDs,id:\.self) { id in
-                                    if let tab=session.state.tabs.first(where:{$0.id==id}) {tabRow(tab,joined:true)}
-                                }
-                            }.padding(4)
-                                .background(Color.primary.opacity(0.045),in:.rect(cornerRadius:10))
-                                .accessibilityElement(children:.contain)
-                                .accessibilityLabel("Split View, \(row.tabIDs.count) tabs")
-                                .accessibilityIdentifier("split-tab-group")
-                        } else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
-                    }
-                }
-            }.scrollIndicators(.hidden)
+                }.scrollIndicators(.hidden)
+                    .onChange(of:focusedTab){_,id in if let id {proxy.scrollTo(id,anchor:.center)}}
+            }
             if let host=session.extensions,!host.records.filter({$0.enabled && host.hasAction($0.id)}).isEmpty {
                 ScrollView(.horizontal) {
                     HStack(spacing:6) {ForEach(host.records.filter{$0.enabled && host.hasAction($0.id)}){record in ExtensionActionButton(record:record,session:session,revision:host.actionRevision).frame(width:28,height:28)}}
@@ -96,6 +100,14 @@ struct SidebarView: View {
             }.frame(height:30)
         }
         .padding(.horizontal,8).padding(.bottom,6)
+        .onChange(of:focusedTab){_,value in
+            session.sidebarKeyboardFocus=value
+            if value != nil {session.contentFocusRequest=nil}
+        }
+        .onChange(of:session.state.sidebarTabIDs){_,ids in
+            if let focusedTab,!ids.contains(focusedTab) {self.focusedTab=nil;session.sidebarKeyboardFocus=nil}
+        }
+        .onDisappear{session.sidebarKeyboardFocus=nil}
         .opacity(active ? 1 : 0.65)
         .glassEffect(.regular,in:.rect(cornerRadius:12))
         .sheet(item:$session.folderEditor){request in FolderEditorView(session:session,request:request)}
@@ -112,7 +124,8 @@ struct SidebarView: View {
         }
     }
     private func tabRow(_ tab: BrowserTab,essential: Bool = false,joined:Bool=false) -> some View {
-        TabRow(session:session,tab:tab,compact:collapsed || essential,joined:joined)
+        TabRow(session:session,tab:tab,compact:collapsed || essential,joined:joined,focusedTab:$focusedTab)
+            .id(tab.id)
             .draggable(session.sidebarDrag(tab.id,kind:.tab))
             .dropDestination(for:SidebarDragItem.self){items,point in
                 session.acceptSidebarDrop(items,at:point.y>(tab.kind == .essential ? 22 : joined ? 14 : 18) ? .afterTab(tab.id) : .beforeTab(tab.id))
@@ -124,6 +137,7 @@ private struct TabRow: View {
     let tab: BrowserTab
     let compact: Bool
     let joined: Bool
+    var focusedTab:FocusState<UUID?>.Binding
     @State private var hovering=false
     var body: some View {
         HStack(spacing:joined ? 4 : 10) {
@@ -134,6 +148,21 @@ private struct TabRow: View {
                     if !compact {Text(tab.title).font(.system(size:13,weight:session.state.sidebarSelectedTabID==tab.id ? .semibold : .regular)).lineLimit(1);Spacer(minLength:0)}
                 }.frame(maxWidth:.infinity,alignment:compact ? .center : .leading).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)").accessibilityAddTraits(session.tabSelection.ids.contains(tab.id) || session.state.sidebarSelectedTabID==tab.id ? .isSelected : [])
+            .accessibilityHint("Up and Down select tabs. Shift extends selection. Return or Escape returns to the page.")
+            .focused(focusedTab,equals:tab.id)
+            .onKeyPress(keys:[.upArrow,.downArrow]){press in
+                guard press.modifiers.intersection([.command,.control,.option]).isEmpty,
+                      let target=session.moveSidebarSelection(from:tab.id,direction:press.key == .downArrow ? 1 : -1,extending:press.modifiers.contains(.shift)) else{return .ignored}
+                focusedTab.wrappedValue=target
+                return .handled
+            }
+            .onKeyPress(keys:[.return,.escape]){press in
+                guard press.modifiers.intersection([.command,.control,.option,.shift]).isEmpty else{return .ignored}
+                if press.key == .return {session.select(tab.id)}
+                focusedTab.wrappedValue=nil;session.sidebarKeyboardFocus=nil
+                session.focusContent(ifSelected:session.state.selectedTabID)
+                return .handled
+            }
             if session.state.glance(for:tab.id) != nil {
                 Button {session.select(tab.id)} label:{Image(systemName:"rectangle.on.rectangle").font(.system(size:12)).frame(width:24,height:24)}.buttonStyle(.plain).accessibilityLabel("Show Link Preview").help("Show Link Preview")
             }

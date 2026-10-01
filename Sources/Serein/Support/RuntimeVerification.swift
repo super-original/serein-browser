@@ -279,6 +279,8 @@ import SereinCore
         } catch {check("private-cookie-isolation",false,error.localizedDescription)}
         session.window?.makeKeyAndOrderFront(nil)
         results += LibraryVerification.run(root: root)
+        checkpoint("SidebarKeyboardVerification")
+        results += await SidebarKeyboardVerification.run(manager:manager,root:root)
         results += await BookmarkVerification.run(manager:manager,root:root)
         results += DownloadIdentityVerification.run(root:root,session:session)
         checkpoint("DownloadVerification")

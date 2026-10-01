@@ -19,6 +19,7 @@ import SereinCore
     var findResult=""
     @ObservationIgnored var findRequestID=UUID()
     @ObservationIgnored var contentFocusRequest:UUID?
+    @ObservationIgnored var sidebarKeyboardFocus:UUID?
     var libraryPanel: LibraryPanel?
     var folderEditor:FolderEditorRequest?
     var bookmarkEditor:BookmarkEditorRequest?
