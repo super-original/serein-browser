@@ -4,19 +4,17 @@
 
 ## Latest completed source
 
-`49e5da0e75a1b0da7c77bc4cf4be3fb164176b8e`: [run 36815945258](https://github.com/super-original/serein-browser/actions/runs/36815945258) passes **120 unit tests and 628/658 browser checks**. All **20 idle-suspension and five real-audio checks** pass: native trusted input starts decoded audio, public playing/paused state is reported, and the aged inactive page stays loaded in both cases. History/zoom restoration, exclusions and controlled races pass. Idle age now uses ContinuousClock. Physical audio output, camera/microphone, WebRTC and screen sharing remain unverified. Retrieved `57-idle-tab-settings.png` was inspected again; its control and explanation are legible, with desktop website content still blank.
+`fdd5ae20bb60074de3325a432325aa5a99e842ee`: [run 36817012498](https://github.com/super-original/serein-browser/actions/runs/36817012498) passes **120 unit tests and 643/673 browser checks**. All **14 page-screenshot checks** pass, including actual native Tools-menu invocation, native PNG destination, cancellation, private export disclosure, duplicate refusal and changed selection/document/window rejection. Retrieved `58-page-screenshot-save.png` shows the legible native sheet over blank desktop website content. Separately inspected `native-page-screenshot.png` contains the actual page text. This validates viewport export, not desktop rendering. The earlier `7474675` actor-isolation compilation error is fixed.
 
-uBO Lite is **13/13 at the production default origin and 12/13 at the experimental Firefox origin**; the original options/background round trip again times out only in the experimental run. This confirms recurring timing/reliability uncertainty, not a resolved defect. The controlled origin probe remains 8/8. Independent native-host 44/44, crash 7/7, download restart 17/17, quit 13/13, bridge 12/12 and fresh fullscreen 8/12 outcomes remain unchanged. The same 30 main failures and rendering gate remain.
+All **20 idle-policy and six real-audio checks** pass. The additional public query confirms audio continues playing after the page leaves the visible window. Playing and paused inactive pages stay loaded; history/zoom restoration, exclusions and controlled races pass. Idle age is monotonic. Physical speaker, camera/microphone, WebRTC and screen-sharing behavior remain unverified.
 
-[Development app](https://github.com/super-original/serein-browser/actions/runs/36815945258/artifacts/11141189024) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36815945258/artifacts/11140994964). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+uBO Lite passes **13/13 in both origin modes on this run**; custom-origin options timeouts recurred on earlier runs and remain unresolved. The controlled origin probe is 8/8. Independent native-host 44/44, crash 7/7, download restart 17/17, quit 13/13, bridge 12/12 and fresh fullscreen 8/12 outcomes remain unchanged. The same 30 main failures and rendering gate remain.
+
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36817012498/artifacts/11141877240) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36817012498/artifacts/11142121842). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
 
 ## Active follow-up
 
-The next audio assertion queries public playback state after the view leaves the visible window, explicitly separating continued background playback from retention alone.
-
-`7474675` [run 36816771290](https://github.com/super-original/serein-browser/actions/runs/36816771290) failed compilation because the nested capture-validity helper lacked explicit main-actor isolation. The follow-up annotates the helper and includes actual Tools-menu input in the runtime test. No screenshot-feature runtime result is claimed yet.
-
-The implementation adds Tools → Save Page Screenshot, using the selected WKWebView viewport and native PNG destination sheet. The image stays in memory until explicit save; document/view/selection identity is checked after capture and after consent. Cancellation writes nothing. Private windows disclose disk persistence. Runtime scenarios cover PNG encoding, stale identity, cancellation, duplicate-command refusal, native destination/content and private cancellation. Exported content images will be inspected separately from the independently captured native save sheet. Full-page/region capture and picture-in-picture remain missing.
+Pending download-model work retains final response provenance, MIME type, progress counts and completion time, displays received/expected amounts, and adds redirect/resume/history tests. The extension downloads namespace remains absent. Read-only options-page diagnostics will also run after a real-package messaging timeout, retaining the original failure.
 
 ## Retained failures
 
@@ -46,7 +44,7 @@ Selected-tab group dragging, live cross-window moves, folders, split resizing, G
 
 The idle policy defaults Off, supports 15/30/60 minutes, excludes visible/private/pinned/essential/extension/file/edited/loading/failed/preview pages and pauses for active downloads. Public media-query timeout preserves the page; identity and policy are rechecked after the reply. In-memory history/position/zoom restoration passes. Unsaved editor detection remains incomplete and some page state can be lost; cross-launch history is not implemented.
 
-Unmodified uBO Lite Firefox 2026.930.1227 has passed 13/13 narrow functional checks in both origin modes on earlier runs, but the experimental mode is 12/13 on the latest run. Its initial rule compilation sometimes exceeds the earlier five-second observation window, so the test allows a bounded thirty seconds and records elapsed time. The custom-origin options exchange has timed out more than once; it remains experimental. This does not establish password manager, script manager, downloader or universal extension compatibility.
+Unmodified uBO Lite Firefox 2026.930.1227 has passed 13/13 narrow functional checks in both origin modes on earlier runs, with intermittent 12/13 experimental-mode results on earlier runs. Its initial rule compilation sometimes exceeds the earlier five-second observation window, so the test allows a bounded thirty seconds and records elapsed time. The custom-origin options exchange has timed out more than once; it remains experimental. This does not establish password manager, script manager, downloader or universal extension compatibility.
 
 [23 pinned Zen captures](https://github.com/super-original/serein-browser/actions/runs/36794469990/artifacts/11133112384) provide the reference baseline. [Research](RESEARCH.md), [parity](ZEN_PARITY.md) and [recorded comparisons](evidence/2026-09-30/README.md) distinguish intentional native Liquid Glass treatment from missing behavior. Serein website desktop content remains unverified because the rendering gate fails.
 

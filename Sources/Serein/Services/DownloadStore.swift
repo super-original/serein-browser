@@ -13,6 +13,12 @@ import SereinCore
     var finished:Bool {record.phase.isFinished}
     var isActive:Bool {record.phase.isActive}
     var canResume:Bool {resumeData != nil && !isActive && !retired}
+    var byteSummary:String? {
+        guard let received=record.receivedBytes else{return nil}
+        let amount=ByteCountFormatter.string(fromByteCount:received,countStyle:.file)
+        if let expected=record.expectedBytes,expected>0 {return "\(amount) of \(ByteCountFormatter.string(fromByteCount:expected,countStyle:.file))"}
+        return amount
+    }
     var status:String {
         switch record.phase {
         case .choosing:return "Choosing destination"
@@ -38,14 +44,22 @@ import SereinCore
     func attach(_ download:WKDownload) {
         guard !retired else{download.cancel(nil);return}
         self.download=download;download.delegate=self
-        observation=download.progress.observe(\.fractionCompleted,options:[.initial,.new]) { [weak self] _,change in
+        observation=download.progress.observe(\.fractionCompleted,options:[.initial,.new]) { [weak self,weak download] _,change in
             let value=change.newValue ?? 0
-            Task { @MainActor [weak self] in self?.fraction=min(1,max(0,value)) }
+            Task { @MainActor [weak self,weak download] in
+                guard let self,let download,self.download === download,!self.retired else{return}
+                self.fraction=min(1,max(0,value));self.readProgress(download)
+            }
         }
+    }
+    private func readProgress(_ download:WKDownload) {
+        record.receivedBytes=max(0,download.progress.completedUnitCount)
+        if download.progress.totalUnitCount>0 {record.expectedBytes=download.progress.totalUnitCount}
     }
     private func changed() {if !privateMode {store?.save()}}
     func download(_ download:WKDownload,decideDestinationUsing response:URLResponse,suggestedFilename:String,completionHandler:@escaping @MainActor @Sendable (URL?)->Void) {
         guard !retired,self.download === download else{completionHandler(nil);return}
+        record.receivedResponse(url:response.url,mimeType:response.mimeType,expectedBytes:response.expectedContentLength)
         record.name=(suggestedFilename as NSString).lastPathComponent
         if let destination {record.name=destination.lastPathComponent;record.phase = .downloading;changed();completionHandler(destination);return}
         let panel=NSSavePanel();savePanel=panel;panel.nameFieldStringValue=name;panel.canCreateDirectories=true
@@ -54,28 +68,33 @@ import SereinCore
             self.savePanel=nil
             guard self.record.phase != .cancelling else{completionHandler(nil);return}
             if response == .OK,let url=panel.url {self.record.destination=url;self.record.name=url.lastPathComponent;self.record.phase = .downloading;self.changed();completionHandler(url)}
-            else {self.record.phase = .cancelled;self.changed();completionHandler(nil)}
+            else {self.record.phase = .cancelled;self.record.completed=Date();self.changed();completionHandler(nil)}
         }
         if let window=session?.dialogWindow {panel.beginSheetModal(for:window,completionHandler:complete)} else {panel.begin(completionHandler:complete)}
     }
     func downloadDidFinish(_ download:WKDownload) {
         guard self.download === download,!retired else{return}
+        readProgress(download);record.completed=Date()
         record.phase = .complete;record.detail="";fraction=1;resumeData=nil;self.download=nil;observation=nil;changed()
     }
     func download(_ download:WKDownload,didFailWithError error:Error,resumeData:Data?) {
         guard self.download === download,!retired,record.phase != .cancelling else{return}
         if record.phase == .cancelled {self.download=nil;observation=nil;return}
+        readProgress(download);record.completed=Date()
         record.phase = .failed;record.detail=error.localizedDescription;self.resumeData=resumeData;self.download=nil;observation=nil;changed()
     }
     func cancel(pause:Bool=false) {
-        if !pause,canResume {resumeData=nil;record.phase = .cancelled;record.detail="";changed();return}
+        if !pause,canResume {resumeData=nil;record.phase = .cancelled;record.completed=Date();record.detail="";changed();return}
         guard let download,isActive,record.phase != .cancelling else{return}
+        readProgress(download)
         record.phase = .cancelling;changed()
         savePanel?.cancel(nil);savePanel=nil
         download.cancel { [weak self] data in
             guard let self,!self.retired,self.download === download else{return}
+            self.readProgress(download)
             self.resumeData=pause ? data : nil
             self.record.phase = pause && data != nil ? .paused : .cancelled
+            self.record.completed=self.record.phase == .paused ? nil : Date()
             self.record.detail=pause && data == nil ? "Stopped; this download did not provide resume data." : ""
             self.download=nil;self.observation=nil;self.changed()
         }
@@ -84,7 +103,7 @@ import SereinCore
         guard canResume,let data=resumeData,
               (privateMode ? record.privateWindowID == session.state.id && session.state.isPrivate : !session.state.isPrivate),
               let webView=session.current?.webView else{return}
-        self.session=session;record.phase = .downloading;record.detail="";resumeData=nil;changed()
+        self.session=session;record.phase = .downloading;record.completed=nil;record.detail="";resumeData=nil;changed()
         webView.resumeDownload(fromResumeData:data) { [weak self] download in
             guard let self,!self.retired else{download.cancel(nil);return}
             self.attach(download)

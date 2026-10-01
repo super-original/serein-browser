@@ -56,6 +56,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_GET(self):
+        if self.path.split('?', 1)[0] == '/redirect-download':
+            self.send_response(302)
+            self.send_header('Location', '/download.txt')
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
         if self.path.split('?', 1)[0] == '/serein-tone.wav':
             return self.tone()
         if self.path.split('?', 1)[0] in ['/ads/!rotator/probe.js', '/serein-clean-probe.js']:

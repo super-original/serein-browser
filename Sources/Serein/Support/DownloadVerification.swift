@@ -48,6 +48,13 @@ import SereinCore
         check("download-content",item.destination.flatMap{try? String(contentsOf:$0,encoding:.utf8)} == "Serein deterministic download fixture v1.\n")
         let restored=DownloadStore(root:root)
         check("download-history-restores",restored.items.contains{$0.id==item.id && $0.record.phase == .complete && $0.destination==item.destination},restored.error ?? "")
+        let redirected=await start("redirect-download",in:session,destination:"redirected-download.txt")
+        _=await wait{redirected.finished}
+        let expectedBytes=Int64("Serein deterministic download fixture v1.\n".utf8.count)
+        check("download-redirect-response-metadata",redirected.record.phase == .complete && redirected.record.source?.path=="/redirect-download" && redirected.record.finalURL?.path=="/download.txt" && redirected.record.mimeType=="text/plain",String(describing:redirected.record))
+        check("download-final-byte-count",redirected.record.receivedBytes==expectedBytes && redirected.record.expectedBytes==expectedBytes && redirected.record.completed != nil,redirected.byteSummary ?? "No count")
+        let restoredMetadata=DownloadStore(root:root).items.first{$0.id==redirected.id}?.record
+        check("download-response-metadata-restores",restoredMetadata?.finalURL==redirected.record.finalURL && restoredMetadata?.receivedBytes==expectedBytes && restoredMetadata?.completed==redirected.record.completed)
 
         let historyBefore=try? Data(contentsOf:manager.downloads.file)
         let modifiedBefore=(try? FileManager.default.attributesOfItem(atPath:manager.downloads.file.path))?[.modificationDate] as? Date
@@ -72,6 +79,7 @@ import SereinCore
         resumable.cancel(pause:true)
         _=await wait{!resumable.isActive}
         check("download-pause-has-resume-data",resumable.record.phase == .paused && resumable.canResume,resumable.status)
+        check("download-paused-byte-metadata",(resumable.record.receivedBytes ?? 0)>0 && resumable.record.expectedBytes==8*1024*1024 && resumable.record.completed==nil,resumable.byteSummary ?? "No count")
         session.libraryPanel = .downloads
         try? await Task.sleep(for:.milliseconds(500))
         let capture="19-downloads-paused"
@@ -87,6 +95,7 @@ import SereinCore
         check("download-resume-completes",resumable.record.phase == .complete,resumable.status)
         let data=resumable.destination.flatMap{try? Data(contentsOf:$0)}
         check("download-resume-byte-integrity",data?.count==8*1024*1024 && data?.enumerated().allSatisfy{UInt8($0.offset%256)==$0.element} == true)
+        check("download-resumed-final-byte-metadata",resumable.record.receivedBytes==8*1024*1024 && resumable.record.expectedBytes==8*1024*1024 && resumable.record.completed != nil,resumable.byteSummary ?? "No count")
         let cancelled=await start("slow-download.bin",in:session,destination:"cancelled-download.bin")
         _=await wait{cancelled.fraction>0.01 || cancelled.finished}
         cancelled.cancel(pause:true)

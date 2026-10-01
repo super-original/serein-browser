@@ -77,7 +77,8 @@ import SereinCore
                 } catch(error){return {status:'rejected',error:String(error)};}
                 """,arguments:[:],in:nil,contentWorld:.page) as? [String:Any]
                 let data=reply?["value"] as? [String:Any]
-                check("original-options-background-roundtrip",(data?["enabledRulesets"] as? [String])?.contains("easylist")==true,"reply=\(String(describing:reply)) contextErrors=\(context.errors.map(\.localizedDescription))")
+                let readiness=reply?["status"] as? String=="timeout" ? await RealExtensionReadinessProbe.inspect(optionView) : "Not needed; original request completed."
+                check("original-options-background-roundtrip",(data?["enabledRulesets"] as? [String])?.contains("easylist")==true,"reply=\(String(describing:reply)) contextErrors=\(context.errors.map(\.localizedDescription)) readiness=\(readiness)")
                 let rules=try? await optionView.callAsyncJavaScript("return await browser.declarativeNetRequest.getEnabledRulesets();",arguments:[:],in:nil,contentWorld:.page) as? [String]
                 check("engine-enables-shipped-easylist",rules?.contains("easylist")==true,String(describing:rules))
                 let errors=context.errors.map(\.localizedDescription)
