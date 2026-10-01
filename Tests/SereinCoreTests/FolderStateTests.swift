@@ -125,4 +125,28 @@ final class FolderStateTests:XCTestCase {
         XCTAssertEqual(state.tabs.first{$0.id==owner}?.workspaceID,workspace)
     }
 
+    func testCustomIconSurvivesCollapseWorkspaceMoveAndSession() throws {
+        var state=BrowserWindowState();let tab=state.selectedTabID!
+        let folder=try XCTUnwrap(state.createFolder(name:"Research",tabIDs:[tab]))
+        state.folders?[0].userIcon=FolderIcon.science.rawValue
+        state.toggleFolder(folder)
+        let destination=state.addWorkspace(name:"Science");state.moveFolderToWorkspace(folder,destination)
+        let restored=try SavedSession.decode(SavedSession(windows:[state]).encoded()).windows[0]
+        XCTAssertEqual(restored.folder(folder)?.resolvedIcon,.science)
+        XCTAssertEqual(restored.folderTabIDs(folder),[tab]);XCTAssertEqual(restored.folder(folder)?.workspaceID,destination)
+        XCTAssertEqual(restored.folder(folder)?.collapsed,true)
+    }
+    func testLegacyAndUnknownFolderIconsUseNativeFallback() throws {
+        let folder=TabFolder(workspaceID:UUID())
+        var json=try XCTUnwrap(JSONSerialization.jsonObject(with:JSONEncoder().encode(folder)) as? [String:Any])
+        json.removeValue(forKey:"userIcon")
+        let legacy=try JSONDecoder().decode(TabFolder.self,from:JSONSerialization.data(withJSONObject:json))
+        XCTAssertNil(legacy.userIcon);XCTAssertNil(legacy.resolvedIcon)
+        for value in ["https://example.test/tracker.svg","unknown-future-icon",""] {
+            json["userIcon"]=value
+            let decoded=try JSONDecoder().decode(TabFolder.self,from:JSONSerialization.data(withJSONObject:json))
+            XCTAssertNil(decoded.resolvedIcon);XCTAssertEqual(decoded.id,folder.id)
+        }
+    }
+
 }

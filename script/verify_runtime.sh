@@ -152,6 +152,15 @@ SPLITINPUT
       folder-name)
         native_input fill folder-name "Research notes" > "$ROOT/folder-name-input.log" 2>&1 || touch "$ROOT/folder-name.keyboard-failed"
         ;;
+      folder-icon-star|folder-icon-default)
+        ICON_IDENTIFIER=folder-icon-star.fill
+        if test "$KEYBOARD_NAME" = folder-icon-default; then ICON_IDENTIFIER=folder-icon-default; fi
+        native_input press "$ICON_IDENTIFIER" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
+      folder-editor-save|folder-editor-cancel)
+        if test "$KEYBOARD_NAME" = folder-editor-save; then EDITOR_KEY=36; else EDITOR_KEY=53; fi
+        osascript -e "tell application \"System Events\" to tell process \"Serein\" to key code $EDITOR_KEY" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
       glance-expand-control|glance-split-control|glance-close-control)
         native_input press "${KEYBOARD_NAME%-control}" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;

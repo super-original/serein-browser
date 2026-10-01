@@ -1,10 +1,18 @@
 import Foundation
 
+/// Stable identifiers for bundled native symbols; session data never supplies an asset URL.
+public enum FolderIcon:String,CaseIterable,Codable,Sendable {
+    case star="star.fill",book="book.closed.fill",work="briefcase.fill",travel="airplane"
+    case code="chevron.left.forwardslash.chevron.right",music="music.note",heart="heart.fill",science="atom"
+}
+
 public struct TabFolder:Identifiable,Codable,Equatable,Sendable {
     public var id:UUID
     public var workspaceID:UUID
     public var parentID:UUID?
     public var name:String
+    public var userIcon:String?
+    public var resolvedIcon:FolderIcon? {userIcon.flatMap(FolderIcon.init(rawValue:))}
     public var collapsed:Bool
     public var order:[UUID]
     public init(id:UUID=UUID(),workspaceID:UUID,parentID:UUID?=nil,name:String="Folder") {

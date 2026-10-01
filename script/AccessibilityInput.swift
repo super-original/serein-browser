@@ -72,7 +72,7 @@ for _ in 0..<10 {
 let mode=arguments[2]
 if mode=="press" {
     let identifier=arguments[3]
-    let allowed=["glance-close":"Close Preview","glance-expand":"Expand Preview","glance-split":"Split Preview"]
+    let allowed=["glance-close":"Close Preview","glance-expand":"Expand Preview","glance-split":"Split Preview","folder-icon-star.fill":"Star","folder-icon-default":"Default Folder"]
     guard let label=allowed[identifier] else{fail("Unknown fixture action")}
     let items=controls()
     let exact=items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && text($0,kAXIdentifierAttribute)==identifier}

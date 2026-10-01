@@ -64,13 +64,33 @@ import SereinCore
         await capture("46-folder-nested")
         let menu=await keyboard("folder-context")
         check("capture-native-context-menu",menu && FileManager.default.fileExists(atPath:root.appendingPathComponent("47-folder-context.png").path))
+        session.folderEditor = .init(editingID:folder.id,name:folder.name)
+        await wait{session.window?.attachedSheet != nil}
+        let iconSelected=await keyboard("folder-icon-star")
+        await capture("68-folder-icon-picker")
+        check("icon-preview-does-not-mutate-session",iconSelected && session.state.folder(folder.id)?.resolvedIcon==nil)
+        let iconSaved=await keyboard("folder-editor-save")
+        await wait{session.folderEditor==nil}
+        check("native-icon-selection-saves-with-live-pages",iconSaved && session.state.folder(folder.id)?.resolvedIcon == .star && session.runtime(a)===first && session.runtime(b)===second)
+        await capture("69-folder-custom-icon")
+        session.folderEditor = .init(editingID:folder.id,name:folder.name)
+        await wait{session.window?.attachedSheet != nil}
+        let resetPreview=await keyboard("folder-icon-default"),cancelled=await keyboard("folder-editor-cancel")
+        await wait{session.folderEditor==nil}
+        check("cancel-icon-edit-preserves-saved-choice",resetPreview && cancelled && session.state.folder(folder.id)?.resolvedIcon == .star)
         session.state.renameFolder(folder.id,to:"Research archive")
         manager.saveNow()
         do {
             let restored=try SavedSession.decode(Data(contentsOf:manager.root.appendingPathComponent("session.json")))
             let window=restored.windows.first{$0.id==session.state.id}
+            check("session-persists-custom-icon",window?.folder(folder.id)?.resolvedIcon == .star)
             check("session-persists-membership-and-name",window?.folder(folder.id)?.name=="Research archive" && window?.folderTabIDs(folder.id)==[a,b] && child.flatMap{window?.folder($0)?.parentID}==folder.id)
         } catch {check("session-persists-membership-and-name",false,error.localizedDescription)}
+        session.folderEditor = .init(editingID:folder.id,name:"Research archive")
+        await wait{session.window?.attachedSheet != nil}
+        let resetSelected=await keyboard("folder-icon-default"),resetSaved=await keyboard("folder-editor-save")
+        await wait{session.folderEditor==nil}
+        check("native-icon-reset-keeps-folder-membership",resetSelected && resetSaved && session.state.folder(folder.id)?.userIcon==nil && session.state.folderTabIDs(folder.id)==[a,b])
         session.deleteFolder(folder.id)
         await wait{session.window?.attachedSheet != nil}
         await capture("48-folder-delete-confirmation")

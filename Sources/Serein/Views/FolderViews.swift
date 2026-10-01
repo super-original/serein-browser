@@ -9,7 +9,7 @@ struct FolderRow:View {
     var body:some View {
         Button {session.state.toggleFolder(folder.id)} label:{
             HStack(spacing:10) {
-                Image(systemName:folder.collapsed ? "folder" : "folder.fill").font(.system(size:16)).foregroundStyle(Color.accentColor).frame(width:16,height:16)
+                Image(systemName:folder.resolvedIcon?.rawValue ?? (folder.collapsed ? "folder" : "folder.fill")).font(.system(size:16)).foregroundStyle(Color.accentColor).frame(width:16,height:16)
                 if !compact {Text(folder.name).font(.system(size:13,weight:.semibold)).lineLimit(1);Spacer(minLength:0)}
             }.frame(maxWidth:.infinity,alignment:compact ? .center : .leading).padding(.horizontal,10).frame(height:36).contentShape(Rectangle())
         }.buttonStyle(.plain)
@@ -20,7 +20,7 @@ struct FolderRow:View {
         .draggable(session.sidebarDrag(folder.id,kind:.folder))
         .dropDestination(for:SidebarDragItem.self){items,_ in session.acceptSidebarDrop(items,at:.folder(folder.id))}
         .contextMenu {
-            Button("Rename Folder…"){session.folderEditor = .init(editingID:folder.id,name:folder.name)}
+            Button("Edit Folder…"){session.folderEditor = .init(editingID:folder.id,name:folder.name)}
             Button("New Tab in Folder"){session.newTab(inFolder:folder.id)}
             Button("New Subfolder…"){session.folderEditor = .init(parentID:folder.id)}.disabled(session.state.folderDepth(folder.id)>=5)
             if let parent=folder.parentID {Button("Move Out of Parent Folder"){_ = session.state.moveFolder(folder.id,into:session.state.folder(parent)?.parentID)}}
@@ -42,29 +42,60 @@ struct FolderEditorView:View {
     let session:BrowserSession
     let request:FolderEditorRequest
     @State private var name:String
+    @State private var icon:FolderIcon?
     @State private var error:String?
     @FocusState private var nameFocused:Bool
-    init(session:BrowserSession,request:FolderEditorRequest) {self.session=session;self.request=request;_name=State(initialValue:request.name)}
+    init(session:BrowserSession,request:FolderEditorRequest) {self.session=session;self.request=request;_name=State(initialValue:request.name);_icon=State(initialValue:request.editingID.flatMap{session.state.folder($0)?.resolvedIcon})}
     var body:some View {
         VStack(alignment:.leading,spacing:18) {
-            Text(request.editingID==nil ? "New Folder" : "Rename Folder").font(.headline)
+            Text(request.editingID==nil ? "New Folder" : "Edit Folder").font(.headline)
             TextField("Name",text:$name).textFieldStyle(.bordered).accessibilityIdentifier("folder-name").focused($nameFocused).onSubmit{save()}
+            Text("Icon").font(.subheadline)
+            LazyVGrid(columns:Array(repeating:GridItem(.fixed(48)),count:5),spacing:8) {
+                iconButton(nil,label:"Default Folder")
+                ForEach(FolderIcon.allCases,id:\.rawValue) { choice in iconButton(choice,label:iconLabel(choice)) }
+            }
             if let error {Text(error).foregroundStyle(.red).font(.caption)}
             HStack {
                 Button("Cancel"){session.folderEditor=nil}.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button(request.editingID==nil ? "Create" : "Rename"){save()}
+                Button(request.editingID==nil ? "Create" : "Save"){save()}
                     .keyboardShortcut(.defaultAction).disabled(name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
             }
         }.padding(24).frame(width:320).onAppear{nameFocused=true}
+    }
+    private func iconLabel(_ icon:FolderIcon)->String {
+        switch icon {
+        case .star:"Star"
+        case .book:"Book"
+        case .work:"Work"
+        case .travel:"Travel"
+        case .code:"Code"
+        case .music:"Music"
+        case .heart:"Heart"
+        case .science:"Science"
+        }
+    }
+    private func iconButton(_ choice:FolderIcon?,label:String)->some View {
+        Button {icon=choice} label:{
+            Image(systemName:choice?.rawValue ?? "folder.fill").font(.system(size:18))
+                .frame(width:32,height:28)
+        }.buttonStyle(.bordered).tint(icon==choice ? Color.accentColor : Color.secondary)
+            .help(label).accessibilityLabel(label).accessibilityValue(icon==choice ? "Selected" : "")
+            .accessibilityIdentifier("folder-icon-"+(choice?.rawValue ?? "default"))
     }
     private func save() {
         guard !name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else{return}
         if let id=request.editingID {
             guard session.state.folder(id) != nil else{error="This folder is no longer available.";return}
             session.state.renameFolder(id,to:name)
-        } else if session.createFolder(name:name,tabIDs:request.tabIDs,parentID:request.parentID)==nil {
-            error="The workspace or selected tabs changed. Close this dialog and try again.";return
+            if let index=session.state.folders?.firstIndex(where:{$0.id==id}) {session.state.folders?[index].userIcon=icon?.rawValue}
+        } else {
+            guard let id=session.createFolder(name:name,tabIDs:request.tabIDs,parentID:request.parentID),
+                  let index=session.state.folders?.firstIndex(where:{$0.id==id}) else {
+                error="The workspace or selected tabs changed. Close this dialog and try again.";return
+            }
+            session.state.folders?[index].userIcon=icon?.rawValue
         }
         session.folderEditor=nil
     }
