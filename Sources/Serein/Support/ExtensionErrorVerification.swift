@@ -27,7 +27,9 @@ import SereinCore
             check("native-error-capture",FileManager.default.fileExists(atPath:root.appendingPathComponent("53-extension-runtime-error.png").path))
             session.libraryPanel=nil
             await wait{session.window?.attachedSheet==nil}
+            host.error="Previous operation failed"
             await host.setEnabled(id,false)
+            check("next-operation-clears-stale-error",host.error==nil)
             check("disabled-context-clears-row",host.contexts[id]==nil && host.contextErrors[id]==nil)
         } catch{check("setup",false,error.localizedDescription)}
         await host.remove(id)

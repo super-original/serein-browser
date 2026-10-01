@@ -37,7 +37,7 @@ with (root / 'server.log').open('w') as log:
         else:
             raise AssertionError('Fixture server did not become ready')
         prepared = None
-        for stage, expected in [('prepare', 2), ('resume', 5), ('disabled', 2), ('mismatched-engine', 2), ('corrupt-state', 2)]:
+        for stage, expected in [('prepare', 3), ('resume', 5), ('disabled', 2), ('mismatched-engine', 2), ('corrupt-state', 2)]:
             fallback = stage not in ['prepare', 'resume']
             app_stage = 'fallback' if fallback else stage
             ready = root / f'{app_stage}-results.json'
@@ -86,6 +86,11 @@ with (root / 'server.log').open('w') as log:
             if fallback:
                 (root / f'{stage}-results.json').write_text(json.dumps(stage_results, indent=2))
             results.extend(stage_results)
+            if stage == 'disabled':
+                saved = json.loads((root / 'session.json').read_text())
+                results.append({'name':'disabled-removes-persisted-navigation-state',
+                                'passed': not saved.get('navigationHistory'),
+                                'detail':'Ordinary quit rewrites URL-only session while preference is off.'})
             modes = {name: stat.S_IMODE((root / name).stat().st_mode) for name in ['.', 'session.json']}
             protected = modes == {'.': 0o700, 'session.json': 0o600}
             results.append({'name': f'{stage}-private-storage-permissions', 'passed': protected, 'detail': str(modes)})

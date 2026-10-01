@@ -38,6 +38,7 @@ import SereinCore
     @ObservationIgnored private var extensionHistoryAfterPreload:Any?
     var hasPendingExtensionReload:Bool {awaitingExtensionReload}
     @ObservationIgnored private var configurationContext: WKWebExtensionContext?
+    @ObservationIgnored private var suspendedNavigation:SavedNavigationHistory?
     @ObservationIgnored private var suspendedState:Any?
     @ObservationIgnored private var suspendedZoom:CGFloat=1
     var loadedWebView:WKWebView? {storedView}
@@ -46,6 +47,7 @@ import SereinCore
         if let storedView {return storedView}
         let url=session?.state.tabs.first(where:{$0.id==id}).flatMap{URL(string:$0.url)}
         let view=makeView(for:url)
+        suspendedNavigation=nil
         view.pageZoom=suspendedZoom
         if let url {
             provisionalURL=url
@@ -73,10 +75,13 @@ import SereinCore
         return view
     }
     func savedNavigation(engine:String)->SavedNavigationHistory? {
-        guard !engine.isEmpty,let session,!session.state.isPrivate,let view=storedView,!view.isLoading,
-              !hasUserEdits,!crashed,failure==nil,
-              let current=view.backForwardList.currentItem,
-              let tab=session.state.tabs.first(where:{$0.id==id}),tab.url==current.url.absoluteString,
+        guard !engine.isEmpty,let session,!session.state.isPrivate,!hasUserEdits,!crashed,failure==nil,
+              let tab=session.state.tabs.first(where:{$0.id==id}) else{return nil}
+        if storedView==nil,let saved=suspendedNavigation,saved.engine==engine,saved.url==tab.url {
+            return SavedNavigationHistory(windowID:session.state.id,tabID:id,url:tab.url,engine:engine,state:saved.state)
+        }
+        guard let view=storedView,!view.isLoading,
+              let current=view.backForwardList.currentItem,tab.url==current.url.absoluteString,
               let data=view.interactionState as? Data,!data.isEmpty,data.count<=2*1024*1024 else{return nil}
         let entries=view.backForwardList.backList+[current]+view.backForwardList.forwardList
         guard entries.allSatisfy({item in
@@ -218,7 +223,8 @@ import SereinCore
     func suspend() {
         guard let view=storedView else{return}
         // A pending navigation must resume its requested URL, not an older
-        // committed history item. Opaque state stays in memory only.
+        // committed history item. Durable state additionally requires opt-in.
+        suspendedNavigation=session?.manager?.restoresNavigation==true ? savedNavigation(engine:BrowserManager.navigationEngine) : nil
         suspendedState=isLoading ? nil : extensionHistoryAfterPreload ?? view.interactionState
         suspendedZoom=view.pageZoom
         dispose();isLoading=false;progress=0;hasUserEdits=false;viewRevision += 1

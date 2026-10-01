@@ -121,6 +121,7 @@ struct InstalledExtension: Identifiable, Codable {
         }
     }
     func install(_ source: URL,in session: BrowserSession) async {
+        error=nil
         guard !session.state.isPrivate else { error = "Extensions cannot be installed from a private window."; return }
         let access=source.startAccessingSecurityScopedResource();defer{if access{source.stopAccessingSecurityScopedResource()}}
         let id=UUID(),destination=root.appendingPathComponent(UUID().uuidString+".staging")
@@ -199,6 +200,7 @@ struct InstalledExtension: Identifiable, Codable {
     }
     func setEnabled(_ id: UUID,_ enabled: Bool) async {
         guard !busyIDs.contains(id), let record = records.first(where: { $0.id == id }) else { return }
+        error=nil
         busyIDs.insert(id); defer { busyIDs.remove(id) }
         do {
             if enabled { try await load(record) }
@@ -214,6 +216,7 @@ struct InstalledExtension: Identifiable, Codable {
     }
     func remove(_ id: UUID) async {
         guard !busyIDs.contains(id), let record = records.first(where: { $0.id == id }) else { return }
+        error=nil
         busyIDs.insert(id); defer { busyIDs.remove(id) }
         do {
             if let context=contexts[id] {

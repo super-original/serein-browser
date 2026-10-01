@@ -47,7 +47,7 @@ struct LibraryPanelView: View {
                         Text("Unloaded pages reload when selected. Edited, media, pinned, preview, extension and private tabs stay loaded; active downloads pause unloading. Some page state may be lost.").font(.caption).foregroundStyle(.secondary)
                         Toggle("Preview external links opened by pinned and essential tabs",isOn:$previewExternalPinnedLinks)
                         Toggle("Remember Back and Forward history between launches",isOn:Binding(get:{restoreTabHistory},set:{restoreTabHistory=$0;manager.setRestoresNavigation($0)}))
-                        Text("Off by default. Saves additional page and form state on this Mac for regular web tabs. Edited pages and private windows are excluded. After a system or WebKit update, tabs reopen at their saved address instead.").font(.caption).foregroundStyle(.secondary)
+                        Text("Off by default. Saves additional page and form state on this Mac for regular web tabs. Private windows and tabs with detected edits on the current page are excluded. After a system or WebKit update, tabs reopen at their saved address instead.").font(.caption).foregroundStyle(.secondary)
                         Text("Tabs restore when you reopen Serein. Private windows use a separate, nonpersistent website data store and are excluded from saved sessions.").font(.callout).foregroundStyle(.secondary)
                         Button("Clear Website Data…") {
                             session.confirm("Clear cookies and website data?",detail:"This signs you out of websites in this browsing mode.",yes:"Clear") {yes in

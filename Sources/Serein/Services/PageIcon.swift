@@ -47,9 +47,9 @@ import ImageIO
             if(!width||!height||width>1024||height>1024)return 'serein-icon-error:invalid-svg-dimensions:'+width+'x'+height;
             const canvas=document.createElement('canvas'),scale=32/Math.max(width,height);
             canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
-            const context=canvas.getContext('2d');if(!context)return 'serein-icon-error:canvas-unavailable';
+            const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)return 'serein-icon-error:canvas-unavailable';
             context.drawImage(image,0,0,canvas.width,canvas.height);
-            const png=canvas.toDataURL('image/png');return png.startsWith('data:image/png;base64,')?png.substring(22):'serein-icon-error:invalid-canvas-output';
+            const png=canvas.toDataURL('image/png');return png.startsWith('data:image/png;base64,')?png.substring(22):'serein-icon-error:invalid-canvas-output:'+png.substring(0,64)+':'+JSON.stringify(context.getContextAttributes());
           }
           let binary='';for(const chunk of chunks){for(const byte of chunk)binary+=String.fromCharCode(byte);}
           return btoa(binary);

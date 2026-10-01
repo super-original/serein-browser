@@ -10,11 +10,13 @@ import SereinCore
         func wait(_ condition:@MainActor ()->Bool) async->Bool {
             for _ in 0..<100 {if condition(){return true};try? await Task.sleep(for:.milliseconds(50))};return false
         }
-        guard let session=manager.active,let runtime=session.current else{return}
-        let view=runtime.webView
         let first="http://127.0.0.1:8765/index.html?history=first"
         let second="http://127.0.0.1:8765/index.html?history=second"
         let third="http://127.0.0.1:8765/index.html?history=third"
+        guard let session=manager.active else{return}
+        if !prepare,let restored=session.state.tabs.first(where:{$0.url==second}) {session.select(restored.id)}
+        guard let runtime=session.current else{return}
+        let view=runtime.webView
         func snapshot()->String {
             "url=\(view.url?.absoluteString ?? "nil") current=\(view.backForwardList.currentItem?.url.absoluteString ?? "nil") back=\(view.backForwardList.backList.map{$0.url.absoluteString}) forward=\(view.backForwardList.forwardList.map{$0.url.absoluteString}) loading=\(view.isLoading)"
         }
@@ -36,6 +38,11 @@ import SereinCore
             let saved=manager.saveNow()
             let disk=try? SavedSession.decode(Data(contentsOf:root.appendingPathComponent("session.json")))
             check("public-state-is-bounded-data",saved && disk?.navigationHistory?.count==1,"Production opt-in session contains one bounded history record")
+            _=session.newTab()
+            runtime.suspend()
+            let savedUnloaded=manager.saveNow()
+            let unloadedDisk=try? SavedSession.decode(Data(contentsOf:root.appendingPathComponent("session.json")))
+            check("unloaded-background-history-persisted",savedUnloaded && runtime.loadedWebView==nil && unloadedDisk?.navigationHistory?.first?.tabID==runtime.id)
         } else {
             do {
                 let disk=try SavedSession.decode(Data(contentsOf:root.appendingPathComponent("session.json")))
