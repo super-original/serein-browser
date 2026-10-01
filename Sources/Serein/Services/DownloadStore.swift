@@ -52,6 +52,7 @@ import SereinCore
         let complete:(NSApplication.ModalResponse)->Void = { [weak self] response in
             guard let self,!self.retired else{completionHandler(nil);return}
             self.savePanel=nil
+            guard self.record.phase != .cancelling else{completionHandler(nil);return}
             if response == .OK,let url=panel.url {self.record.destination=url;self.record.name=url.lastPathComponent;self.record.phase = .downloading;self.changed();completionHandler(url)}
             else {self.record.phase = .cancelled;self.changed();completionHandler(nil)}
         }
@@ -70,6 +71,7 @@ import SereinCore
         if !pause,canResume {resumeData=nil;record.phase = .cancelled;record.detail="";changed();return}
         guard let download,isActive,record.phase != .cancelling else{return}
         record.phase = .cancelling;changed()
+        savePanel?.cancel(nil);savePanel=nil
         download.cancel { [weak self] data in
             guard let self,!self.retired,self.download === download else{return}
             self.resumeData=pause ? data : nil
@@ -136,6 +138,20 @@ import SereinCore
         let record=DownloadRecord(source:download.originalRequest?.url,destination:destination,privateWindowID:session.state.isPrivate ? session.state.id : nil)
         let item=DownloadItem(record:record,store:self,session:session)
         items.insert(item,at:0);item.attach(download);if !item.privateMode {save()};return item
+    }
+    /// Request opaque WebKit resume data before process exit. Private items stay
+    /// memory-only, including when a later consent check cancels termination.
+    func prepareForTermination() async -> Bool {
+        for item in items where item.isActive {item.cancel(pause:true)}
+        for _ in 0..<100 {
+            if !items.contains(where: \.isActive) {
+                error=nil;save()
+                return error==nil
+            }
+            try? await Task.sleep(for:.milliseconds(50))
+        }
+        error="Downloads are still stopping. Wait for them to pause and quit again."
+        return false
     }
     func visible(in session:BrowserSession)->[DownloadItem] {
         items.filter{session.state.isPrivate ? $0.record.privateWindowID==session.state.id : !$0.privateMode}

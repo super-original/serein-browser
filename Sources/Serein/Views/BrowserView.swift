@@ -78,7 +78,6 @@ struct PagePane: View {
             session.state.secondaryTabID != nil && session.state.selectedTabID == id ? Color.accentColor : Color.primary.opacity(0.08),
             lineWidth:session.state.secondaryTabID != nil && session.state.selectedTabID == id ? 2 : 1
         ).allowsHitTesting(false))
-        .accessibilityIdentifier("page-\(id)")
     }
 }
 struct WebContentView: NSViewRepresentable {

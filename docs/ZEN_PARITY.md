@@ -70,10 +70,10 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | File selection / JS dialogs | I | Native panels; broader UI automation pending |
 | Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |
 | Fullscreen | P | Native window/fullscreen WebKit preference; media runtime coverage incomplete |
-| Loading / errors / process recovery | P | Visible states; real process-crash injection pending |
+| Loading / errors / process recovery | P | Actual attributed WebContent termination and native crash screen verified at `32b17e3`; native Reload recovery remains under test |
 | Settings | P | Appearance, sidebar, search engine, external essential previews and website data clearing; advanced policies absent |
 | Glance / link preview | P | Native Option-click overlay and parent/child lifecycle implemented; geometry, minimum bounds, actual Option-click/Escape/focus, live movement/split, consent, private isolation and reopened relationships pass at `7ef2e5f`; cycling/expansion now pass at `4449c7a`. Configurable external-host popup routing, restored-owner attachment, independent message-controller ownership and parent edit tracking pass at `c136b59`; its actual essential-preview screenshot was inspected. Nested previews and animation parity remain gaps. |
-| Folders / live folders | P / U | Native nested pinned folders implemented; creation/persistence/unpack/deletion verified, input regression under repair; live providers, sharing and icon selection remain absent |
+| Folders / live folders | P / U | Native nested pinned folders implemented; all 19 creation/persistence/unpack/deletion/conversion checks verified at `32b17e3`; live providers, sharing and icon selection remain absent |
 | Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/unpin and workspace moves verified at `e511f58` and later runs; full keyboard selection remains a gap |
 | Tab groups | U | Not implemented |
 | Containers / profiles / per-site isolation | U | Not implemented |
@@ -132,6 +132,8 @@ The inspected `c0061e9` capture confirms the essential tile’s 44-point height 
 
 ### Divider persistence follow-up
 
-The native split grid already allows dragging its eight-point dividers. The follow-up retains root and column proportions in normal sessions, keeps them while resizing the window, and resets them when pane composition changes. Private session state follows existing no-disk persistence rules. Actual pointer drags on both axes and recreated-window geometry are pending CI. Arbitrary divider trees, incremental split additions and split-group sidebar tabs remain unfinished.
+The native split grid already allows dragging its eight-point dividers. The follow-up retains root and column proportions in normal sessions, keeps them while resizing the window, and resets them when pane composition changes. Private session state follows existing no-disk persistence rules. Actual pointer drags on both axes, resize stability and recreated-window geometry pass at `32b17e3`. The retrieved desktop capture shows 35% root and 65% left-column divisions; page rendering is still blank. Arbitrary divider trees, incremental split additions and split-group sidebar tabs remain unfinished.
 
 Address cancellation now restores the current location and requests page focus after dismissing suggestions. A real Command-L/type/Escape check passes at `f8800b0`, verifying unchanged navigation and restored location/focus.
+
+October 1 reference refresh [36794469990](https://github.com/super-original/serein-browser/actions/runs/36794469990) retains the pinned binary and now emits a compact evidence index. All 26 file hashes were checked. Light/dark expanded windows and expanded/collapsed folders were inspected again. At `32b17e3`, the sole essential uses the occupied full-width column in Serein; earlier adaptive-grid placement notes are historical, not the current layout. Active/inactive window state still needs a matched comparison.

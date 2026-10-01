@@ -98,6 +98,20 @@ import SereinCore
         privateB.window?.performClose(nil)
         check("private-download-close-clears-records",!manager.downloads.items.contains{$0.privateMode})
         session.window?.makeKeyAndOrderFront(nil)
+        let shutdownPanel=await start("download.txt",in:session,destination:nil)
+        let shutdownPanelVisible=await wait{session.window?.attachedSheet is NSSavePanel}
+        let shutdownReady=await manager.downloads.prepareForTermination()
+        check("download-shutdown-dismisses-destination-panel",shutdownPanelVisible && shutdownReady && session.window?.attachedSheet==nil && !shutdownPanel.isActive && shutdownPanel.destination==nil,shutdownPanel.status)
+        let blockedRoot=root.appendingPathComponent("download-shutdown-blocked")
+        do {
+            try Data("fixture obstruction".utf8).write(to:blockedRoot)
+            let blockedStore=DownloadStore(root:blockedRoot)
+            let rejected=await blockedStore.prepareForTermination()
+            check("download-shutdown-retains-app-on-save-failure",!rejected && blockedStore.error != nil)
+            try FileManager.default.removeItem(at:blockedRoot)
+            let recovered=await blockedStore.prepareForTermination()
+            check("download-shutdown-retries-persistence",recovered && blockedStore.error==nil && FileManager.default.fileExists(atPath:blockedStore.file.path))
+        } catch {check("download-shutdown-persistence-fixture",false,error.localizedDescription)}
         return results
     }
 }

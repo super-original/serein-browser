@@ -77,14 +77,15 @@ import SwiftUI
     }
     private func finishTermination(_ sender:NSApplication)->NSApplication.TerminateReply {
         guard let manager else{return .terminateNow}
-        guard manager.extensions.nativeMessaging.hasConnections else{manager.saveNow();return .terminateNow}
+        guard manager.extensions.nativeMessaging.hasConnections || manager.downloads.items.contains(where: {$0.isActive || $0.canResume}) else{manager.saveNow();return .terminateNow}
         let documents=Dictionary(uniqueKeysWithValues:manager.windows.map{($0.session.state.id,$0.session.closeConsentSnapshot)})
         Task {
             await manager.extensions.nativeMessaging.shutdown()
+            let downloadsReady=await manager.downloads.prepareForTermination()
             let current=Dictionary(uniqueKeysWithValues:manager.windows.map{($0.session.state.id,$0.session.closeConsentSnapshot)})
-            let unchanged=current==documents
+            let unchanged=current==documents && downloadsReady
             if unchanged {manager.saveNow()}
-            else {manager.extensions.nativeMessaging.resumeAcceptingConnections();manager.active?.error="Open pages changed while native applications were closing. Review your work and quit again."}
+            else {manager.extensions.nativeMessaging.resumeAcceptingConnections();manager.active?.error=downloadsReady ? "Open pages changed while downloads and native applications were closing. Review your work and quit again." : manager.downloads.error}
             sender.reply(toApplicationShouldTerminate:unchanged)
         }
         return .terminateLater

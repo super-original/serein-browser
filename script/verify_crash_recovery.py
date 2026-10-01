@@ -66,13 +66,18 @@ with timeout of 5 seconds
      try
       set elementIdentifier to value of attribute "AXIdentifier" of uiElement as text
      end try
+     if elementName is "missing value" or elementName is "" then
+      try
+       set elementName to value of attribute "AXDescription" of uiElement as text
+      end try
+     end if
      set diagnostics to diagnostics & elementRole & " name=" & elementName & " identifier=" & elementIdentifier & linefeed
      if elementName is "Page stopped" then set stoppedPage to true
      if elementIdentifier is "page-error-reload" then
       perform action "AXPress" of uiElement
       return "pressed identifier" & linefeed & diagnostics
      end if
-     if elementRole is "AXButton" and elementName is "Reload" then set end of reloadButtons to uiElement
+     if elementRole is "AXButton" and elementName is "Reload" then set end of reloadButtons to contents of uiElement
     end repeat
     -- ContentUnavailableView can expose a native action title without its
     -- SwiftUI identifier. Require the crash heading and exactly one button.

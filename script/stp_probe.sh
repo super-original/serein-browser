@@ -21,7 +21,15 @@ curl --fail --location --retry 2 --max-time 120 --max-filesize 209715200 -o "$DM
 echo 'dbfcc270a845b9a7ac74b13b762808ef19a5652eabadc5b7719291754dc01c8e  /tmp/serein-stp-253.dmg' | shasum -a 256 --check
 mkdir -p "$MOUNT"
 hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$MOUNT"
-PKG="$MOUNT/Safari Technology Preview.pkg"
+PKG=$(python3 - "$MOUNT" <<'PYTHON'
+import pathlib,sys
+root=pathlib.Path(sys.argv[1])
+packages=list(root.glob('*.pkg'))
+assert len(packages)==1, f'Expected one signed installer; volume entries: {[p.name for p in root.iterdir()]}'
+print(packages[0])
+PYTHON
+)
+printf 'Installer: %s\n' "$PKG"
 pkgutil --check-signature "$PKG" | tee "$ROOT/package-signature.txt"
 spctl --assess --type install --verbose=2 "$PKG" 2>&1 | tee "$ROOT/package-assessment.txt"
 sudo -n installer -pkg "$PKG" -target / > "$ROOT/install.log" 2>&1

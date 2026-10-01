@@ -36,7 +36,7 @@ with (root / 'server.log').open('w') as log:
                 time.sleep(.1)
         else:
             raise AssertionError('Fixture server did not become ready')
-        for stage, expected in [('prepare', 4), ('resume', 5)]:
+        for stage, expected in [('prepare', 5), ('resume', 8)]:
             with (root / f'{stage}.log').open('w') as stdout, (root / f'{stage}-error.log').open('w') as stderr:
                 process = subprocess.Popen([str(app), '--test-root', str(root), f'--download-restart-{stage}'], stdout=stdout, stderr=stderr)
                 try:
@@ -53,6 +53,15 @@ with (root / 'server.log').open('w') as log:
             print(json.dumps(stage_results, indent=2), flush=True)
             assert len(stage_results) == expected and all(item['passed'] for item in stage_results), stage_results
             assert protected, modes
+            if stage == 'prepare':
+                history = json.loads((root / 'downloads.json').read_text())
+                live = [item for item in history if item['name'] == 'quit-download.bin']
+                paused = len(live) == 1 and live[0]['phase'] == 'paused'
+                recovery = root / 'DownloadResume' / (live[0]['id'] + '.resume') if live else None
+                saved = paused and recovery.is_file() and recovery.stat().st_size > 0 and stat.S_IMODE(recovery.stat().st_mode) == 0o600
+                results.append({'name': 'quit-pauses-live-download-before-exit', 'passed': bool(saved), 'detail': str(live)})
+                (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
+                assert saved, live
         results.append({'name':'download-resumed-after-process-exit','passed':True,'detail':'Two independent launches exited with status 0; full byte-integrity assertion passed.'})
         (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
     finally:

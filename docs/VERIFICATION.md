@@ -16,6 +16,12 @@ The independent crash supervisor positively attributes WebContent PID 13349 to t
 
 [Refreshed pinned Zen references](https://github.com/super-original/serein-browser/actions/runs/36794469990/artifacts/11133112384) contain 23 captures, with all 26 indexed file hashes verified. Light/dark expanded windows and expanded/collapsed folders were inspected. Active/inactive key-window state remains unmatched. [Earlier inspected folder/Safari comparisons](evidence/2026-09-30/folders-and-safari/README.md) retain the blank WebKit limitation.
 
+## Latest diagnostic follow-up
+
+`c2d819b83b9a0d368443bd6560218e93a3a26d83`: [run 36795922611](https://github.com/super-original/serein-browser/actions/runs/36795922611) builds/packages successfully; **114 unit, 463/479 browser, 43/44 native-host, 6/7 crash, 9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fullscreen** checks pass. The extra browser/native-host failure is MV3 file-picker allow input. [App](https://github.com/super-original/serein-browser/actions/runs/36795922611/artifacts/11133404220) · [evidence](https://github.com/super-original/serein-browser/actions/runs/36795922611/artifacts/11133144692).
+
+Retrieved/inspected recovery screenshot still shows the stopped page. Its actual AX dump proves the outer `page-UUID` identifier was propagated to the crash heading, description **and Reload button**, replacing `page-error-reload`. Follow-up removes that unused container identifier; the action retains its own identifier. This is a production accessibility fix, awaiting native input/recovery verification. Diagnostics now also record native descriptions when SwiftUI button names are absent.
+
 ## Earlier verified native messaging (`029feec`)
 
 All **40 production native-host checks** pass across signed MV2/MV3 fixtures: real native consent/cancellation; owner-only persistent registration; one-shot child execution and cleanup; MV2 background-page/MV3 worker execution; ordered persistent-port messages and caller origin; unknown-host denial; permission revoke/regrant; registration revocation; extension disable and removal. The separate quit process opens a real native port, exercises cancel/stale/fresh consent, then verifies successful app exit, saved tabs and absence of its recorded child PID.
@@ -62,3 +68,9 @@ CI evidence export now indexes original files with SHA-256 and PNG dimensions in
 ### New independent rendering diagnostic
 
 A separate standard `xcode-27` workflow installs Apple-signed Safari Technology Preview 253 on the ephemeral runner only. [Apple’s release notes](https://developer.apple.com/documentation/safari-technology-preview-release-notes/stp-release-253) and [download page](https://developer.apple.com/safari/technology-preview/) identify the macOS 27 package. Its pinned SHA-256 is `dbfcc270a845b9a7ac74b13b762808ef19a5652eabadc5b7719291754dc01c8e` (136,844,579 bytes, independently streamed and hashed). Package assessment and code-signature checks precede launch; no security setting is disabled. System Safari and the preview load the same local fixture and retain actual desktop screenshots. This is an independent newer-WebKit witness, not Serein’s engine or a substitute for its rendering gate. No result or IOSurface fix is claimed before execution and screenshot inspection.
+
+### Pending download shutdown improvement
+
+The follow-up requests WebKit resume data for active downloads before replying to application termination. It waits at most five seconds, retains the app on timeout or persistence failure, and rechecks document consent after asynchronous work. Private resume data stays memory-only. The two-process verification now starts a second ordinary download without manually pausing it, invokes actual app termination, checks owner-only saved recovery data after exit, then resumes both downloads and verifies each complete 8 MiB payload. These new checks await macOS CI; earlier 12/12 results cover only manually paused downloads.
+
+The first Technology Preview diagnostic stopped before installation because the DMG used a different installer filename. Follow-up discovers exactly one top-level `.pkg` on the hash-verified mounted image before signature assessment. This was a recoverable harness assumption, not a rendering result.
