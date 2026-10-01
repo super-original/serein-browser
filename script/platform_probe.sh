@@ -33,3 +33,31 @@ test -s evidence/platform/desktop.png
 killall SereinProbe
 cat evidence/platform/application.log
 cat evidence/platform/application-error.log
+
+# Compare Apple's separately signed system browser on the same ephemeral VM.
+# This diagnostic cannot satisfy Serein's visual gate.
+python3 -m http.server 8765 --bind 127.0.0.1 --directory Fixtures > evidence/platform/server.log 2>&1 &
+SERVER_PID=$!
+trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+sleep 2
+osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' || true
+open -a Safari http://127.0.0.1:8765/index.html
+sleep 3
+osascript <<'APPLESCRIPT' > evidence/platform/safari-automation.log 2>&1 || true
+with timeout of 15 seconds
+    tell application "System Events" to tell process "Safari"
+        set frontmost to true
+        keystroke "l" using command down
+        keystroke "http://127.0.0.1:8765/index.html"
+        key code 36
+        set position of front window to {10, 30}
+        set size of front window to {1000, 677}
+        get name of front window
+    end tell
+end timeout
+APPLESCRIPT
+sleep 5
+screencapture -x evidence/platform/safari-desktop.png
+log show --last 2m --style compact --predicate '(process CONTAINS "WebKit" OR subsystem BEGINSWITH "com.apple.WebKit") AND (messageType == error OR messageType == fault)' > evidence/platform/webkit-errors.log 2>&1 || true
+head -60 evidence/platform/webkit-errors.log
+cat evidence/platform/safari-automation.log

@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>Serein fullscreen fixture</title>
+<style>body{font:20px system-ui;margin:60px;background:white;color:black}#stage{padding:40px;background:white;color:black}#stage:fullscreen{box-sizing:border-box;width:100%;height:100%;padding:80px}button{font:inherit;padding:12px}h1{font-size:42px}</style>
+<section id="stage"><h1>Room for the whole page.</h1><p>This deterministic fixture checks native element fullscreen.</p><button id="enter">Enter fullscreen</button></section>
+<script>
+const stage=document.querySelector('#stage');
+document.querySelector('#enter').onclick=event=>{window.fullscreenAttempt={trusted:event.isTrusted,activation:navigator.userActivation.isActive,enabled:document.fullscreenEnabled,visibility:document.visibilityState,focused:document.hasFocus()};stage.requestFullscreen().catch(error=>{document.documentElement.dataset.fullscreenError=String(error);window.fullscreenAttempt.error={name:error.name,message:error.message}})};
+document.addEventListener('fullscreenchange',()=>{document.documentElement.dataset.fullscreenState=document.fullscreenElement?.id || 'none'});
+</script>

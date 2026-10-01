@@ -1,0 +1,77 @@
+[
+  {
+    "command": [
+      "xcodebuild",
+      "-downloadComponent",
+      "MetalToolchain"
+    ],
+    "returncode": 0,
+    "stop_reason": null,
+    "elapsed_seconds": 22.92223333299995,
+    "samples": 11,
+    "sampled_peak_descendant_rss_bytes": 126664704,
+    "minimum_sampled_disk_free_bytes": 40954019840,
+    "retained_initial_log_bytes": 675,
+    "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+  },
+  {
+    "command": [
+      "git",
+      "fetch",
+      "--depth=1",
+      "--filter=blob:none",
+      "origin",
+      "131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7"
+    ],
+    "returncode": 0,
+    "stop_reason": null,
+    "elapsed_seconds": 2.102887833000011,
+    "samples": 1,
+    "sampled_peak_descendant_rss_bytes": 5128192,
+    "minimum_sampled_disk_free_bytes": 40951324672,
+    "retained_initial_log_bytes": 116,
+    "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+  },
+  {
+    "command": [
+      "git",
+      "checkout",
+      "--detach",
+      "131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7"
+    ],
+    "returncode": 0,
+    "stop_reason": null,
+    "elapsed_seconds": 83.29291874999996,
+    "samples": 39,
+    "sampled_peak_descendant_rss_bytes": 617922560,
+    "minimum_sampled_disk_free_bytes": 38962065408,
+    "retained_initial_log_bytes": 139,
+    "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+  },
+  {
+    "command": [
+      "Tools/Scripts/build-webkit",
+      "--release",
+      "--only=Everything up to WebKit",
+      "--xcode",
+      "-jobs",
+      "2",
+      "-sdk",
+      "macosx",
+      "ARCHS=arm64",
+      "ONLY_ACTIVE_ARCH=YES",
+      "MACOSX_DEPLOYMENT_TARGET=27.0",
+      "GCC_GENERATE_DEBUGGING_SYMBOLS=NO",
+      "CLANG_ENABLE_MODULE_DEBUGGING=NO",
+      "DEBUG_INFORMATION_FORMAT=dwarf"
+    ],
+    "returncode": 0,
+    "stop_reason": null,
+    "elapsed_seconds": 5119.2062195,
+    "samples": 2398,
+    "sampled_peak_descendant_rss_bytes": 4841717760,
+    "minimum_sampled_disk_free_bytes": 21173846016,
+    "retained_initial_log_bytes": 20971520,
+    "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+  }
+]

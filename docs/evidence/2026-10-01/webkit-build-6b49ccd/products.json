@@ -1,0 +1,14 @@
+{
+  "build_command_succeeded": true,
+  "framework_audits": [
+    {
+      "path": "products/Release/WebKit.framework",
+      "valid": true,
+      "architectures": "arm64",
+      "build_metadata": "/Users/runner/work/_temp/serein-webkit-build-enzrwk3d/products/Release/WebKit.framework/Versions/A/WebKit:\nLoad command 10\n      cmd LC_BUILD_VERSION\n  cmdsize 32\n platform MACOS\n    minos 27.0\n      sdk 27.0\n   ntools 1\n     tool LD\n  version 27037.1",
+      "signature_verification_returncode": 1,
+      "signature_detail": "/Users/runner/work/_temp/serein-webkit-build-enzrwk3d/products/Release/WebKit.framework: a sealed resource is missing or invalid\n"
+    }
+  ],
+  "scope": "Compile feasibility only. No engine adoption, patch, packaging, hardened runtime validation or conformance pass follows from this experiment."
+}

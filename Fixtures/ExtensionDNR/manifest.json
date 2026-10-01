@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Serein declarative rule fixture",
+  "version": "1.0",
+  "description": "Original static, dynamic and session request-rule verification fixture.",
+  "permissions": ["declarativeNetRequest"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "options_ui": {"page": "options.html"},
+  "declarative_net_request": {
+    "rule_resources": [{"id": "static", "enabled": true, "path": "rules.json"}]
+  }
+}

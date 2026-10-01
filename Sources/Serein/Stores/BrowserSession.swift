@@ -4,30 +4,50 @@ import Observation
 import SereinCore
 
 @MainActor @Observable final class BrowserSession {
-    var state: BrowserWindowState { didSet {manager?.scheduleSave()} }
+    var state: BrowserWindowState { didSet {
+        if state.selectedTabID != oldValue.selectedTabID || state.splitTabIDs != oldValue.splitTabIDs {
+            let changed=Set(oldValue.splitTabIDs+state.splitTabIDs+[oldValue.selectedTabID,state.selectedTabID].compactMap{$0})
+            for id in changed {runtimes[id]?.noteActivity()}
+        }
+        manager?.scheduleSave()
+    } }
+    var tabSelection=TabSelection()
     var address = ""
     var addressFocused=false
     var findVisible=false
     var findText=""
     var findResult=""
+    @ObservationIgnored var findRequestID=UUID()
+    @ObservationIgnored var contentFocusRequest:UUID?
+    @ObservationIgnored var sidebarKeyboardFocus:UUID?
     var libraryPanel: LibraryPanel?
+    var folderEditor:FolderEditorRequest?
+    var bookmarkEditor:BookmarkEditorRequest?
     var compactRevealed=false
     var error: String?
+    var savingPageSnapshot=false
     @ObservationIgnored weak var manager: BrowserManager?
     @ObservationIgnored weak var window: NSWindow?
     @ObservationIgnored var runtimes: [UUID:TabRuntime] = [:]
+    // Replacing a runtime can retain the same persisted tab UUID. Notify native
+    // panes even when SwiftUI coalesces close/reopen or round-trip window moves.
+    var runtimeRevision=0
     @ObservationIgnored var extensionWindow: ExtensionWindow?
     @ObservationIgnored var extensionTabs: [UUID:ExtensionTab] = [:]
     @ObservationIgnored var actionAnchors:[UUID:WeakActionAnchor]=[:]
+    let sitePermissions: SitePermissionStore
     @ObservationIgnored let dataStore: WKWebsiteDataStore
     init(state: BrowserWindowState, manager: BrowserManager) {
         self.state=state;self.manager=manager
+        sitePermissions=state.isPrivate ? SitePermissionStore() : manager.sitePermissions
         dataStore=state.isPrivate ? .nonPersistent() : .default()
+        tabSelection.selectOnly(state.selectedTabID)
         address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? ""
     }
     var current: TabRuntime? {state.selectedTabID.map {runtime($0)}}
     var extensions: ExtensionHost? {state.isPrivate ? nil : manager?.extensions}
     func runtime(_ id: UUID) -> TabRuntime {
+        _=runtimeRevision
         if let existing=runtimes[id] {return existing}
         let runtime=TabRuntime(id:id,session:self);runtimes[id]=runtime
         return runtime
@@ -36,57 +56,185 @@ import SereinCore
         if let tab=extensionTabs[id] {return tab}
         let tab=ExtensionTab(id:id,session:self);extensionTabs[id]=tab;return tab
     }
-    func select(_ id: UUID) {
-        let previous=state.selectedTabID.map {bridge($0)}
-        state.select(id);address=state.selectedTab?.url ?? "";addressFocused=false
-        if address=="about:blank" {address=""}
-        _=runtime(id).webView
-        extensions?.controller.didActivateTab(bridge(id),previousActiveTab:previous)
-    }
-    @discardableResult func newTab(url: String = "about:blank", select: Bool = true, configuration: WKWebViewConfiguration? = nil) -> UUID {
-        let previous=state.selectedTabID.map{bridge($0)}
-        let id=state.newTab(url:url,select:select)
-        if let configuration {runtimes[id]=TabRuntime(id:id,session:self,configuration:configuration)}
-        extensions?.controller.didOpenTab(bridge(id))
-        if select {
-            address=url=="about:blank" ? "" : url
-            addressFocused=url=="about:blank"
+    func publishSelection(previousActive:UUID?,previousHighlighted:Set<UUID>,refreshActive:Bool=true) {
+        let valid=Set(state.tabs.map(\.id));tabSelection.retain(valid)
+        if previousActive != state.selectedTabID {findRequestID=UUID();findResult=""}
+        if refreshActive {address=state.selectedTab?.url == "about:blank" ? "" : state.selectedTab?.url ?? "";addressFocused=false}
+        if let id=state.selectedTabID,refreshActive {
             _=runtime(id).webView
-            extensions?.controller.didActivateTab(bridge(id),previousActiveTab:previous)
+            if previousActive != id {extensions?.controller.didActivateTab(bridge(id),previousActiveTab:previousActive.flatMap{valid.contains($0) ? bridge($0) : nil})}
+        }
+        let removed=previousHighlighted.subtracting(tabSelection.ids).intersection(valid)
+        let added=tabSelection.ids.subtracting(previousHighlighted)
+        if !removed.isEmpty {extensions?.controller.didDeselectTabs(state.tabs.filter{removed.contains($0.id)}.map{bridge($0.id)})}
+        if !added.isEmpty {extensions?.controller.didSelectTabs(state.tabs.filter{added.contains($0.id)}.map{bridge($0.id)})}
+        if findVisible,previousActive != state.selectedTabID {find()}
+    }
+    func select(_ id:UUID,preservingSelection:Bool=false) {
+        guard state.tabs.contains(where:{$0.id==id}) else{return}
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        state.select(id)
+        if preservingSelection {tabSelection.set(id,selected:true)} else {tabSelection.selectOnly(state.selectedTabID)}
+        publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:!preservingSelection || previous != id)
+    }
+    @discardableResult func setHighlighted(_ id:UUID,_ selected:Bool)->Bool {
+        guard state.tabs.contains(where:{$0.id==id}) else{return false}
+        let previous=tabSelection.ids
+        tabSelection.set(id,selected:selected)
+        publishSelection(previousActive:state.selectedTabID,previousHighlighted:previous,refreshActive:false)
+        return true
+    }
+    func clickTab(_ id:UUID,modifiers:NSEvent.ModifierFlags) {
+        guard state.visibleTabs.contains(where:{$0.id==id}) else{return}
+        if !modifiers.intersection([.command,.shift]).isEmpty,let preview=state.activeGlance {state.expandGlance(preview.id)}
+        if modifiers.contains(.shift) {
+            let previous=state.selectedTabID,highlighted=tabSelection.ids
+            tabSelection.range(to:id,in:state.sidebarTabIDs,additive:modifiers.contains(.command))
+            state.select(id);publishSelection(previousActive:previous,previousHighlighted:highlighted)
+        } else if modifiers.contains(.command) {
+            let previous=tabSelection.ids;tabSelection.toggle(id)
+            publishSelection(previousActive:state.selectedTabID,previousHighlighted:previous,refreshActive:false)
+        } else {select(id)}
+    }
+    var closeConsentSnapshot:[UUID:UUID?] {
+        Dictionary(uniqueKeysWithValues:state.tabs.map{($0.id,runtimes[$0.id]?.documentID)})
+    }
+    func splitHighlighted() {
+        let ids=state.visibleTabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        if state.setSplitTabs(ids) {publishSelection(previousActive:previous,previousHighlighted:highlighted)}
+    }
+    func closeHighlighted() {
+        let ids=state.tabs.filter{tabSelection.ids.contains($0.id)}.map(\.id)
+        guard !ids.isEmpty else{return}
+        let group=ids.flatMap{state.closingTabIDs($0)}
+        let documents=group.map{(id:$0,document:runtimes[$0]?.documentID)}
+        let closeAll: @MainActor ()->Void = { [weak self] in
+            guard let self,ids.flatMap({self.state.closingTabIDs($0)})==group,documents.allSatisfy({target in self.state.tabs.contains{$0.id==target.id} && self.runtimes[target.id]?.documentID==target.document}) else{return}
+            for id in ids {self.close(id,ask:false)}
+        }
+        if group.contains(where:{runtimes[$0]?.hasUserEdits == true}) {
+            confirm("Close \(ids.count) selected tabs?",detail:"Edited pages may contain unsaved changes.",yes:"Close Tabs"){if $0 {closeAll()}}
+        } else {closeAll()}
+    }
+    @discardableResult func newTab(url:String="about:blank",select:Bool=true,configuration:WKWebViewConfiguration?=nil,kind:TabKind = .regular,index:Int?=nil,opener:UUID?=nil,addToSelection:Bool=false)->UUID {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        let id=state.newTab(url:url,select:select,kind:kind,index:index,opener:opener)
+        if let configuration {runtimes[id]=TabRuntime(id:id,session:self,configuration:configuration)}
+        if select {tabSelection.selectOnly(id)} else if addToSelection {tabSelection.set(id,selected:true)}
+        extensions?.controller.didOpenTab(bridge(id))
+        if select || addToSelection {publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:select)}
+        if select {
+            addressFocused=url=="about:blank"
         }
         return id
     }
-    func close(_ id: UUID, ask: Bool = true) {
-        if ask,let runtime=runtimes[id],runtime.hasUserEdits {
-            confirm("Close this tab?",detail:"This page has been edited. Unsaved changes may be lost.") { [weak self] allowed in if allowed {self?.close(id,ask:false)} }
+    func close(_ id:UUID,ask:Bool=true,completion:(@MainActor (Bool)->Void)?=nil) {
+        guard state.tabs.contains(where:{$0.id==id}) else{completion?(false);return}
+        let group=state.closingTabIDs(id)
+        let returnsFromPreview=state.activeGlance?.id==id
+        if ask,group.contains(where:{runtimes[$0]?.hasUserEdits==true}) {
+            let documents=group.map{(id:$0,document:runtimes[$0]?.documentID)}
+            confirm("Close this tab?",detail:"This tab or its preview has edits. Unsaved changes may be lost.",yes:"Close Tab"){[weak self] allowed in
+                guard allowed,let self,self.state.closingTabIDs(id)==group,
+                      documents.allSatisfy({self.runtimes[$0.id]?.documentID==$0.document}) else{completion?(false);return}
+                self.close(id,ask:false,completion:completion)
+            }
             return
         }
-        let tab=bridge(id);let previous=state.selectedTabID
-        extensions?.controller.didCloseTab(tab,windowIsClosing:false)
-        runtimes[id]?.dispose();runtimes[id]=nil;extensionTabs[id]=nil
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        for closed in group {
+            extensions?.controller.didCloseTab(bridge(closed),windowIsClosing:false)
+            runtimes[closed]?.dispose();runtimes[closed]=nil;extensionTabs[closed]=nil
+        }
+        runtimeRevision &+= 1
         let before=Set(state.tabs.map(\.id));state.close(id)
         for added in state.tabs where !before.contains(added.id) {extensions?.controller.didOpenTab(bridge(added.id))}
-        if previous != state.selectedTabID,let next=state.selectedTabID {select(next)}
+        tabSelection.retain(Set(state.tabs.map(\.id)))
+        if previous==id || tabSelection.ids.isEmpty {tabSelection.selectOnly(state.selectedTabID)}
+        publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:previous != state.selectedTabID)
+        if returnsFromPreview {contentFocusRequest=state.selectedTabID}
+        completion?(true)
     }
-    func reopen() {if let id=state.reopen() {extensions?.controller.didOpenTab(bridge(id));select(id)}}
-    func duplicate(_ id: UUID) {if let new=state.duplicate(id) {extensions?.controller.didOpenTab(bridge(new));select(new)}}
+    func reopen() {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        let before=Set(state.tabs.map(\.id))
+        if state.reopen() != nil {
+            for added in state.tabs where !before.contains(added.id) {extensions?.controller.didOpenTab(bridge(added.id))}
+            tabSelection.selectOnly(state.selectedTabID);publishSelection(previousActive:previous,previousHighlighted:highlighted)
+        }
+    }
+    func duplicate(_ id:UUID) {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        if let new=state.duplicate(id) {extensions?.controller.didOpenTab(bridge(new));tabSelection.selectOnly(new);publishSelection(previousActive:previous,previousHighlighted:highlighted)}
+    }
     func navigate(_ input: String,ask:Bool = true) {
-        if ask,current?.hasUserEdits==true {confirm("Leave this page?",detail:"Unsaved changes may be lost.",yes:"Leave"){[weak self] allowed in if allowed{self?.navigate(input,ask:false)}};return}
-        guard let url=AddressResolver.resolve(input),let runtime=current else{return}
+        if ask,let runtime=current,runtime.hasUserEdits {
+            let tabID=runtime.id,documentID=runtime.documentID
+            confirm("Leave this page?",detail:"Unsaved changes may be lost.",yes:"Leave") { [weak self,weak runtime] allowed in
+                guard allowed,let self,let runtime,self.state.selectedTabID==tabID,
+                      self.runtimes[tabID] === runtime,runtime.documentID==documentID else{return}
+                self.navigate(input,ask:false)
+            }
+            return
+        }
+        let entered=URL(string:input.trimmingCharacters(in:.whitespacesAndNewlines))
+        if ExtensionResourceOrigin.isExtensionScheme(entered?.scheme),entered.flatMap({extensions?.controller.extensionContext(for:$0)})==nil {
+            error="This extension page is unavailable in this window.";return
+        }
+        let provider=SearchProvider(rawValue:UserDefaults.standard.string(forKey:"searchProvider") ?? "") ?? .duckDuckGo
+        let target=entered.flatMap{extensions?.controller.extensionContext(for:$0)} != nil ? entered : AddressResolver.resolve(input,searchBase:provider.queryPrefix)
+        guard let url=target,let runtime=current else{return}
         address=url.absoluteString;addressFocused=false;runtime.load(url)
     }
     func setKind(_ id: UUID, _ kind: TabKind) {
-        state.setKind(id,kind);extensions?.controller.didChangeTabProperties(.pinned,for:bridge(id))
+        if kind == .pinned || (kind == .regular && state.tabs.first(where:{$0.id==id})?.kind == .pinned) {
+            setPinned(id,kind == .pinned)
+        } else {
+            guard state.tabs.first(where:{$0.id==id})?.kind != kind else{return}
+            state.setKind(id,kind);extensions?.controller.didChangeTabProperties(.pinned,for:bridge(id))
+        }
     }
-    func move(_ id: UUID, before other: UUID) {
+    func setPinned(_ id:UUID,_ pinned:Bool) {
+        let changed=state.setPinned(id,pinned)
+        for member in changed {extensions?.controller.didChangeTabProperties(.pinned,for:bridge(member))}
+    }
+    func setHighlightedKind(_ kind:TabKind) {
+        let targets=state.visibleTabs.filter{tabSelection.ids.contains($0.id) && $0.kind != kind}.map(\.id)
+        for id in targets {setKind(id,kind)}
+    }
+    func moveHighlightedToWorkspace(_ workspace:UUID) {
+        guard state.workspaces.contains(where:{$0.id==workspace}) else{return}
+        let targets=state.visibleTabs.filter{tabSelection.ids.contains($0.id) && ($0.workspaceID != workspace || $0.kind == .essential)}.map(\.id)
+        guard !targets.isEmpty else{return}
+        // Snapshot selection before the first move changes the active tab.
+        changeWorkspace {state in for id in targets {state.moveToWorkspace(id,workspace)}}
+    }
+    func move(_ id:UUID,before other:UUID) {move(id,relativeTo:other,after:false)}
+    func move(_ id:UUID,after other:UUID) {move(id,relativeTo:other,after:true)}
+    private func move(_ id:UUID,relativeTo other:UUID,after:Bool) {
         guard let old=state.tabs.firstIndex(where:{$0.id==id}) else{return}
-        state.move(id,before:other);extensions?.controller.didMoveTab(bridge(id),from:old,in:extensionWindow)
+        if after {state.move(id,after:other)} else {state.move(id,before:other)}
+        if state.tabs.firstIndex(where:{$0.id==id}) != old {
+            extensions?.controller.didMoveTab(bridge(id),from:old,in:extensionWindow)
+        }
     }
-    func switchWorkspace(_ id: UUID) {state.switchWorkspace(id);if let tab=state.selectedTabID {select(tab)}}
-    func find(backwards: Bool = false) {
-        let config=WKFindConfiguration();config.backwards=backwards;config.wraps=true
-        current?.webView.find(findText,configuration:config) {[weak self] result in self?.findResult=result.matchFound ? "" : "No matches"}
+    func changeWorkspace(_ change:(inout BrowserWindowState)->Void) {
+        let previous=state.selectedTabID,highlighted=tabSelection.ids
+        let oldTabs=Set(state.tabs.map(\.id))
+        change(&state)
+        for tab in state.tabs where !oldTabs.contains(tab.id) {extensions?.controller.didOpenTab(bridge(tab.id))}
+        tabSelection.selectOnly(state.selectedTabID)
+        publishSelection(previousActive:previous,previousHighlighted:highlighted)
     }
+    func switchWorkspace(_ id: UUID) {changeWorkspace{$0.switchWorkspace(id)}}
+    @discardableResult func addWorkspace(name: String) -> UUID {
+        var id:UUID!
+        changeWorkspace{id=$0.addWorkspace(name:name)}
+        return id
+    }
+    func removeWorkspace(_ id: UUID) {changeWorkspace{$0.removeWorkspace(id)}}
+    func moveTabToWorkspace(_ id: UUID,_ workspace: UUID) {changeWorkspace{$0.moveToWorkspace(id,workspace)}}
     func update(_ id: UUID, url: String?, title: String?) {
         guard let i=state.tabs.firstIndex(where:{$0.id==id}) else{return}
         if let url {state.tabs[i].url=url}
@@ -95,18 +243,31 @@ import SereinCore
         extensions?.controller.didChangeTabProperties([.URL,.title,.loading],for:bridge(id))
     }
     func bookmark() {
-        guard let tab=state.selectedTab else{return}
-        manager?.library.bookmark(title:tab.title,url:tab.url)
+        guard let tab=state.selectedTab,let store=manager?.library,window?.attachedSheet==nil,
+              let url=StoredPageURL.removingCredentials(tab.url) else{return}
+        let existing=store.bookmarks.first{$0.url==url}
+        bookmarkEditor=BookmarkEditorRequest(original:existing,title:existing?.title ?? tab.title,url:existing?.url ?? url)
     }
-    func confirm(_ title: String, detail: String, yes: String = "Continue", completion: @escaping @MainActor (Bool)->Void) {
+    // Library and folder editors are sheets. Attach their dialogs to that sheet,
+    // otherwise AppKit queues them behind the library until it is dismissed.
+    var dialogWindow: NSWindow? {
+        if libraryPanel != nil || folderEditor != nil,let sheet=window?.attachedSheet {return sheet}
+        return window
+    }
+    func confirm(_ title: String, detail: String, yes: String = "Continue", identifier:String?=nil, completion: @escaping @MainActor (Bool)->Void) {
         let alert=NSAlert();alert.messageText=title;alert.informativeText=detail;alert.addButton(withTitle:yes);alert.addButton(withTitle:"Cancel")
-        if let window {alert.beginSheetModal(for:window){r in completion(r == .alertFirstButtonReturn)}}
+        if let identifier {alert.window.identifier=NSUserInterfaceItemIdentifier(identifier)}
+        if let window=dialogWindow {alert.beginSheetModal(for:window){r in completion(r == .alertFirstButtonReturn)}}
         else {completion(false)}
     }
+    func canUnload(_ id: UUID) -> Bool {
+        state.tabs.contains{$0.id==id} && runtimes[id]?.loadedWebView != nil && id != state.selectedTabID && id != state.activeGlance?.glanceParentID && !state.splitTabIDs.contains(id)
+    }
     func unload(_ id: UUID) {
-        guard id != state.selectedTabID,id != state.secondaryTabID else{return}
-        confirm("Unload this tab?",detail:"The page will reload when selected. Media will stop and unsaved page state will be lost.",yes:"Unload") { [weak self] yes in
-            guard yes,let self else{return};self.runtimes[id]?.dispose();self.runtimes[id]=nil
+        guard canUnload(id),let runtime=runtimes[id] else{return}
+        let document=runtime.documentID
+        confirm("Unload this tab?",detail:"The page will reload when selected. Media will stop and unsaved page state will be lost.",yes:"Unload") { [weak self,weak runtime] yes in
+            guard yes,let self,let runtime,self.canUnload(id),self.runtimes[id] === runtime,runtime.documentID==document else{return};runtime.suspend()
         }
     }
 }

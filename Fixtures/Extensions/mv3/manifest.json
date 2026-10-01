@@ -21,10 +21,58 @@
         "content.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "frame.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "document-end.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "main-world.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
     }
   ],
   "action": {
     "default_popup": "popup.html"
   },
-  "description": "Controlled Serein integration fixture for extension lifecycle, permissions, storage and messaging."
+  "description": "Controlled Serein integration fixture for extension lifecycle, permissions, storage and messaging.",
+  "commands": {
+    "_execute_action": {},
+    "record-fixture-command": {
+      "suggested_key": {
+        "mac": "Alt+Shift+Y"
+      },
+      "description": "Record the Serein keyboard conformance fixture"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "public.html"
+      ],
+      "matches": [
+        "http://127.0.0.1/*"
+      ]
+    }
+  ]
 }

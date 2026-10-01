@@ -26,6 +26,7 @@ The reference workflow launches the actual downloaded Zen binary with geckodrive
 | 12 | Collapsed vertical tabs with top address toolbar |
 | 13 | Native running Zen preferences page |
 | 14 | Navigation error/restricted address page |
+| 15 | Active and pinned tab multiselection |
 
 Early captures were invalid: a network-consent dialog obscured them, and initial split/compact scenarios did not reach their intended state. These were inspected and corrected, not counted as successful references. The corrected split and compact captures are in [run 35241652810](https://github.com/super-original/serein-browser/actions/runs/35241652810). State names alone are never a visual assertion.
 
@@ -39,13 +40,13 @@ Early captures were invalid: a network-consent dialog obscured them, and initial
 | Content left edge | About 246 px including window origin | 230 pt sidebar + 6 pt separation |
 | Content inset | About 8 pt top/right/bottom | 8 pt |
 | Tab typography | About 13 pt, stronger selected state | System 13 pt, semibold selection |
-| Essential cells | Compact icon-only region above workspace | Shared across workspaces; original SF Symbol until favicon support |
+| Essential cells | Compact icon-only region above workspace | Shared across workspaces; same-origin favicons with native symbol fallback |
 | Navigation header | Traffic lights, sidebar button, back, forward, reload | Same order; native system traffic-light geometry retained |
 | Tab shape | Rounded selected tab | 8 pt selected-tab corner radius |
 | Compact transitions | Hover keep duration 150 ms, toolbar hide 1,000 ms in source | Sidebar hover hide 150 ms; toolbar-only/both variants not implemented |
 | Materials | Zen's default Gecko theme | Native macOS 27 Liquid Glass; different tint/contrast is intentional, not claimed as pixel matching |
 
-SF Symbol fallback icons do not reproduce site favicons. Native address field, sheets and menus deliberately follow macOS 27 treatment. Geometry discrepancies, missing Zen interactions and clipping are defects, not automatically justified as material adaptation.
+Same-origin raster and SVG favicon loading passes all 32 current checks, including CSP, private isolation and bounded image-only SVG readback; the native SVG sidebar screenshot was inspected at `69e6b04`. Cross-origin/CDN icons, live icon changes and a persistent cache remain gaps. Unsupported/unloaded sites retain SF Symbol fallbacks. Native address fields, sheets and menus follow macOS 27 treatment. Geometry discrepancies, missing interactions and clipping remain defects.
 
 ## Parity checklist
 
@@ -55,31 +56,197 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 |---|---|---|
 | Back/forward, reload/stop, URL/search | I | WKWebView; local-history/bookmark suggestions only |
 | Create/close/reopen/duplicate tabs | I | Unsaved form-input warning; broader app state detection incomplete |
-| Reorder | P | Drag strings within the same tab kind; cross-window dragging absent |
+| Reorder | P | Typed same-process tab/folder payloads; cross-window normal-tab dragging and folder drops implemented; actual cross-window pointer and all transfer/privacy checks pass at `21091e9`; category changes, cross-window folder trees and drag-to-new-window remain absent |
 | Pins and essentials | I | Essentials span workspaces; pins preserve reset URL |
 | Multiple workspaces | P | Create, rename, remove, switch; no containers or per-workspace cookie stores |
 | Expanded/collapsed sidebar | I | Visual inspection required across resizing and focus |
 | Compact mode | P | Edge reveal/hide; Zen's complete toolbar variants absent |
-| Split views | P | Two horizontal panes; no four-pane grid, split-group tabs or drag composition |
-| Multiple windows / moving tabs | P | Normal live-tab transfer; isolated private transfer deliberately rejected |
-| Persistent sessions | P | Tab/workspace/sidebar restoration; not full history-stack/window restoration |
+| Split views | P | Rows/columns/grid up to four panes, actual keyboard/page focus, native dragging, live views and saved boundaries pass at `b5dea7d`; inspected three-pane comparisons retain blank desktop content. Contiguous regular and pinned split tabs join in verified sidebar strips; persistent independent groups and group-wide pinning pass native/extension tests. Group-wide movement/closing, incremental layout preservation and directional drag composition remain absent |
+| Multiple windows / moving tabs | P | Normal live-tab transfer through menu and typed drop targets; isolated private transfer deliberately rejected |
+| Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; opt-in bounded HTTP(S) Back/Forward persistence implemented with build/version/privacy fallback, 24/24 five-launch history/privacy checks pass at `b5dea7d`; file/extension histories remain gaps; unloaded ordinary tabs now retain bounded state with verified restart behavior |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
-| Downloads | P | Native save/cancel/reveal; no resume or durable download history |
+| Downloads | P | Native search and status filters verified with actual keyboard input and inspected capture at `b236aa8`, save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume passed the separate-process integrity/privacy gate at `29dabbf`; live ordinary downloads now pause on real Command-Q and resume after relaunch with full byte integrity at `c1e2498`; a live private transfer stays out of recovery files |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |
 | File selection / JS dialogs | I | Native panels; broader UI automation pending |
-| Site permissions / media | P | Per-page camera/microphone consent; policy manager incomplete |
-| Fullscreen | P | Native window/fullscreen WebKit preference; media runtime coverage incomplete |
-| Loading / errors / process recovery | P | Visible states; real process-crash injection pending |
-| Settings | P | Appearance, sidebar, website data clearing; advanced policies absent |
-| Glance / link preview | U | Not implemented |
-| Folders / live folders | U | Not implemented |
-| Tab groups / multiselect | U | Not implemented |
+| Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |
+| Fullscreen | P | Public WebKit preference enabled, but real page/Glance fullscreen requests fail with InvalidStateError on this runner; isolated public GPU primers have not resolved it |
+| Loading / errors / process recovery | P | Actual attributed WebContent termination, native crash screen and AX Reload recovery pass at `d365cfc`; desktop website rendering remains blocked |
+| Settings | P | Appearance, sidebar, search engine, external essential previews, website data clearing, opt-in idle unloading and bounded navigation history; advanced policies absent |
+| Glance / link preview | P | Native Option-click overlay and parent/child lifecycle implemented; geometry, minimum bounds, actual Option-click/Escape/focus, live movement/split, consent, private isolation and reopened relationships pass at `7ef2e5f`; cycling/expansion now pass at `4449c7a`. Configurable external-host popup routing, restored-owner attachment, independent message-controller ownership and parent edit tracking pass at `c136b59`; its actual essential-preview screenshot was inspected. Nested previews and animation parity remain gaps. |
+| Folders / live folders | P / U | Native nested pinned folders and eight selectable system icons; all 26 creation/edit/persistence/unpack/deletion/conversion checks pass at `81dafd3`, with inspected picker/sidebar captures. Live providers, sharing and the complete Zen icon catalog remain absent |
+| Tab multiselect | P | Command-click toggling, anchored Shift ranges and explicit bulk close; native state tests and desktop capture verified at `7ce1cad`; bulk pin/unpin and workspace moves verified at `e511f58` and later runs; full keyboard selection remains a gap |
+| Tab groups | U | Not implemented |
 | Containers / profiles / per-site isolation | U | Not implemented |
 | Zen Mods / themes / gradient editor | U | Not implemented; native glass adaptation is separate |
 | Sync / account / import wizard | U | Not implemented |
-| Tab unloading | P | Manual with warning; no automatic suspension |
+| Tab unloading | P | Manual with warning and document/selection revalidation; old-view release and in-memory back/current/forward/zoom restoration verified at `3209fee`, including extension resources. Opt-in automatic idle unloading passes 20 policy and six real-audio checks at `fdd5ae2`. Opt-in cross-launch HTTP(S) history now implemented, including unloaded background state; 21/21 production-path checks pass at 8c76795 including unloaded background tabs |
 | Keyboard customization | U | Fixed native shortcuts only |
-| Picture-in-picture / screenshot tools | U | Not implemented as browser commands |
+| Picture-in-picture / screenshot tools | P | Viewport PNG save command passes 14 runtime checks at `fdd5ae2`; native sheet and exported content image retrieved/inspected; full-page/region selection and picture-in-picture commands absent |
 | Full extension compatibility | U | See detailed matrix; target remains unmet |
 
 This checklist is intentionally not a claim of complete Zen parity.
+
+## Refreshed baseline, September 30
+
+[Run 36705707876](https://github.com/super-original/serein-browser/actions/runs/36705707876) reproduced all 14 captures with the same pinned Zen 1.22.2b binary and settings on macOS 27. All 14 screenshots were retrieved and visually inspected. Light/dark, essentials/pins, address focus, context menu, workspace labels, split panes, compact overlay/hide, collapsed toolbar, settings and restricted-port error states are visible. The context menu is taller than the available area and scrolls; it is not a full-menu inventory. Workspace captures retain the fixture page while changing workspace labels; they do not prove cookie/container isolation.
+
+The measured sidebar remains 230 points and regular tab layout boxes 224×40. Full-window light captures match 1000×677 outer bounds and 1× scale. Serein's content starts at the same x≈246, but its bordered native address field is visually shorter than Zen's address surface. Essentials now show same-origin favicons but retain different cell sizing; split-group tab representation and compact toolbar variants remain gaps. Zen shows a 2-point accent outline on the focused split pane; the continuation adopts that focus indicator using the native accent color. Native system traffic lights/materials intentionally differ. Serein's blank WebKit area remains a rendering defect/blocker, never a deliberate glass adaptation.
+
+### Additional grid baseline under capture
+
+The pinned [ZenViewSplitter source](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/split-view/ZenViewSplitter.mjs) caps split groups at four tabs. Its `calculateLayoutTree` places two tabs side by side, three as two stacked left panes plus one full-height right pane, and four as two stacked columns. [Run 36752869953](https://github.com/super-original/serein-browser/actions/runs/36752869953) captures three panes and then adds a fourth; both screenshots were inspected. The fourth addition preserves the existing left stack and appends another full-height column, rather than rebuilding a two-by-two grid. A separate fresh four-pane grid capture is now requested. Serein's new explicit “Split Selected Tabs” builds the initial grid, pending runtime verification. Incrementally adding panes and retaining arbitrary prior divider trees remains unsupported; the existing “Split with Current Tab” still creates a new pair.
+
+The fresh four-pane grid in [run 36753946618](https://github.com/super-original/serein-browser/actions/runs/36753946618) was retrieved and inspected. Relative to the window, its pane rectangles are (236,8,374.5,326), (236,343,374.5,326), (618.5,8,374.5,326), (618.5,343,374.5,326). Serein's first grid captures show the correct pane order and focus outline but uneven heights and narrow column spacing; these remain visual defects until the native-divider follow-up is inspected. WebKit page rendering remains blank.
+
+At `e32960d`, the native divider follow-up passes balanced geometry and minimum-window tests. Retrieved/inspected screenshots confirm eight-point column gaps and 327/326-point rows. [Original-image comparison](evidence/2026-09-30/grid/README.md) records exact differences from Zen, including differing sidebar/focus state and blank Serein content. This is geometry evidence, not complete visual parity.
+
+Glance research uses the pinned [manager](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/glance/ZenGlanceManager.mjs) and [styles](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/glance/zen-glance.css). Zen associates a hidden child tab with its owner, overlays the preview, and provides close, expand and split actions. A new real reference capture opens an existing tab through this manager; it does not claim to test modifier-click input. Serein implements this structure; verified behavior and remaining failures are listed below.
+
+
+The [Glance reference run 36760541400](https://github.com/super-original/serein-browser/actions/runs/36760541400) succeeded and capture 19 was retrieved/inspected. At 1000×677 outer bounds, preview content is (311.6,8,604.8,661) relative to the window, and controls occupy (916.4,23,56,144). The [pinned preference](https://github.com/zen-browser/desktop/blob/1.22.2b/prefs/zen/glance.yaml) defaults activation to Alt (Option), overriding the actor's Ctrl fallback. Serein uses native glass buttons for close/expand/split, matching the 80%-width/full-height layout at reference size. At minimum width the preview narrows to retain a 56-point controls margin. These intentional native/adaptive choices do not establish visual parity; [Original reference/runtime screenshots](evidence/2026-09-30/glance/README.md) are inspected; blank page content remains a rendering defect.
+
+Parent and preview remain separate native tabs sharing one session's website data. The preview is hidden from the ordinary sidebar list and represented by a parent-row badge. Expand/split reuse its live web view. Closing an owner includes preview edit consent; cross-window movement carries both live views. Private previews stay in their window's nonpersistent store. Unit/runtime scenarios are included, but their addition alone is not a passing result. No Zen code or assets were copied into this implementation.
+
+
+At `71983bc`, actual Serein Glance screenshots were inspected: the preview rectangle is (312,8,604,661), within one pixel of Zen's 1× geometry; the minimum-window preview is (292,8,284,384), leaving controls inside the window. Native circular glass controls are visible and unclipped. Page surfaces remain blank due to the existing WebKit desktop-rendering failure. Six Glance interaction assertions fail and are being corrected; visual geometry alone is not feature completion.
+
+At `7ef2e5f`, real Option-click, Escape, returned page-key delivery and reopened parent/preview relationships pass. Tab-cycling and dependent expansion setup still fail. The pinned manager makes external-host previews from pinned/app tabs a configurable preference enabled by the [shipped preference file](https://github.com/zen-browser/desktop/blob/1.22.2b/prefs/zen/glance.yaml), overriding the manager’s false fallback; the follow-up adds this choice for pinned/essential tabs and preserves WebKit's supplied popup configuration and original request. It intentionally limits previews to HTTP(S); local-file previews remain unsupported. Runtime verification is pending.
+
+At `884d731`, expansion preserves the same live WKWebView and JavaScript state; both Control-Tab directions still fail. Their next fix handles native key-equivalent dispatch before WebKit.
+
+The next native-interaction batch adds a persistent DuckDuckGo/Google/Bing search-engine picker (DuckDuckGo remains the existing default). Explicit URLs keep normal navigation. Escape handling now defers to WebKit while a preview is in element fullscreen; both ordinary-page and Glance fullscreen receive native-pointer/DOM/state checks. These changes are pending exact-head verification.
+
+### Folder baseline under continuation
+
+The pinned [folder manager](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/folders/ZenFolders.mjs), [folder element](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/folders/ZenFolder.mjs), [styles](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/folders/zen-folders.css) and [creation test](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/tests/folders/browser_folder_create.js) establish workspace-scoped pinned folders, nested groups, expanded creation, click-to-collapse, an internal empty tab and 14-point nested indentation. Deletion closes contents; unpacking retains tabs. Folder depth defaults to five in the manager. Native implementation must distinguish removal of the folder from destructive closure of its pages and retain document-bound consent. Live folders additionally use providers and remain a separate unimplemented capability.
+
+The reference harness now requests four additional captures from the same unmodified 1.22.2b binary: expanded, collapsed, nested and context-menu states. Folder label/content geometry and parent/collapsed state are recorded. The results below record the retrieved captures and implemented native UI. No Zen source or icon assets are copied into the browser implementation.
+
+The [folder reference run 36781892358](https://github.com/super-original/serein-browser/actions/runs/36781892358) succeeded. All four new original captures were retrieved and inspected: a 40-point label row, 14-point child indentation, retained active child when collapsed, nested folder and native context menu. The nested capture reports the parent DOM collapsed flag while showing its descendants after insertion; it is not evidence of a clean expanded transition.
+
+The continuation implements native folder naming/renaming, selected-tab creation/pinning, nesting (maximum five levels), collapse retaining the active owner, drop-to-folder, explicit sibling ordering, workspace moves, unpacking and document-bound deletion consent. Optional session fields preserve older-session decoding; repair rejects orphan/cyclic/cross-workspace membership. Unpacking keeps live views; deletion closes captured documents only after fresh consent. Native SF Symbols replace Zen's custom SVG icons deliberately. The first implementation has no live providers, folder share/import, custom icons or drag insertion between arbitrary folder rows; no full folder parity is claimed. Twelve folder core tests and all 19 runtime folder checks pass at `b3e2899`, including actual AX collapse and live folder-to-workspace conversion. [Inspected comparison captures](evidence/2026-09-30/folders-and-safari/README.md) retain the blank-WebKit-content limitation and imperfect active-window matching. The behavior follows the pinned manager’s `convertFolderToSpace` action; no source is copied.
+
+The first Serein folder scenario accidentally closed its global essential after switching to an empty workspace, because that essential remained selected. Its 44–46 captures therefore cannot establish vertically matched folder placement. The corrected setup retains an essential showing the same local fixture page. Zen’s recorded essential outer row is 50 points (44-point visual tile plus margins); Serein now uses a 44-point essential tile with its existing six vertical padding points. The appearance still needs fresh native capture; SF Symbol fallback and native material treatment remain deliberate differences.
+
+The inspected `c0061e9` capture confirms the essential tile’s 44-point height but shows an unintended narrow column: SwiftUI’s adaptive grid reserves empty columns where Zen fills the available row. The next revision creates only the occupied flexible columns (and one column in collapsed mode), so a single essential fills the sidebar. It retains the native material and SF Symbol fallback. Fresh capture remains required.
+
+### Divider persistence follow-up
+
+The native split grid already allows dragging its eight-point dividers. The follow-up retains root and column proportions in normal sessions, keeps them while resizing the window, and resets them when pane composition changes. Private session state follows existing no-disk persistence rules. Actual pointer drags on both axes, resize stability and recreated-window geometry pass at `32b17e3`. The retrieved desktop capture shows 35% root and 65% left-column divisions; page rendering is still blank. Arbitrary divider trees, incremental split additions and split-group sidebar tabs remain unfinished.
+
+Address cancellation now restores the current location and requests page focus after dismissing suggestions. A real Command-L/type/Escape check passes at `f8800b0`, verifying unchanged navigation and restored location/focus.
+
+October 1 reference refresh [36794469990](https://github.com/super-original/serein-browser/actions/runs/36794469990) retains the pinned binary and now emits a compact evidence index. All 26 file hashes were checked. Light/dark expanded windows and expanded/collapsed folders were inspected again. At `32b17e3`, the sole essential uses the occupied full-width column in Serein; earlier adaptive-grid placement notes are historical, not the current layout. Active/inactive window state still needs a matched comparison.
+
+
+### Live cross-window drag continuation
+
+Tab rows and folder rows now share an original typed `Transferable` payload, exported as `dev.serein.sidebar-item`. A per-launch token and the source window/tab identity reject foreign or stale payloads before any model mutation. Dropping before a tab retains its category; dropping into a folder pins the moved owner and preserves its live preview. Existing native transfer logic carries WKWebView, history, zoom, document edits and extension tab identity. Cross-window private transfers remain rejected because each private window has a separate nonpersistent store; within-window private reordering is allowed.
+
+The new runtime scenario locates two actual native tab controls and sends a real pointer drag between their visible sidebars, then checks live-object identity, script state, history, zoom, insertion order, document edits, privacy rejection, stale data, preview ownership and persisted folder membership. A direct handler fallback is separately labeled if the physical gesture fails. These additions await macOS 27 CI and inspected screenshots; no drag pass is claimed from compilation. Cross-window folder-tree transfer, multi-item drag, category-changing drops and drag-to-create-window are still missing.
+
+At `7611908`, the exact-composition native attachment guard restores preview-close keyboard delivery to its live owner. Folder text submission and all folder scenarios pass again, and the original expanded-folder screenshot was inspected. Actual cross-window drag still fails despite passing controlled state/privacy checks; frontmost-window fixture correction is pending. Website desktop rendering remains blank.
+
+At `21091e9`, all 17 cross-window drag scenarios pass, including real native pointer input; the handler fallback did not execute. The retrieved final moved-tab/preview capture was inspected. Native file selection and all 19 folder checks also pass. Category-changing/multi-item/folder-tree dragging and drag-to-new-window remain absent, and blank website rendering prevents complete visual parity.
+
+### Lower-half tab placement
+
+Tab rows now distinguish an upper-half drop (before) from a lower-half drop (after), including the last row. The existing typed payload, same-process token and private-store boundaries apply to both placements. Pinned tabs adopt the destination folder and preserve its explicit order; tab/view identity, history and edits remain unchanged. Three core tests cover end insertion, folder/session order and invalid targets. The macOS fixture adds an actual second pointer drag to the lower half of the final row; no model fallback satisfies that assertion. At `54c6c5e` all 19 drag checks and the three new core tests pass, including both actual pointer placements. The main run later times out in a separate update scenario, so this is partial checkpoint evidence. Folder-to-folder arbitrary insertion, category changes and drag-to-new-window remain gaps.
+
+### Selected-tab drag groups (pending macOS verification)
+
+Dragging one of several highlighted tabs now captures their sidebar order in the app-private payload. The host validates all members and the destination before moving any live view, preserves group order before/after a row or into a folder, and restores the complete destination selection. Stale/duplicate members, dropping onto the group itself, category-incompatible targets and cross-private-window moves are rejected. Unselected-tab drags retain singleton behavior. The new fixture includes an actual pointer drag of noncontiguous highlighted tabs, live JavaScript/document identity checks, atomic stale-group refusal, after-target ordering and folder membership. Pending execution is not a parity pass. Cross-window folder-tree transfer, category-changing drops and drag-to-create-window remain missing.
+
+At `e2339f2`, [run 36812749134](https://github.com/super-original/serein-browser/actions/runs/36812749134) passes **all 10 selected-tab group checks**. The actual native pointer drag succeeds without the controlled fallback, both JavaScript sentinels and WKWebView identities survive, source/destination selection and group order are preserved, and invalid/private moves leave the group in place. Retrieved and inspected `56-selected-tab-drop.png` shows both highlighted folder members; it also retains the known blank WebKit desktop content. No cross-window folder-tree or drag-to-create-window support is claimed.
+
+## Native arrangement commands (pending runtime verification)
+
+The pinned [keyboard source](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/kbs/ZenKeyboardShortcuts.mjs) declares accelerator+Alt H/V/G/U, so the macOS implementation uses Command–Option, rather than copying the manual's generic Control–Alt text. The [layout calculation](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/split-view/ZenViewSplitter.mjs) distinguishes stacked rows (`hsep`), side-by-side columns (`vsep`) and the existing two-column grid. Native menu wording explicitly says Rows/Columns/Grid. Arrangement retains tab order, selected tab and live WKWebView identities; changing arrangement resets dividers, repeating it preserves their positions. Without a split, the command starts a pair using the next visible tab. Native four-pane geometry, real keyboard commands, row-divider dragging and native restored boundaries are prepared for CI. Arbitrary directional drag trees and incremental group composition remain missing; these commands do not establish complete split-view parity.
+
+The first fresh shortcut reference at `7d7088f` ([run 36833595078](https://github.com/super-original/serein-browser/actions/runs/36833595078)) failed both rearrangements. Both retrieved screenshots show Zen's “Can't add more panels” toast with the four-pane grid unchanged. The pinned `splitTabs` implementation returns at its four-tab limit before checking whether the request only changes layout. The follow-up uses an existing three-pane group to isolate actual shortcut mapping; four-pane refusal is retained as observed reference behavior. Serein deliberately permits rearranging four existing panes without adding one.
+
+### Persistent folder icons
+
+The pinned [folder manager](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/folders/ZenFolders.mjs) opens a vector-only picker with optional removal and persists `userIcon`. Serein's Edit Folder sheet adds eight curated native SF Symbols and Default Folder. Changes are staged until Save; Cancel preserves the prior choice. Unknown/legacy identifiers use the native folder fallback, with no file/network asset loading. This intentionally substitutes system symbols and a native sheet for Zen's SVG catalog/popover. Arbitrary images, the full Zen catalog and live-folder providers remain unsupported. Both core persistence/fallback tests and all seven new icon checks pass at `81dafd3` (26/26 total folder checks). The original native picker and saved-sidebar screenshots were retrieved and inspected; website desktop content remains blank.
+
+At `b5dea7d`, all arrangement focus/restoration defects are repaired, and [inspected three-pane comparisons](evidence/2026-10-01/split-layouts/README.md) confirm the pinned Command–Option shortcut mapping. Desktop website pixels and joined sidebar split groups remain missing.
+
+### Folder sibling placement prepared
+
+Folder drags now distinguish the top/bottom ten points of a 36-point folder row (before/after) from its center (nest inside). Tab drops retain their existing whole-row folder destination. All placements validate the entire tree before changing order: self/descendant, foreign workspace, excessive depth and foreign drag tokens are rejected. Existing folder IDs, custom icons, nested order, pages and selection are preserved; cross-window folder-tree transfer remains unsupported. Both core ordering/atomicity tests and all eight native/runtime checks pass at `89aa249`, including real before/after pointer drags without a model fallback. The retrieved original `70-folder-reordered.png` was inspected.
+
+### Native joined split tabs prepared
+
+Expanded/compact-revealed sidebars now present contiguous regular split members in a single joined native row, retaining each tab's accessible button, title, icon, selection, context menu and individual drag target. The strip preserves original tab/API index order; selecting a member keeps live panes, and Command-W closes the selected member. Collapsed sidebars retain individual reachable controls. Mixed-category and noncontiguous splits retain separate rows; persistent multiple split groups and cross-category group layout remain unfinished. Two model tests cover ordering/session/close and fallback cases; native AX geometry/selection and actual Command-W scenarios await CI. This changes native browser controls, not website content or the rendering gate.
+
+### Bookmark editing continuation
+
+The next native bookmark editor exposes name/address editing from Command-D and the bookmark library. Creation remains a draft until Save; Cancel preserves existing data. Updates retain identity/creation date, reject stale edits from other windows, and publish only after atomic persistence succeeds. Credential-bearing URL userinfo is removed as in the existing library policy. This native sheet is a deliberate macOS form treatment; Zen's bookmark folders, tags and full edit-popup geometry are not yet reproduced. At `c366ef2`, all five store checks and eight native command/edit/persistence/capture checks pass. The actual editor and updated library screenshots were retrieved and inspected; fields and controls are readable and unclipped.
+
+### Sidebar keyboard selection (pending)
+
+Native tab buttons now use window-local SwiftUI focus and public [onKeyPress](https://developer.apple.com/documentation/swiftui/view/onkeypress(keys:phases:action:)) handling (available since macOS 14, retained as the applicable public API on macOS 27). Up/Down follows rendered tab order, stops at edges and excludes hidden workspace/folder rows. Shift extends/contracts the existing anchor range; an ordinary arrow replaces selection. Return selects the focused tab and returns to its page; Escape returns to the active page without changing the highlighted group. Command/Control/Option combinations remain available to native menus and system handling. Pending page-focus requests cannot override newer sidebar keyboard focus. This adds keyboard accessibility; exact Zen key-event parity is not yet established.
+
+Two core tests cover boundary/hidden-row order and range contraction. Eight actual native-focus/keyboard/capture checks are prepared, including preserved live views and page-responder restoration. No passing runtime claim yet.
+
+Untitled loaded pages now use a filename or host instead of retaining “New Tab”; empty/new tabs retain that label. Explicit document titles remain authoritative. Fallbacks omit URL userinfo/query/fragment and avoid data/opaque payloads. Two core tests and the actual JSON-page label check are prepared after the defect was observed in `5959e2c`'s desktop screenshot.
+
+At `656146e`, the sidebar core tests pass but six native focus/selection checks fail (capture/live-view preservation pass). AX assignment reports success without moving focus to the requested tab; inspected capture shows no extended range. Explicit SwiftUI focusability is the next repair, not a verified feature yet. Both title core tests and the actual untitled-page check pass; inspected capture shows `formatter.json`.
+
+At `6c156fa`, explicit native focusability fixes initial focus and all arrow/range checks (7/8 sidebar checks pass). The screenshot was inspected and shows the expected two-row selection and native active-row focus ring. Escape still fails. The next revision handles Escape with Apple's public [onExitCommand](https://developer.apple.com/documentation/swiftui/view/onexitcommand(perform:)) (macOS 10.15+, explicitly documented as the macOS Escape command), then finishes the page-focus request after SwiftUI releases its focus. This fix remains pending execution.
+
+At `dcbcb09`, the native exit-command/deferred focus repair passes: all eight sidebar keyboard assertions succeed, including Escape returning to the actual WKWebView. The selected-row/focus-ring desktop capture was retrieved and inspected again. Exact Zen shortcut parity and broader VoiceOver behavior remain unverified.
+
+Three further pinned-reference captures are prepared for two independent two-pane groups: first group, second group, then selecting a member of the first again. They assert visible active panes and preserved membership of both groups. Persistent multiple groups remain unimplemented in Serein until the reference behavior is inspected and the state/persistence transitions are implemented and verified.
+
+At `aa116b5`, [run 36858497065](https://github.com/super-original/serein-browser/actions/runs/36858497065) passes all **28** captures. Images 26/27/28 were retrieved and inspected: both joined groups remain in the sidebar, and selecting the first group restores its visible pair. The upcoming native implementation parks inactive compositions, layouts and divider fractions, restores by member selection, persists them with the session, and repairs membership on closure/movement. Contiguous regular groups remain joined while inactive. Core and actual native-view tests are prepared; execution is pending. Group-wide pinning, noncontiguous/mixed-category presentation and full Zen group interactions remain open.
+
+The follow-up makes Exit Split View available on inactive joined groups too. The operation dissolves only the chosen group and preserves the active selection, layout and fractions. A model regression and actual native context-menu scenario are prepared; the scenario uses the public Accessibility show-menu/press actions on the owned fixture tab and does not invoke the model as a fallback. Results remain pending.
+
+At `28e1a30`, all seven new model tests and twelve split-group runtime checks pass. Original screenshots 76/77/78 were inspected. The returned native divider preserves the saved 0.37 fraction and live document markers survive. Desktop pages remain blank, with a stale-looking vertical rendering artifact after restoration; this is not visual parity. The next checks measure all four sidebar controls through native Accessibility, wait for active page titles before capture, and give unloaded URL tabs a safe filename/host fallback instead of New Tab. These follow-ups remain pending.
+
+At `d8cce57`, native Accessibility confirms all four controls in two horizontal rows; the updated group screenshot and unloaded filename labels were inspected. Fifteen of sixteen group checks pass. The context-menu scenario fails because AXShowMenu is unavailable on the tab button. Its menu currently belongs to the surrounding stack; the follow-up attaches that same menu to the accessible button and retains the original assertion, with no model-action fallback. Desktop content remains blank.
+
+### Group pinning follow-up (verification pending)
+
+The pinned [Zen 1.22.2b split-group test](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/tests/split_view/browser_split_groups.js)
+requires pin/unpin on one member to affect the entire group without dissolving it.
+Serein now routes native pin actions and the extension tab pin bridge through the same
+group operation. Changed members retain workspace, selection, layout and divider state;
+repeating pin does not overwrite the original home URL or emit duplicate changed events.
+The extension event path emits once per changed member; actual listener delivery is not
+established by the core tests alone.
+
+Complete contiguous pinned groups now share a joined sidebar row, including within a
+single visible folder. Collapsed folders keep their selected-child behavior. Mixed-category,
+separated and cross-folder members remain individually reachable rather than being hidden.
+Four new core cases cover active/inactive groups, home URLs, hidden workspaces and folder
+visibility. Native runtime checks and screenshot 80 cover actual pinned panes and unpin
+restoration. These additions await macOS CI; group-wide movement/closing and exact Zen
+placement still remain open.
+
+The follow-up also exercises real `browser.tabs.update` promises from an extension resource
+page in both manifest generations, queries both group members, and counts `tabs.onUpdated`
+pin/unpin events. Repeated pin must not deliver duplicates. These twelve checks remain
+pending; native event-dispatch calls alone are not counted as successful event delivery.
+
+At `10e984e`, all four group-pin core tests, three native behavior checks, the pinned screenshot
+and twelve real extension promise/event checks pass. Screenshot 80 was retrieved and inspected:
+the pair is joined above the pinned divider. Group-wide pin/unpin is now verified for these
+cases; mixed-category/cross-folder presentation, group-wide movement/closing and the context
+menu AX action remain incomplete. [Inspected original group comparisons](evidence/2026-10-01/persistent-split-groups/README.md)
+preserve the prior equal-split reference states and disclose unmatched conditions.
+
+### Named tab accessibility actions
+
+Tabs now expose Duplicate and Close actions, plus group Pin/Unpin and Exit Split View when
+they belong to a group, using Apple's public
+[`accessibilityActions`](https://developer.apple.com/documentation/swiftui/view/accessibilityactions(_:))
+(macOS 13+, available on the required macOS 27 target). This gives assistive technology a
+named action path independent of SwiftUI's missing AXShowMenu action. A separate bounded
+native AX test enumerates public action names/descriptions and invokes Exit Split View on
+an inactive group; it must preserve the selected group. The ordinary right-click/menu test
+remains independent. This is not a claim that VoiceOver, every locale or full accessibility
+has been verified.
+
+At `32e6a92`, the native AX test enumerates and successfully invokes the named Exit Split View action on an inactive group while preserving the active group and selection. Screenshot 81 was retrieved and inspected. Duplicate/Close/Pin action exposure does not yet prove every action's assistive-technology behavior. At `d8e534e`, the separate context-menu helper excludes the application menu bar and correctly fails instead of selecting the global View command; no inactive group was removed by that pointer path.

@@ -19,7 +19,7 @@ struct ExtensionActionButton:NSViewRepresentable {
         let action=extensionContext.action(for:session.state.selectedTabID.map{session.bridge($0)})
         button.toolTip=action?.label ?? record.name
         button.setAccessibilityLabel(action?.label ?? record.name)
-        button.isEnabled=action?.isEnabled ?? false
+        button.isEnabled=host.actionEnabled(record.id,in:session)
         if let icon=action?.icon(for:NSSize(width:18,height:18)){button.image=icon}
     }
     @MainActor final class Coordinator:NSObject {

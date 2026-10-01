@@ -1,13 +1,31 @@
 import SwiftUI
+import AppKit
 import SereinCore
 
 struct SidebarView: View {
     @Bindable var session: BrowserSession
     @Environment(\.appearsActive) private var active
     @State private var workspaceName=""
+    @FocusState private var focusedTab:UUID?
     @State private var creatingWorkspace=false
     @State private var renamingWorkspace: UUID?
     private var collapsed: Bool {session.state.sidebar == .collapsed}
+    private var essentialColumns:[GridItem] {
+        let count=session.state.visibleTabs.filter{$0.kind == .essential}.count
+        let capacity=collapsed ? 1 : max(1,Int((session.state.sidebarWidth-10)/42))
+        return Array(repeating:GridItem(.flexible(minimum:36),spacing:6),count:max(1,min(count,capacity)))
+    }
+    private func joinedTabs(_ ids:[UUID])->some View {
+        HStack(spacing:4) {
+            ForEach(ids,id:\.self) { id in
+                if let tab=session.state.tabs.first(where:{$0.id==id}) {tabRow(tab,joined:true)}
+            }
+        }.padding(4)
+            .background(Color.primary.opacity(0.045),in:.rect(cornerRadius:10))
+            .accessibilityElement(children:.contain)
+            .accessibilityLabel("Split View, \(ids.count) tabs")
+            .accessibilityIdentifier("split-tab-group")
+    }
     var body: some View {
         VStack(spacing:6) {
             if !collapsed {
@@ -20,7 +38,7 @@ struct SidebarView: View {
                 AddressField(session:session)
             } else {Color.clear.frame(height:54)}
             if !session.state.visibleTabs.filter({$0.kind == .essential}).isEmpty {
-                LazyVGrid(columns:[GridItem(.adaptive(minimum:36),spacing:6)],spacing:6) {
+                LazyVGrid(columns:essentialColumns,spacing:6) {
                     ForEach(session.state.visibleTabs.filter{$0.kind == .essential}){tab in tabRow(tab,essential:true)}
                 }.padding(.vertical,3)
             }
@@ -31,22 +49,37 @@ struct SidebarView: View {
                     if session.state.isPrivate {Image(systemName:"hand.raised").help("Private Browsing")}
                 }.padding(.horizontal,8).padding(.top,8).padding(.bottom,12)
             }
-            ScrollView {
-                LazyVStack(spacing:4) {
-                    ForEach(session.state.visibleTabs.filter{$0.kind == .pinned}){tab in tabRow(tab)}
-                    Divider().padding(.vertical,8)
-                    Button {session.newTab()} label:{HStack(spacing:10){Image(systemName:"plus");if !collapsed {Text("New Tab");Spacer()}}.frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,10).frame(height:36)}
-                        .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityIdentifier("new-tab")
-                    ForEach(session.state.visibleTabs.filter{$0.kind == .regular}){tab in tabRow(tab)}
-                }
-            }.scrollIndicators(.hidden)
-            if let host=session.extensions,!host.records.filter({$0.enabled}).isEmpty {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing:4) {
+                        ForEach(session.state.pinnedSidebarDisplayRows){row in
+                            Group {
+                                if row.isFolder,let folder=session.state.folder(row.id) {FolderRow(session:session,folder:folder,compact:collapsed)}
+                                else if row.tabIDs.count>1 {joinedTabs(row.tabIDs)}
+                                else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
+                            }.padding(.leading,collapsed ? 0 : CGFloat(row.depth)*14)
+                        }
+                        Divider().padding(.vertical,8)
+                        Button {session.newTab()} label:{HStack(spacing:10){Image(systemName:"plus");if !collapsed {Text("New Tab");Spacer()}}.frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,10).frame(height:36)}
+                            .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityIdentifier("new-tab")
+                        ForEach(session.state.regularSidebarRows) { row in
+                            if row.tabIDs.count>1 {
+                                joinedTabs(row.tabIDs)
+                            } else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
+                        }
+                    }
+                }.scrollIndicators(.hidden)
+                    .onChange(of:focusedTab){_,id in if let id {proxy.scrollTo(id,anchor:.center)}}
+            }
+            if let host=session.extensions,!host.records.filter({$0.enabled && host.hasAction($0.id)}).isEmpty {
                 ScrollView(.horizontal) {
-                    HStack(spacing:6) {ForEach(host.records.filter{$0.enabled}){record in ExtensionActionButton(record:record,session:session,revision:host.actionRevision).frame(width:28,height:28)}}
+                    HStack(spacing:6) {ForEach(host.records.filter{$0.enabled && host.hasAction($0.id)}){record in ExtensionActionButton(record:record,session:session,revision:host.actionRevision).frame(width:28,height:28)}}
                 }.scrollIndicators(.hidden).frame(height:32)
             }
             HStack(spacing:6) {
                 Menu {
+                    Button("New Folder…"){session.folderEditor = .init()}
+                    Divider()
                     Button("Bookmarks"){session.libraryPanel = .bookmarks}
                     Button("History"){session.libraryPanel = .history}
                     Button("Downloads"){session.libraryPanel = .downloads}
@@ -62,7 +95,7 @@ struct SidebarView: View {
                         Button {session.switchWorkspace(space.id)} label:{Image(systemName:space.id==session.state.activeWorkspaceID ? "circle.fill" : "circle").font(.system(size:space.id==session.state.activeWorkspaceID ? 8 : 6))}.buttonStyle(.plain).frame(width:20,height:28).help(space.name).accessibilityLabel("Workspace \(space.name)")
                         .contextMenu {
                             Button("Rename…"){workspaceName=space.name;renamingWorkspace=space.id;creatingWorkspace=true}
-                            if session.state.workspaces.count>1 {Button("Remove Workspace (Keep Tabs)"){session.state.removeWorkspace(space.id)}}
+                            if session.state.workspaces.count>1 {Button("Remove Workspace (Keep Tabs)"){session.removeWorkspace(space.id)}}
                         }
                     }
                     Spacer(minLength:0)
@@ -71,54 +104,129 @@ struct SidebarView: View {
             }.frame(height:30)
         }
         .padding(.horizontal,8).padding(.bottom,6)
+        .onChange(of:focusedTab){_,value in
+            session.sidebarKeyboardFocus=value
+            if value != nil {session.contentFocusRequest=nil}
+        }
+        .onChange(of:session.state.sidebarTabIDs){_,ids in
+            if let focusedTab,!ids.contains(focusedTab) {self.focusedTab=nil;session.sidebarKeyboardFocus=nil}
+        }
+        .onDisappear{session.sidebarKeyboardFocus=nil}
         .opacity(active ? 1 : 0.65)
         .glassEffect(.regular,in:.rect(cornerRadius:12))
+        .sheet(item:$session.folderEditor){request in FolderEditorView(session:session,request:request)}
         .sheet(isPresented:$creatingWorkspace) {
             VStack(alignment:.leading,spacing:18) {
                 Text("Workspace").font(.headline)
                 TextField("Name",text:$workspaceName).textFieldStyle(.bordered)
                 HStack {Button("Cancel"){creatingWorkspace=false}.keyboardShortcut(.cancelAction);Spacer();Button(renamingWorkspace == nil ? "Create" : "Rename"){
                     if let id=renamingWorkspace,let i=session.state.workspaces.firstIndex(where:{$0.id==id}) {session.state.workspaces[i].name=workspaceName.trimmingCharacters(in:.whitespacesAndNewlines)}
-                    else {let id=session.state.addWorkspace(name:workspaceName);session.switchWorkspace(id)}
+                    else {session.addWorkspace(name:workspaceName)}
                     creatingWorkspace=false
                 }.disabled(workspaceName.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty).keyboardShortcut(.defaultAction)}
             }.padding(24).frame(width:320)
         }
     }
-    private func tabRow(_ tab: BrowserTab,essential: Bool = false) -> some View {
-        TabRow(session:session,tab:tab,compact:collapsed || essential)
-            .draggable(tab.id.uuidString)
-            .dropDestination(for:String.self){items,_ in guard let value=items.first,let id=UUID(uuidString:value) else{return false};session.move(id,before:tab.id);return true}
+    private func tabRow(_ tab: BrowserTab,essential: Bool = false,joined:Bool=false) -> some View {
+        TabRow(session:session,tab:tab,compact:collapsed || essential,joined:joined,focusedTab:$focusedTab)
+            .id(tab.id)
+            .draggable(session.sidebarDrag(tab.id,kind:.tab))
+            .dropDestination(for:SidebarDragItem.self){items,point in
+                session.acceptSidebarDrop(items,at:point.y>(tab.kind == .essential ? 22 : joined ? 14 : 18) ? .afterTab(tab.id) : .beforeTab(tab.id))
+            }
     }
 }
 private struct TabRow: View {
     let session: BrowserSession
     let tab: BrowserTab
     let compact: Bool
+    let joined: Bool
+    var focusedTab:FocusState<UUID?>.Binding
     @State private var hovering=false
     var body: some View {
-        HStack(spacing:10) {
-            Button {session.select(tab.id)} label: {
-                HStack(spacing:10) {
-                    Image(systemName:tab.kind == .essential ? "star.fill" : "globe").font(.system(size:14)).frame(width:16,height:16)
-                    if !compact {Text(tab.title).font(.system(size:13,weight:session.state.selectedTabID==tab.id ? .semibold : .regular)).lineLimit(1);Spacer(minLength:0)}
+        HStack(spacing:joined ? 4 : 10) {
+            Button {session.clickTab(tab.id,modifiers:NSApp.currentEvent?.modifierFlags ?? [])} label: {
+                HStack(spacing:joined ? 4 : 10) {
+                    if let icon=session.runtimes[tab.id]?.pageIcon {Image(nsImage:icon).resizable().interpolation(.high).scaledToFit().frame(width:16,height:16).accessibilityHidden(true)}
+                    else {Image(systemName:tab.kind == .essential ? "star.fill" : "globe").font(.system(size:14)).frame(width:16,height:16).accessibilityHidden(true)}
+                    if !compact {Text(tab.title).font(.system(size:13,weight:session.state.sidebarSelectedTabID==tab.id ? .semibold : .regular)).lineLimit(1);Spacer(minLength:0)}
                 }.frame(maxWidth:.infinity,alignment:compact ? .center : .leading).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)")
-            if !compact,hovering,tab.kind == .regular {Button("Close Tab",systemImage:"xmark"){session.close(tab.id)}.labelStyle(.iconOnly).font(.system(size:10)).buttonStyle(.plain)}
+            }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)").accessibilityAddTraits(session.tabSelection.ids.contains(tab.id) || session.state.sidebarSelectedTabID==tab.id ? .isSelected : [])
+            .accessibilityHint("Up and Down select tabs. Shift extends selection. Return or Escape returns to the page.")
+            .focusable()
+            .focused(focusedTab,equals:tab.id)
+            .onKeyPress(keys:[.upArrow,.downArrow]){press in
+                guard press.modifiers.intersection([.command,.control,.option]).isEmpty,
+                      let target=session.moveSidebarSelection(from:tab.id,direction:press.key == .downArrow ? 1 : -1,extending:press.modifiers.contains(.shift)) else{return .ignored}
+                focusedTab.wrappedValue=target
+                return .handled
+            }
+            .onKeyPress(keys:[.return]){press in
+                guard press.modifiers.intersection([.command,.control,.option,.shift]).isEmpty else{return .ignored}
+                session.select(tab.id)
+                focusedTab.wrappedValue=nil;session.sidebarKeyboardFocus=nil
+                session.contentFocusRequest=session.state.selectedTabID
+                DispatchQueue.main.async {session.completeContentFocusRequest()}
+                return .handled
+            }
+            .onExitCommand {
+                focusedTab.wrappedValue=nil;session.sidebarKeyboardFocus=nil
+                session.contentFocusRequest=session.state.selectedTabID
+                DispatchQueue.main.async {session.completeContentFocusRequest()}
+            }
+            .contextMenu {tabContextMenu}
+            .accessibilityActions {
+                Button("Duplicate Tab"){session.duplicate(tab.id)}
+                Button("Close Tab"){session.close(tab.id)}
+                if session.state.splitGroups.contains(where:{$0.tabIDs.contains(tab.id)}) {
+                    Button(tab.kind == .pinned ? "Unpin Split Group" : "Pin Split Group"){session.setPinned(tab.id,tab.kind != .pinned)}
+                    Button("Exit Split View"){session.state.removeSplitGroup(containing:tab.id)}
+                }
+            }
+            if session.state.glance(for:tab.id) != nil {
+                Button {session.select(tab.id)} label:{Image(systemName:"rectangle.on.rectangle").font(.system(size:12)).frame(width:24,height:24)}.buttonStyle(.plain).accessibilityLabel("Show Link Preview").help("Show Link Preview")
+            }
+            if !compact,!joined,hovering,tab.kind == .regular {Button("Close Tab",systemImage:"xmark"){session.close(tab.id)}.labelStyle(.iconOnly).font(.system(size:10)).buttonStyle(.plain)}
         }
-        .padding(.horizontal,10).frame(height:36)
-        .background(session.state.selectedTabID==tab.id ? Color.primary.opacity(0.09) : hovering ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
+        .padding(.horizontal,joined ? 4 : 10).frame(maxWidth:.infinity).frame(height:tab.kind == .essential ? 44 : joined ? 28 : 36)
+        .background(session.state.sidebarSelectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : tab.kind == .essential ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
         .onHover{hovering=$0}.help(tab.title+"\n"+tab.url)
-        .contextMenu {
+    }
+    @ViewBuilder private var tabContextMenu:some View {
+            if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {
+                Button("Pin Selected Tabs"){session.setHighlightedKind(.pinned)}
+                Button("Unpin Selected Tabs"){session.setHighlightedKind(.regular)}
+                Menu("Move Selected Tabs to Workspace") {
+                    ForEach(session.state.workspaces){space in Button(space.name){session.moveHighlightedToWorkspace(space.id)}}
+                }
+                Divider()
+            }
+            if tab.kind != .essential {
+                let targets=session.tabSelection.ids.contains(tab.id) && session.tabSelection.ids.count>1 ? session.state.visibleTabs.filter{session.tabSelection.ids.contains($0.id)}.map(\.id) : [tab.id]
+                Button(targets.count>1 ? "New Folder with Selected Tabs…" : "New Folder with Tab…"){session.folderEditor = .init(tabIDs:targets)}
+                    .disabled(targets.contains{id in session.state.tabs.first{$0.id==id}?.kind == .essential})
+                Menu("Move to Folder") {
+                    ForEach((session.state.folders ?? []).filter{$0.workspaceID==tab.workspaceID}){folder in
+                        Button(session.state.folderPath(folder.id)){session.moveTabIntoFolder(tab.id,folder.id)}.disabled(tab.folderID==folder.id)
+                    }
+                }.disabled(!(session.state.folders ?? []).contains{$0.workspaceID==tab.workspaceID})
+                if tab.folderID != nil {Button("Remove from Folder"){session.moveTabIntoFolder(tab.id,nil)}}
+                Divider()
+            }
             Button("Duplicate Tab"){session.duplicate(tab.id)}
-            Button(tab.kind == .pinned ? "Unpin Tab" : "Pin Tab"){session.setKind(tab.id,tab.kind == .pinned ? .regular : .pinned)}
+            let grouped=session.state.splitGroups.contains{$0.tabIDs.contains(tab.id)}
+            Button(tab.kind == .pinned ? (grouped ? "Unpin Split Group" : "Unpin Tab") : (grouped ? "Pin Split Group" : "Pin Tab")){session.setPinned(tab.id,tab.kind != .pinned)}
             Button(tab.kind == .essential ? "Remove from Essentials" : "Add to Essentials"){session.setKind(tab.id,tab.kind == .essential ? .regular : .essential)}
             if let home=tab.homeURL {Button("Reset Pinned Tab"){if let url=URL(string:home){session.runtime(tab.id).load(url)}}}
-            Menu("Move to Workspace") {ForEach(session.state.workspaces){space in Button(space.name){session.state.moveToWorkspace(tab.id,space.id)}}}
+            Menu("Move to Workspace") {ForEach(session.state.workspaces){space in Button(space.name){session.moveTabToWorkspace(tab.id,space.id)}}}
             if !session.state.isPrivate {Button("Move to New Window"){session.manager?.moveTab(tab.id,from:session)}}
-            if tab.id != session.state.selectedTabID {Button("Split with Current Tab"){session.state.split(with:tab.id)};Button("Unload Tab…"){session.unload(tab.id)}}
+            if session.tabSelection.ids.contains(tab.id),(2...4).contains(session.tabSelection.ids.count) {
+                Button("Split Selected Tabs"){session.splitHighlighted()}
+            }
+            if session.state.splitGroups.contains(where:{$0.tabIDs.contains(tab.id)}) {Button("Exit Split View"){session.state.removeSplitGroup(containing:tab.id)}}
+            if tab.id != session.state.selectedTabID {Button("Split with Current Tab"){session.state.split(with:tab.id)};Button("Unload Tab…"){session.unload(tab.id)}.disabled(!session.canUnload(tab.id))}
             Divider()
+            if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {Button("Close \(session.tabSelection.ids.count) Selected Tabs"){session.closeHighlighted()}}
             Button("Close Tab"){session.close(tab.id)}
-        }
     }
 }

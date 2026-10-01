@@ -1,0 +1,29 @@
+name: macOS 27 Safari Technology Preview rendering diagnostic
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/stp-probe.yml', 'script/stp_probe.sh']
+permissions:
+  contents: read
+concurrency:
+  group: stp-rendering-probe
+  cancel-in-progress: true
+jobs:
+  probe:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      MACOSX_DEPLOYMENT_TARGET: '27.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: bash script/stp_probe.sh
+      - name: Index diagnostic evidence
+        if: always()
+        run: python3 script/emit_evidence.py evidence/stp
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: safari-technology-preview-diagnostic
+          path: evidence/stp
+          retention-days: 7

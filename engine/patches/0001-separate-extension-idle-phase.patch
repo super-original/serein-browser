@@ -1,0 +1,60 @@
+--- a/Source/WebCore/page/UserScriptTypes.h
++++ b/Source/WebCore/page/UserScriptTypes.h
+@@ -25,12 +25,13 @@
+  
+ #pragma once
+ 
++#include <stdint.h>
+ #include <wtf/HashMap.h>
+ #include <wtf/Vector.h>
+ 
+ namespace WebCore {
+ 
+-enum class UserScriptInjectionTime : bool { DocumentStart, DocumentEnd };
++enum class UserScriptInjectionTime : uint8_t { DocumentStart, DocumentEnd, DocumentIdle };
+ 
+ class DOMWrapperWorld;
+ class UserScript;
+--- a/Source/WebCore/loader/FrameLoader.cpp
++++ b/Source/WebCore/loader/FrameLoader.cpp
+@@ -935,7 +935,14 @@
+ 
+     Ref frame = m_frame;
+ 
++    RefPtr originalDocument = frame->document();
+     frame->injectUserScripts(UserScriptInjectionTime::DocumentEnd);
++
++    // Complete document-end injection in every world before any idle script.
++    // End scripts may replace the document; never inject this phase into that
++    // replacement on behalf of the document which just finished parsing.
++    if (originalDocument && frame->document() == originalDocument)
++        frame->injectUserScripts(UserScriptInjectionTime::DocumentIdle);
+ 
+     if (m_stateMachine.creatingInitialEmptyDocument())
+         return;
+--- a/Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in
++++ b/Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in
+@@ -5744,7 +5744,11 @@
+     std::optional<WebCore::PlatformMediaCapabilitiesTransferFunction> transferFunction;
+ }
+ 
+-enum class WebCore::UserScriptInjectionTime : bool;
++enum class WebCore::UserScriptInjectionTime : uint8_t {
++    DocumentStart,
++    DocumentEnd,
++    DocumentIdle
++}
+ 
+ enum class WebCore::UserContentInjectedFrames : bool;
+ 
+--- a/Source/WebKit/UIProcess/Extensions/WebExtensionContext.cpp
++++ b/Source/WebKit/UIProcess/Extensions/WebExtensionContext.cpp
+@@ -1278,7 +1278,7 @@
+     case WebExtension::InjectionTime::DocumentStart:
+         return WebCore::UserScriptInjectionTime::DocumentStart;
+     case WebExtension::InjectionTime::DocumentIdle:
+-        // FIXME: <rdar://problem/57613315> Implement idle injection time. For now, the end injection time is fine.
++        return WebCore::UserScriptInjectionTime::DocumentIdle;
+     case WebExtension::InjectionTime::DocumentEnd:
+         return WebCore::UserScriptInjectionTime::DocumentEnd;
+     }

@@ -1,0 +1,27 @@
+name: Pinned Chrome real-extension reference
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/chrome-reference.yml', 'script/chrome_formatter_reference.py', 'script/chrome_distribution.py', 'script/WaitForBrowserWindow.swift', 'script/test_chrome_distribution.py', 'script/chrome_download_reference.py', 'script/build_json_formatter_fixture.py', 'Fixtures/formatter.json', 'Fixtures/DownloadAPI/**']
+permissions:
+  contents: read
+concurrency:
+  group: chrome-formatter-reference
+  cancel-in-progress: true
+jobs:
+  reference:
+    runs-on: xcode-27
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 script/test_chrome_distribution.py
+      - run: python3 script/chrome_formatter_reference.py
+      - name: Index reference evidence
+        if: always()
+        run: python3 script/emit_evidence.py evidence/chrome-formatter-reference
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: chrome-formatter-reference
+          path: evidence/chrome-formatter-reference
+          retention-days: 7

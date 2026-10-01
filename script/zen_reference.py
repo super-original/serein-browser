@@ -14,12 +14,40 @@ for _ in range(40):
 session=request('/session',{'capabilities':{'alwaysMatch':{'browserName':'firefox','moz:firefoxOptions':{'binary':'/tmp/Zen.app/Contents/MacOS/zen','prefs':{'zen.welcome-screen.seen':True,'browser.shell.checkDefaultBrowser':False,'browser.startup.homepage_override.mstone':'ignore','zen.view.use-single-toolbar':True,'zen.view.sidebar-expanded':True,'zen.view.compact.enable-at-startup':False,'layout.css.prefers-color-scheme.content-override':1}}}}})
 sid=session['sessionId']; prefix='/session/'+sid
 def js(code): return request(prefix+'/execute/sync',{'script':code,'args':[]})
-def snap(name,code=''):
+def snap(name,code='',key=None):
     try:
         if code: js(code)
+        if key:
+            pid=int(session['capabilities']['moz:processID'])
+            source=f'tell application "System Events" to tell (first application process whose unix id is {pid})\nset frontmost to true\nkeystroke "{key}" using {{command down, option down}}\nend tell'
+            subprocess.run(['osascript','-e',source],check=True,timeout=10)
         time.sleep(1.2)
         subprocess.run(['screencapture','-x',str(out/(name+'.png'))],check=True)
-        geometry=js('return {width:outerWidth,height:outerHeight,scale:devicePixelRatio,sidebar:document.getElementById("navigator-toolbox").getBoundingClientRect().toJSON(),tabs:[...gBrowser.tabs].map(t=>({label:t.label,pinned:t.pinned,essential:t.hasAttribute("zen-essential"),rect:t.getBoundingClientRect().toJSON()}))};')
+        geometry=js('return {width:outerWidth,height:outerHeight,scale:devicePixelRatio,sidebar:document.getElementById("navigator-toolbox").getBoundingClientRect().toJSON(),tabs:[...gBrowser.tabs].map(t=>({label:t.label,pinned:t.pinned,multiselected:!!t.multiselected,selected:!!t.selected,essential:t.hasAttribute("zen-essential"),rect:t.getBoundingClientRect().toJSON()}))};')
+        if name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid','24-split-rows-keyboard','25-split-columns-keyboard']:
+            geometry['splitPanes']=js('return window.referenceGridTabs.filter(t=>t.splitView).map(t=>({label:t.label,rect:t.linkedBrowser.getBoundingClientRect().toJSON()}));')
+            expected=3 if name in ['16-three-pane-grid','24-split-rows-keyboard','25-split-columns-keyboard'] else 4
+            if len(geometry['splitPanes'])!=expected or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['splitPanes']): raise RuntimeError('Incorrect visible split pane count or geometry')
+            panes=[p['rect'] for p in geometry['splitPanes']]
+            if name=='24-split-rows-keyboard' and not all(abs(a['x']-b['x'])<2 and a['bottom']<b['top'] for a,b in zip(panes,panes[1:])): raise RuntimeError('Command-Option-H did not produce rows')
+            if name=='25-split-columns-keyboard' and not all(abs(a['y']-b['y'])<2 and a['right']<b['left'] for a,b in zip(panes,panes[1:])): raise RuntimeError('Command-Option-V did not produce columns')
+        if name in ['20-folder-expanded','21-folder-collapsed','22-folder-nested','23-folder-context']:
+            geometry['folders']=js('return [...document.querySelectorAll("zen-folder")].map(f=>({label:f.label,collapsed:f.collapsed,parent:f.group?.label||null,rect:f.getBoundingClientRect().toJSON(),labelRect:f.labelElement.getBoundingClientRect().toJSON(),items:f.tabs.map(t=>({label:t.label,pinned:t.pinned,empty:t.hasAttribute("zen-empty-tab"),rect:t.getBoundingClientRect().toJSON()}))}));')
+            relevant=[f for f in geometry['folders'] if f['label']=='Research notes']
+            if len(relevant)!=1 or relevant[0]['labelRect']['width']<=0: raise RuntimeError('Folder label missing or hidden')
+            if name=='21-folder-collapsed' and not relevant[0]['collapsed']: raise RuntimeError('Folder did not collapse')
+            if name=='22-folder-nested' and not any(f['parent']=='Research notes' for f in geometry['folders']): raise RuntimeError('Nested folder has no parent')
+        if name in ['26-first-split-group','27-second-split-group','28-return-first-split-group']:
+            geometry['splitGroups']=js('return window.referencePairTabs.map((t,index)=>({index,label:t.label,split:!!t.splitView,selected:t===gBrowser.selectedTab,parentTag:t.parentElement?.localName,parentID:t.parentElement?.id,rect:t.linkedBrowser.getBoundingClientRect().toJSON()}));')
+            members=geometry['splitGroups']
+            active=[2,3] if name=='27-second-split-group' else [0,1]
+            if len(members)!=4 or any(not members[i]['split'] or members[i]['rect']['width']<=0 or members[i]['rect']['height']<=0 for i in active): raise RuntimeError('Expected selected split group has no visible panes')
+            if name!='26-first-split-group' and not all(t['split'] for t in members): raise RuntimeError('Switching groups did not preserve both memberships')
+            if not members[active[0]]['selected']: raise RuntimeError('Wrong selected group member')
+        if name=='19-glance':
+            geometry['glance']=js('return [...document.querySelectorAll(".zen-glance-overlay .browserContainer, .zen-glance-overlay .zen-glance-sidebar-container")].map(e=>({className:e.className,rect:e.getBoundingClientRect().toJSON()}));')
+            if len(geometry['glance'])<2 or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['glance']): raise RuntimeError('Glance overlay or controls are not visible')
+        if name=='15-tab-multiselection' and sum(t.get('multiselected',False) for t in geometry['tabs'])<2: raise RuntimeError('Fewer than two tabs are actually multiselected')
         results.append({'name':name,'status':'captured','geometry':geometry})
     except Exception as e: results.append({'name':name,'status':'failed','error':str(e)});print(name,str(e),flush=True)
 try:
@@ -36,6 +64,8 @@ try:
     snap('02-dark-expanded','Services.prefs.setIntPref("ui.systemUsesDarkTheme",1);')
     snap('03-essentials','Services.prefs.setIntPref("ui.systemUsesDarkTheme",0);gZenPinnedTabManager.addToEssentials(gBrowser.selectedTab);gBrowser.selectedTab=gBrowser.addTab("http://127.0.0.1:8765/second.html",{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});')
     snap('04-pinned-and-normal','gBrowser.pinTab(gBrowser.selectedTab);gBrowser.selectedTab=gBrowser.addTab("http://127.0.0.1:8765/index.html",{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});')
+    snap('15-tab-multiselection','gBrowser.addToMultiSelectedTabs(gBrowser.selectedTab);gBrowser.addToMultiSelectedTabs([...gBrowser.tabs].find(t=>t.pinned&&!t.hasAttribute("zen-essential")));')
+    js('gBrowser.clearMultiSelectedTabs();')
     snap('05-address-focused','gURLBar.focus();gURLBar.select();')
     snap('06-tab-context','gURLBar.blur();document.getElementById("tabContextMenu").openPopup(gBrowser.selectedTab,"after_start",0,0,true,false);')
     js('document.getElementById("tabContextMenu").hidePopup();gZenWorkspaces.createAndSaveWorkspace("Research");')
@@ -52,8 +82,42 @@ try:
     snap('12-collapsed','gZenCompactModeManager.preference=false;Services.prefs.setBoolPref("zen.view.sidebar-expanded",false);')
     snap('13-settings','Services.prefs.setBoolPref("zen.view.sidebar-expanded",true);gBrowser.selectedTab=gBrowser.addTab("about:preferences",{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});')
     snap('14-network-error','gBrowser.selectedTab=gBrowser.addTab("http://127.0.0.1:1/",{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});')
+    js('window.referenceGridTabs=[0,1,2,3].map(i=>gBrowser.addTab("http://127.0.0.1:8765/"+(i%2 ? "second.html" : "index.html")+"?grid="+i,{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()}));gBrowser.selectedTab=window.referenceGridTabs[0];')
+    time.sleep(2)
+    snap('16-three-pane-grid','gZenViewSplitter.splitTabs(window.referenceGridTabs.slice(0,3),"grid");')
+    snap('17-four-pane-addition','gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
+    snap('18-four-pane-grid','gZenViewSplitter.unsplitCurrentView();gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
+    snap('24-split-rows-keyboard','gZenViewSplitter.unsplitCurrentView();gZenViewSplitter.splitTabs(window.referenceGridTabs.slice(0,3),"grid");',key='h')
+    snap('25-split-columns-keyboard',key='v')
+    snap('19-glance','gZenViewSplitter.unsplitCurrentView();gBrowser.selectedTab=window.referenceGridTabs[0];gZenGlanceManager.openGlance({},window.referenceGridTabs[1]);')
+    js('gZenGlanceManager.closeGlance({noAnimation:true});gZenWorkspaces.createAndSaveWorkspace("Folder reference");')
+    time.sleep(2)
+    js('window.referenceFolderTabs=["index.html","second.html"].map(page=>gBrowser.addTab("http://127.0.0.1:8765/"+page,{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()}));gBrowser.selectedTab=window.referenceFolderTabs[0];window.referenceFolder=gZenFolders.createFolder(window.referenceFolderTabs,{renameFolder:false,label:"Research notes"});')
+    time.sleep(2)
+    snap('20-folder-expanded')
+    snap('21-folder-collapsed','window.referenceFolder.labelElement.click();')
+    snap('22-folder-nested','window.referenceFolder.collapsed=false;window.referenceSubfolder=gZenFolders.createFolder([],{renameFolder:false,label:"Reading list"});window.referenceFolder.tabs[0].after(window.referenceSubfolder);')
+    snap('23-folder-context','document.getElementById("zenFolderActions").openPopup(window.referenceFolder.labelElement,"after_start",0,0,true,false);')
+    js('document.getElementById("zenFolderActions").hidePopup();gZenWorkspaces.createAndSaveWorkspace("Split groups");')
+    time.sleep(2)
+    js('window.referencePairTabs=[0,1,2,3].map(i=>gBrowser.addTab("http://127.0.0.1:8765/"+(i%2 ? "second.html" : "index.html")+"?pair="+i,{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()}));gBrowser.selectedTab=window.referencePairTabs[0];')
+    time.sleep(2)
+    snap('26-first-split-group','gZenViewSplitter.splitTabs(window.referencePairTabs.slice(0,2),"grid");')
+    snap('27-second-split-group','gBrowser.selectedTab=window.referencePairTabs[2];gZenViewSplitter.splitTabs(window.referencePairTabs.slice(2),"grid");')
+    snap('28-return-first-split-group','gBrowser.selectedTab=window.referencePairTabs[0];')
 finally:
     (out/'manifest.json').write_text(json.dumps({'zen':'1.22.2b','theme':'Built-in default, no mods','requestedWindow':[1000,700],'results':results},indent=2))
     request(prefix,method='DELETE')
 print(json.dumps(results,indent=2))
+if not any(x['name']=='15-tab-multiselection' and x['status']=='captured' for x in results): raise SystemExit('Multiselection reference did not capture')
 if sum(x['status']=='captured' for x in results)<12: raise SystemExit('Fewer than twelve successful captures')
+
+if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid']): raise SystemExit('Grid reference capture failed')
+
+if not any(x["name"]=="19-glance" and x["status"]=="captured" for x in results): raise SystemExit("Glance reference capture failed")
+
+if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['20-folder-expanded','21-folder-collapsed','22-folder-nested','23-folder-context']): raise SystemExit('Folder reference capture failed')
+
+if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['24-split-rows-keyboard','25-split-columns-keyboard']): raise SystemExit('Native arrangement shortcut references failed')
+
+if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['26-first-split-group','27-second-split-group','28-return-first-split-group']): raise SystemExit('Persistent split-group reference failed')

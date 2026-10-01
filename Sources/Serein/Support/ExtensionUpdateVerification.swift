@@ -1,0 +1,257 @@
+import AppKit
+import WebKit
+import SereinCore
+
+@MainActor enum ExtensionUpdateVerification {
+    static func run(id: UUID, host: ExtensionHost, session: BrowserSession, root: URL) async -> [RuntimeVerification.Result] {
+        var results: [RuntimeVerification.Result] = []
+        func check(_ name:String,_ passed:Bool,_ detail:String="") {
+            results.append(.init(name:"signed-update-"+name,passed:passed,detail:detail))
+            print("UPDATE_VERIFY \(name): \(passed)");fflush(stdout)
+            try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("update-partial-results.json"),options:.atomic)
+        }
+        let fixtures = Bundle.main.resourceURL!.appendingPathComponent("Fixtures/Packages")
+        func apply(_ name: String, accept: Bool, capture: String? = nil) async throws -> Bool {
+            let previousSheet=session.dialogWindow?.attachedSheet
+            let task = Task { await host.update(id, from: fixtures.appendingPathComponent(name), in: session) }
+            for _ in 0..<100 {
+                if let sheet=session.dialogWindow?.attachedSheet,sheet !== previousSheet,sheet.identifier?.rawValue=="extension-update-\(id)" { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            let owner = session.dialogWindow
+            let candidate=owner?.attachedSheet
+            let sheet=candidate !== previousSheet && candidate?.identifier?.rawValue=="extension-update-\(id)" ? candidate : nil
+            check("consent-" + name + (accept ? "-accept" : "-cancel"), sheet != nil)
+            if let sheet {
+                if let capture {
+                    try capture.write(to: root.appendingPathComponent("capture-request"), atomically: true, encoding: .utf8)
+                    for _ in 0..<100 {
+                        if FileManager.default.fileExists(atPath: root.appendingPathComponent(capture + ".capture-finished").path) { break }
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                    check("capture-" + capture, FileManager.default.fileExists(atPath: root.appendingPathComponent(capture + ".png").path))
+                }
+                owner?.endSheet(sheet, returnCode: accept ? .alertFirstButtonReturn : .alertSecondButtonReturn)
+            }
+            return await task.value
+        }
+        func state(version: String) async throws -> Bool {
+            session.navigate("http://127.0.0.1:8765/index.html?extension=crx-" + version, ask: false)
+            for _ in 0..<50 {
+                try await Task.sleep(for: .milliseconds(100))
+                if let value = try? await session.current?.webView.evaluateJavaScript("document.documentElement.dataset.sereinCRXState || null"),
+                   let text = value as? String, let data = text.data(using: .utf8),
+                   let payload = try JSONSerialization.jsonObject(with: data) as? [String:String], payload["version"] == version {
+                    return payload["marker"] == "preserved-across-update"
+                }
+            }
+            return false
+        }
+        do {
+            guard let before = host.records.first(where: { $0.id == id }), let originalContext = host.contexts[id] else { throw ExtensionValidationError.invalid("Signed fixture is not installed") }
+            var previousRequests = before; previousRequests.permissions = []; previousRequests.hosts = []
+            let expired = ExtensionPermissionState(granted: [:], denied: ["storage": .distantPast], grantedHosts: [:], deniedHosts: ["http://127.0.0.1/*": .distantPast])
+            let merged = try expired.updating(from: previousRequests, to: originalContext.webExtension)
+            check("expired-denials-do-not-block-reviewed-grants", merged.denied.isEmpty && merged.deniedHosts.isEmpty && merged.granted["storage"] != nil && !merged.grantedHosts.isEmpty)
+            let broad = try WKWebExtension.MatchPattern(string: "*://*/*")
+            let narrow = try WKWebExtension.MatchPattern(string: "https://example.test/*")
+            check("host-scope-containment", broad.matches(narrow) && !narrow.matches(broad))
+            session.libraryPanel = .extensions
+            try await Task.sleep(for: .milliseconds(500))
+            host.chooseUpdate(id, in: session)
+            for _ in 0..<50 {
+                if session.dialogWindow?.attachedSheet is NSOpenPanel { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            let chooser = session.dialogWindow?.attachedSheet as? NSOpenPanel
+            check("native-update-chooser", chooser != nil)
+            chooser?.cancel(nil)
+            try await Task.sleep(for: .milliseconds(300))
+            check("chooser-cancel-keeps-package", host.records.first(where: { $0.id == id })?.version == "1.0")
+            session.libraryPanel = nil
+            for _ in 0..<50 {
+                if session.window?.attachedSheet == nil { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            for name in ["wrong-developer.crx", "signed-fixture.crx", "signed-update-unsupported.crx"] {
+                let updated = await host.update(id, from: fixtures.appendingPathComponent(name), in: session)
+                check("reject-" + name, !updated && host.records.first(where: { $0.id == id })?.version == "1.0" && host.contexts[id] === originalContext, host.error ?? "")
+            }
+            let cancelled = try await apply("signed-update.crx", accept: false)
+            check("cancel-preserves-package", !cancelled && host.records.first(where: { $0.id == id })?.version == "1.0" && host.contexts[id] === originalContext)
+            guard let options = originalContext.optionsPageURL else { throw ExtensionValidationError.invalid("Fixture options page unavailable") }
+            let optionsTab = session.newTab(url: options.absoluteString, select: false)
+            let optionsRuntime = session.runtime(optionsTab)
+            _=optionsRuntime.webView
+            var initialOptions:String?
+            for _ in 0..<50 {
+                initialOptions=try? await optionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
+                if initialOptions == "Version 1.0",!optionsRuntime.webView.isLoading {break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("initial-options-document",initialOptions == "Version 1.0" && !optionsRuntime.webView.isLoading,initialOptions ?? "no document")
+            let updated = try await apply("signed-update.crx", accept: true, capture: "23-signed-update-consent")
+            check("new-version-loaded", updated && host.records.first(where: { $0.id == id })?.version == "1.1" && host.contexts[id] != nil, host.error ?? "")
+            let preserved = try await state(version: "1.1")
+            check("identity-and-storage-preserved", host.contexts[id]?.uniqueIdentifier == before.runtimeIdentifier && preserved)
+            var optionText: String?
+            for _ in 0..<50 {
+                optionText = try? await optionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
+                if optionText == "Version 1.1" { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            check("resource-origin-and-open-page-preserved", host.contexts[id]?.baseURL == originalContext.baseURL && optionText == "Version 1.1", optionText ?? "no options document")
+            func waitForOptions(_ expected:String) async -> Bool {
+                for _ in 0..<50 {
+                    if let text=try? await optionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String,text==expected,optionsRuntime.webView.url==options,!optionsRuntime.webView.isLoading{return true}
+                    try? await Task.sleep(for:.milliseconds(100))
+                }
+                return false
+            }
+            let previousSelection=session.state.selectedTabID
+            session.select(optionsTab)
+            try await Task.sleep(for:.milliseconds(200))
+            check("options-accepts-keyboard-focus",session.window?.makeFirstResponder(optionsRuntime.webView)==true)
+            let ordinary=URL(string:"http://127.0.0.1:8765/index.html?options-history=1")!
+            optionsRuntime.load(ordinary)
+            for _ in 0..<50 {
+                if optionsRuntime.webView.url==ordinary,!optionsRuntime.webView.isLoading{break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("options-to-ordinary-document",optionsRuntime.webView.url==ordinary && optionsRuntime.webView.title != "Signed extension options")
+            let responder=session.window?.firstResponder as? NSView
+            check("origin-handoff-preserves-page-focus",responder.map{$0 === optionsRuntime.webView || $0.isDescendant(of:optionsRuntime.webView)} ?? false)
+            let privateTarget=String(data:try JSONSerialization.data(withJSONObject:[options.absoluteString]),encoding:.utf8)!
+            _=try? await optionsRuntime.webView.evaluateJavaScript("location.href="+privateTarget+"[0]")
+            try await Task.sleep(for:.milliseconds(500))
+            check("website-cannot-open-private-options",optionsRuntime.webView.url==ordinary)
+            optionsRuntime.goBack()
+            check("back-to-options-document",await waitForOptions("Version 1.1"))
+            optionsRuntime.goForward()
+            for _ in 0..<50 {
+                if optionsRuntime.webView.url==ordinary,!optionsRuntime.webView.isLoading{break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("forward-to-ordinary-document",optionsRuntime.webView.url==ordinary)
+            optionsRuntime.load(options)
+            check("ordinary-to-options-document",await waitForOptions("Version 1.1"))
+            _=try? await optionsRuntime.webView.evaluateJavaScript("location.href='http://127.0.0.1:8765/second.html?options-link=1'")
+            for _ in 0..<50 {
+                if optionsRuntime.webView.url?.query=="options-link=1",!optionsRuntime.webView.isLoading{break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("page-initiated-origin-transition",optionsRuntime.webView.url?.query=="options-link=1")
+            _=try? await optionsRuntime.webView.evaluateJavaScript("history.back()")
+            check("script-history-back-to-options",await waitForOptions("Version 1.1"))
+            check("script-history-preserves-forward",optionsRuntime.webView.canGoForward)
+            if let previousSelection {session.select(previousSelection)}
+            check("new-permission-consented", host.contexts[id]?.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) == true)
+            check("old-package-cleaned-after-commit", !FileManager.default.fileExists(atPath: before.directory(in: host.root).path))
+            guard let context = host.contexts[id] else { throw ExtensionValidationError.invalid("Updated context missing") }
+            let site = URL(string: "http://127.0.0.1:8765/index.html")!
+            context.setPermissionStatus(.unknown, for: WKWebExtension.Permission(rawValue: "tabs"))
+            context.setPermissionStatus(.deniedExplicitly, for: site)
+            host.rememberPermissions(context)
+            func historyEntries()->[String] {
+                let list=optionsRuntime.webView.backForwardList
+                return list.backList.map{ $0.url.absoluteString }+["CURRENT",list.currentItem?.url.absoluteString ?? "nil","FORWARD"]+list.forwardList.map{ $0.url.absoluteString }
+            }
+            func executionCount() async -> Int? {
+                try? await optionsRuntime.webView.callAsyncJavaScript("return Object.keys(await browser.storage.local.get(null)).filter(key => key.startsWith('optionsExecution_')).length",arguments:[:],in:nil,contentWorld:.page) as? Int
+            }
+            let executionsBeforeDisable=await executionCount()
+            let expectedHistory=historyEntries()
+            optionsRuntime.setZoom(1.25)
+            await host.setEnabled(id, false)
+            let restoredOptionsTab=session.newTab(url:options.absoluteString,select:false)
+            let restoredOptionsRuntime=session.runtime(restoredOptionsTab)
+            _=restoredOptionsRuntime.webView
+            for _ in 0..<50 {
+                if restoredOptionsRuntime.failure != nil {break}
+                try await Task.sleep(for:.milliseconds(50))
+            }
+            check("unavailable-options-error-stays-in-tab",restoredOptionsRuntime.failure != nil && session.error==nil && session.window?.attachedSheet==nil)
+            let selectionBeforeError=session.state.selectedTabID
+            session.select(restoredOptionsTab)
+            try "55-disabled-extension-page".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+            for _ in 0..<100 {
+                if FileManager.default.fileExists(atPath:root.appendingPathComponent("55-disabled-extension-page.capture-finished").path){break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("disabled-options-native-error-captured",FileManager.default.fileExists(atPath:root.appendingPathComponent("55-disabled-extension-page.png").path))
+            if let selectionBeforeError {session.select(selectionBeforeError)}
+            let disabledUpdate = try await apply("signed-update-disabled.crx", accept: true)
+            check("disabled-state-preserved", disabledUpdate && host.records.first(where: { $0.id == id })?.enabled == false && host.contexts[id] == nil)
+            let saved = try JSONDecoder().decode([InstalledExtension].self, from: Data(contentsOf: host.root.appendingPathComponent("extensions.json")))
+            check("version-pointer-persists", saved.first(where: { $0.id == id })?.packageVersionID != nil && saved.first(where: { $0.id == id })?.version == "1.2")
+            let savedLedger=saved.first(where:{$0.id==id})?.capabilityLedger
+            let installedManifest=try Data(contentsOf:ExtensionPackageLoader.manifest(host.records.first(where:{$0.id==id})!.directory(in:host.root)))
+            try savedLedger?.validate(installed:installedManifest)
+            check("original-capabilities-follow-update",savedLedger != nil && savedLedger?.requiredPermissions==["storage","tabs"] && savedLedger?.originalSHA256 != before.capabilityLedger?.originalSHA256)
+            await host.setEnabled(id, true)
+            guard var restored = host.contexts[id] else { throw ExtensionValidationError.invalid("Disabled update did not re-enable") }
+            let refreshed=await waitForOptions("Version 1.2")
+            func diagnostic(_ runtime:TabRuntime)->String {
+                "url=\(String(describing:runtime.loadedWebView?.url)) saved=\(session.state.tabs.first{$0.id==runtime.id}?.url ?? "missing") title=\(runtime.title) failure=\(runtime.failure ?? "none") loading=\(runtime.isLoading) revision=\(runtime.viewRevision)"
+            }
+            check("open-options-refresh-after-reenable",refreshed,diagnostic(optionsRuntime))
+            check("reenable-preserves-entire-history",historyEntries()==expectedHistory,"before=\(expectedHistory) after=\(historyEntries())")
+            func captureRecoveryError(_ capture:String) async throws {
+                let selected=session.state.selectedTabID
+                session.select(optionsTab)
+                try await Task.sleep(for:.milliseconds(300))
+                try capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                for _ in 0..<100 {
+                    if FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path){break}
+                    try await Task.sleep(for:.milliseconds(100))
+                }
+                if let selected {session.select(selected)}
+            }
+            if !refreshed {try await captureRecoveryError("25-extension-recovery-error")}
+            var restoredText:String?
+            for _ in 0..<50 {
+                restoredText=try? await restoredOptionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
+                if restoredText=="Version 1.2"{break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("unavailable-options-retry-after-context-load",restoredText=="Version 1.2",(restoredText ?? "no document")+" "+diagnostic(restoredOptionsRuntime))
+            let executionsAfterEnable=await executionCount()
+            check("reenable-initializes-each-options-page-once",executionsBeforeDisable != nil && executionsAfterEnable==executionsBeforeDisable.map{$0+2},"before=\(String(describing:executionsBeforeDisable)) after=\(String(describing:executionsAfterEnable))")
+            var lastRecoveryFailed=false
+            let historyCount=optionsRuntime.webView.backForwardList.backList.count
+            for cycle in 1...3 {
+                let executionsBefore=await executionCount()
+                await host.setEnabled(id,false)
+                await host.setEnabled(id,true)
+                guard let latest=host.contexts[id] else{throw ExtensionValidationError.invalid("Context did not return during reload cycle")}
+                restored=latest
+                let recovered=await waitForOptions("Version 1.2")
+                lastRecoveryFailed = !recovered
+                check("repeat-options-recovery-\(cycle)",recovered,diagnostic(optionsRuntime))
+                check("repeat-options-history-count-\(cycle)",optionsRuntime.webView.backForwardList.backList.count==historyCount,"before=\(historyCount) after=\(optionsRuntime.webView.backForwardList.backList.count)")
+                check("repeat-options-history-entries-\(cycle)",historyEntries()==expectedHistory,"before=\(expectedHistory) after=\(historyEntries())")
+                check("repeat-options-zoom-\(cycle)",optionsRuntime.webView.pageZoom==1.25)
+                for _ in 0..<50 {
+                    let other=try? await restoredOptionsRuntime.webView.evaluateJavaScript("document.body.innerText") as? String
+                    if other=="Version 1.2",!restoredOptionsRuntime.webView.isLoading{break}
+                    try await Task.sleep(for:.milliseconds(100))
+                }
+                let executionsAfter=await executionCount()
+                check("repeat-options-single-initialization-\(cycle)",executionsBefore != nil && executionsAfter==executionsBefore.map{$0+2},"before=\(String(describing:executionsBefore)) after=\(String(describing:executionsAfter))")
+            }
+            if lastRecoveryFailed {try await captureRecoveryError("28-final-extension-recovery-error")}
+            results += await ExtensionReloadProbe.inspectHost(context:restored,dataStore:session.dataStore,version:"1.2",history:optionsRuntime.webView.interactionState)
+            session.close(optionsTab,ask:false);session.close(restoredOptionsTab,ask:false)
+            check("revocation-and-site-denial-preserved", !restored.hasPermission(WKWebExtension.Permission(rawValue: "tabs")) && restored.permissionStatus(for: site) == .deniedExplicitly)
+            restored.setPermissionStatus(.grantedExplicitly, for: site)
+            host.rememberPermissions(restored)
+            check("disabled-update-data-preserved", try await state(version: "1.2"))
+            if let record=host.records.first(where:{$0.id==id}) {
+                results += await ExtensionReloadProbe.run(directory:record.directory(in:host.root),version:"1.2")
+            }
+            let downgrade = await host.update(id, from: fixtures.appendingPathComponent("signed-fixture.crx"), in: session)
+            check("downgrade-preserves-new-version", !downgrade && host.records.first(where: { $0.id == id })?.version == "1.2")
+        } catch { check("scenario", false, error.localizedDescription) }
+        return results
+    }
+}

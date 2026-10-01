@@ -1,10 +1,14 @@
 import AppKit
 import SwiftUI
+import SereinCore
 
 @MainActor final class BrowserWindowController: NSWindowController, NSWindowDelegate {
+    private(set) var fullscreenTransition=false
+    private var frameBeforeFullscreen:NSRect?
     let session: BrowserSession
     init(session: BrowserSession) {
         self.session=session
+        let savedFrame=session.state.windowFrame
         let window=SereinWindow(contentRect:NSRect(x:10,y:60,width:1000,height:677),styleMask:[.titled,.closable,.miniaturizable,.resizable,.fullSizeContentView],backing:.buffered,defer:false)
         window.title=session.state.isPrivate ? "Serein — Private Browsing" : "Serein"
         window.titleVisibility = .hidden
@@ -18,32 +22,82 @@ import SwiftUI
         super.init(window:window)
         session.window=window;window.session=session;window.delegate=self
         window.contentView=NSHostingView(rootView:BrowserView(session:session))
-        if let f=session.state.windowFrame,f.count==4,f.allSatisfy(\.isFinite),f[2]>=640,f[3]>=400 {
-            let frame=NSRect(x:f[0],y:f[1],width:f[2],height:f[3])
-            if NSScreen.screens.contains(where:{$0.visibleFrame.intersects(frame)}){window.setFrame(frame,display:true)}
-        }
+        let preferred=NSScreen.main
+        let screens=([preferred].compactMap{$0}+NSScreen.screens.filter{$0 !== preferred}).map(\.visibleFrame)
+        if let frame=WindowPlacement.restored(savedFrame,screens:screens) {window.setFrame(frame,display:true)}
+        rememberFrame()
     }
     required init?(coder: NSCoder) {fatalError("Not supported")}
     func windowDidBecomeKey(_ notification: Notification) {
         if !session.state.isPrivate {session.extensions?.controller.didFocusWindow(session.extensionWindow)}
     }
+    func windowDidUpdate(_ notification:Notification){session.completeContentFocusRequest()}
     func windowDidMove(_ notification:Notification){rememberFrame()}
     func windowDidResize(_ notification:Notification){rememberFrame()}
-    private func rememberFrame(){if let f=window?.frame{session.state.windowFrame=[f.origin.x,f.origin.y,f.width,f.height]}}
+    func windowWillEnterFullScreen(_ notification:Notification){rememberFrame();frameBeforeFullscreen=window?.frame;fullscreenTransition=true}
+    func windowDidEnterFullScreen(_ notification:Notification){fullscreenTransition=false}
+    func windowWillExitFullScreen(_ notification:Notification){fullscreenTransition=true}
+    func windowDidExitFullScreen(_ notification:Notification){
+        if let frame=frameBeforeFullscreen,
+           let restored=WindowPlacement.restored([frame.minX,frame.minY,frame.width,frame.height],screens:NSScreen.screens.map(\.visibleFrame)) {
+            window?.setFrame(restored,display:true)
+        }
+        frameBeforeFullscreen=nil;fullscreenTransition=false;rememberFrame()
+    }
+    func windowDidFailToEnterFullScreen(_ window:NSWindow){frameBeforeFullscreen=nil;fullscreenTransition=false;rememberFrame()}
+    func windowDidFailToExitFullScreen(_ window:NSWindow){fullscreenTransition=false}
+    private func rememberFrame(){
+        guard !fullscreenTransition,let window,!window.styleMask.contains(.fullScreen) else{return}
+        let f=window.frame;session.state.windowFrame=[f.origin.x,f.origin.y,f.width,f.height]
+    }
     func windowWillClose(_ notification: Notification) {session.manager?.windowClosed(self)}
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        if session.runtimes.values.contains(where:{$0.hasUserEdits}) {
-            session.confirm("Close this window?",detail:"One or more pages have edits. Unsaved changes may be lost.",yes:"Close") { [weak self] allow in
-                guard allow,let self else{return};for runtime in self.session.runtimes.values {runtime.hasUserEdits=false};self.window?.performClose(nil)
-            };return false
+        guard session.runtimes.values.contains(where:{$0.hasUserEdits}) else{return true}
+        requestClose{_ in}
+        return false
+    }
+    func requestClose(completion:@escaping (Bool)->Void) {
+        guard session.manager?.windows.contains(where:{$0===self})==true else{completion(false);return}
+        let close:() -> Void = { [weak self] in
+            guard let self,self.session.manager?.windows.contains(where:{$0===self})==true else{completion(false);return}
+            self.window?.close()
+            completion(self.session.manager?.windows.contains(where:{$0===self})==false)
         }
-        return true
+        if session.runtimes.values.contains(where:{$0.hasUserEdits}) {
+            let documents=session.closeConsentSnapshot
+            session.confirm("Close this window?",detail:"One or more pages have edits. Unsaved changes may be lost.",yes:"Close") { [weak self] allow in
+                guard allow,let self,self.session.closeConsentSnapshot==documents else{completion(false);return}
+                // Consent is already validated. performClose may be suppressed
+                // while AppKit is still dismissing the attached sheet.
+                close()
+            }
+        } else {close()}
     }
 }
 
 @MainActor final class SereinWindow:NSWindow {
     weak var session:BrowserSession?
+    private func handleBrowserShortcut(_ event:NSEvent)->Bool {
+        guard let session,event.type == .keyDown,attachedSheet==nil else{return false}
+        let modifiers=event.modifierFlags.intersection([.command,.option,.control,.shift])
+        if event.keyCode==48,(modifiers == .control || modifiers == [.control,.shift]),
+           let id=session.state.adjacentVisibleTab(modifiers.contains(.shift) ? -1 : 1) {
+            session.select(id);return true
+        }
+        if event.keyCode==53,modifiers.isEmpty,session.state.activeGlance != nil,
+           !session.findVisible,!session.addressFocused,
+           session.current?.loadedWebView?.fullscreenState == .notInFullscreen {session.closeGlance();return true}
+        return false
+    }
+    override func sendEvent(_ event:NSEvent) {
+        if event.type == .leftMouseDown {session?.contentFocusRequest=nil}
+        if handleBrowserShortcut(event){return}
+        super.sendEvent(event)
+    }
     override func performKeyEquivalent(with event:NSEvent)->Bool {
+        // AppKit can dispatch Control-Tab as a key equivalent before sendEvent.
+        // Handle it here as well so WebKit/focus traversal cannot consume it.
+        if handleBrowserShortcut(event){return true}
         if super.performKeyEquivalent(with:event){return true}
         guard let session,!session.state.isPrivate else{return false}
         for context in session.extensions?.contexts.values ?? Dictionary<UUID,WebKit.WKWebExtensionContext>().values {

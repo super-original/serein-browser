@@ -1,0 +1,29 @@
+{
+  "repository": "https://github.com/WebKit/WebKit",
+  "commit": "131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7",
+  "measured_on": "2026-09-30",
+  "scope": "Git tree blob sizes for selected build-relevant directories; not checkout disk use, Git pack size, build products, peak RAM or build duration. Truncated API responses recursively expanded.",
+  "parts": [
+    {
+      "path": "Source",
+      "files": 70815,
+      "blob_bytes": 1147945066
+    },
+    {
+      "path": "Tools",
+      "files": 5047,
+      "blob_bytes": 145562448
+    },
+    {
+      "path": "WebKit.xcworkspace",
+      "files": 8,
+      "blob_bytes": 45306
+    },
+    {
+      "path": "WebKitLibraries",
+      "files": 597,
+      "blob_bytes": 38915325
+    }
+  ],
+  "metadata_requests": 18
+}

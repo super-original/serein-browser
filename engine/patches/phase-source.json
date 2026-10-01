@@ -1,0 +1,25 @@
+{
+  "upstreamCommit": "131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7",
+  "files": [
+    {
+      "path": "Source/WebCore/page/UserScriptTypes.h",
+      "baseSHA256": "3c8f6259be94e72712360dc545fd78bb6cefb0f51ab5cee26319f330d581ea69",
+      "patchedSHA256": "cf5781169acbd1b3107fcdcc07aed51255e684cfd0f778a04bc00ace6407ef47"
+    },
+    {
+      "path": "Source/WebCore/loader/FrameLoader.cpp",
+      "baseSHA256": "f98aaa53c1fad5bd4290843591b3e3b6e04ec2627034d074437f73fe5d50adbf",
+      "patchedSHA256": "b91f7833bed9d4f8cc399c5b5cfdb3405c8ad76b09e44eb97f1f4cb91287d968"
+    },
+    {
+      "path": "Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in",
+      "baseSHA256": "c8d6d353343050516b2f2a934606f1d66f2bef1b848a99d18db532cc1d31b002",
+      "patchedSHA256": "366e750cd13e97a396958eb12bb0e53378c817cbb22204a485d3d74ef4c74a74"
+    },
+    {
+      "path": "Source/WebKit/UIProcess/Extensions/WebExtensionContext.cpp",
+      "baseSHA256": "77f409b7d94d78ff17dd77eb1c69c255c7f16ed12985b02dd5eacbcba9adc0a6",
+      "patchedSHA256": "ed7feebb34caa2dcf56504c78939bda06ce19892f596891020c9a3ea5f50cb27"
+    }
+  ]
+}

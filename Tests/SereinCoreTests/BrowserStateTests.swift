@@ -22,6 +22,24 @@ final class BrowserStateTests: XCTestCase {
         s.select(b);XCTAssertEqual(s.primarySplitTabID,a);XCTAssertEqual(s.secondaryTabID,b);XCTAssertEqual(s.selectedTabID,b)
         s.newTab();XCTAssertNil(s.secondaryTabID);XCTAssertNil(s.primarySplitTabID)
     }
+    func testClosingUnrelatedTabPreservesSecondaryFocusedSplit() {
+        var s=BrowserWindowState();let a=s.selectedTabID!;let b=s.newTab();let unrelated=s.newTab()
+        s.select(a);s.split(with:b);s.select(b);s.close(unrelated)
+        XCTAssertEqual(s.primarySplitTabID,a);XCTAssertEqual(s.secondaryTabID,b);XCTAssertEqual(s.selectedTabID,b)
+    }
+    func testSwitchWorkspaceParksAndRestoresSplitPanes() {
+        var s=BrowserWindowState();let original=s.activeWorkspaceID;let other=s.addWorkspace(name:"Other")
+        s.switchWorkspace(original);let a=s.selectedTabID!;let b=s.newTab();s.split(with:a)
+        XCTAssertEqual(s.primarySplitTabID,b)
+        s.switchWorkspace(other);XCTAssertNil(s.primarySplitTabID);XCTAssertNil(s.secondaryTabID)
+        s.switchWorkspace(original);XCTAssertEqual(s.primarySplitTabID,b);XCTAssertEqual(s.secondaryTabID,a)
+    }
+    func testRestoreRejectsSplitThatDoesNotContainSelection() throws {
+        var s=BrowserWindowState();let a=s.selectedTabID!;let b=s.newTab();let c=s.newTab()
+        s.primarySplitTabID=a;s.secondaryTabID=b;s.selectedTabID=c
+        let restored=try SavedSession.decode(SavedSession(windows:[s]).encoded()).windows[0]
+        XCTAssertEqual(restored.selectedTabID,c);XCTAssertNil(restored.primarySplitTabID);XCTAssertNil(restored.secondaryTabID)
+    }
     func testPrivateWindowsNeverEncodeEvenIfInjectedAfterInitialization() throws {
         let normal=BrowserWindowState();var privateWindow=BrowserWindowState(isPrivate:true);privateWindow.newTab(url:"https://private.example/secret")
         var session=SavedSession(windows:[normal]);session.windows.append(privateWindow)

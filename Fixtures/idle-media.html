@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>Serein idle media fixture</title>
+<style>body{font:20px system-ui;margin:60px}button{font:inherit;padding:14px}audio{display:block;margin:24px 0}</style>
+<h1>Idle media protection</h1>
+<p>Original, quiet generated tone for native playback-state checks.</p>
+<button id="play">Play fixture tone</button>
+<audio id="track" src="/serein-tone.wav" preload="auto" loop controls></audio>
+<script>
+const track=document.querySelector('#track');track.volume=0.02;
+document.querySelector('#play').onclick=async event=>{
+  window.mediaAttempt={trusted:event.isTrusted,activation:navigator.userActivation.isActive};
+  try{await track.play();window.mediaAttempt.started=true;}
+  catch(error){window.mediaAttempt.error=String(error);}
+};
+</script>

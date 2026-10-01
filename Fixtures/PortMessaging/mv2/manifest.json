@@ -1,0 +1,26 @@
+{
+  "manifest_version": 2,
+  "name": "Serein MV2 port lifecycle fixture",
+  "version": "1.0",
+  "content_scripts": [
+    {
+      "matches": [
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "persistent": true
+  },
+  "description": "Controlled runtime port ordering, payload and disconnect verification."
+}

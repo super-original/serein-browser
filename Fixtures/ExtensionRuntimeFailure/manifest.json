@@ -1,0 +1,7 @@
+{
+  "manifest_version": 3,
+  "name": "Serein background failure fixture",
+  "description": "Original fixture with a deliberately missing module for runtime error reporting.",
+  "version": "1.0",
+  "background": {"service_worker": "background.js", "type": "module"}
+}
