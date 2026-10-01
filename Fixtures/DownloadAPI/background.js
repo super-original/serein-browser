@@ -43,6 +43,7 @@ browser.runtime.onMessage.addListener((message, sender, reply) => {
         observations.endedBeforeEpoch = own(await browser.downloads.search({endedBefore:'1970-01-01T00:00:00.000Z'})).map(item=>item.id);
         observations.filenameUppercase = own(await browser.downloads.search({filename:first.filename.toUpperCase()})).map(item=>item.id);
         observations.unknownTotalBytes = own(await browser.downloads.search({totalBytes:-1})).map(item=>item.id);
+        observations.removedFilename = first.filename;
         checks.removeFile = false;
         await browser.downloads.removeFile(first.id);
         for (let i=0;i<40;i++) {

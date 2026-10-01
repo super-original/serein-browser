@@ -119,7 +119,7 @@ try:
                 except Exception as error:
                     entry['cleanupError'] = str(error)
                 (out / 'results.json').write_text(json.dumps(results, indent=2))
-        download_results=[run_download_reference(request,script,prefix,out,temporary,version) for version in [2,3]]
+        download_results=[run_download_reference(request,script,prefix,out,temporary,version,download_directory.name) for version in [2,3]]
     assert all(item['scenarioExecuted'] for item in results), results
     assert all(item['scenarioExecuted'] for item in download_results), download_results
     assert all(item['result'].get('checks') and all(item['result']['checks'].values()) for item in download_results), download_results

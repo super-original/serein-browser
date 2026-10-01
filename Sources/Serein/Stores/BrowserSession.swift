@@ -21,6 +21,7 @@ import SereinCore
     @ObservationIgnored var contentFocusRequest:UUID?
     var libraryPanel: LibraryPanel?
     var folderEditor:FolderEditorRequest?
+    var bookmarkEditor:BookmarkEditorRequest?
     var compactRevealed=false
     var error: String?
     var savingPageSnapshot=false
@@ -232,8 +233,10 @@ import SereinCore
         extensions?.controller.didChangeTabProperties([.URL,.title,.loading],for:bridge(id))
     }
     func bookmark() {
-        guard let tab=state.selectedTab else{return}
-        manager?.library.bookmark(title:tab.title,url:tab.url)
+        guard let tab=state.selectedTab,let store=manager?.library,window?.attachedSheet==nil,
+              let url=StoredPageURL.removingCredentials(tab.url) else{return}
+        let existing=store.bookmarks.first{$0.url==url}
+        bookmarkEditor=BookmarkEditorRequest(original:existing,title:existing?.title ?? tab.title,url:existing?.url ?? url)
     }
     // Library and folder editors are sheets. Attach their dialogs to that sheet,
     // otherwise AppKit queues them behind the library until it is dismissed.

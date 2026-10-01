@@ -6,7 +6,7 @@ import time
 import zipfile
 
 
-def run_download_reference(request, script, prefix, out, temporary, version):
+def run_download_reference(request, script, prefix, out, temporary, version, download_directory):
     addon_id=f'serein-download-reference-mv{version}@serein.invalid'
     source=pathlib.Path('Fixtures/DownloadAPI')
     manifest=dict(manifest_version=version,name='Serein download API reference',version='1.0',
@@ -36,6 +36,12 @@ def run_download_reference(request, script, prefix, out, temporary, version):
         if 'result' not in entry:entry['error']='Download fixture did not finish within 45 seconds'
         entry['scenarioExecuted']='result' in entry and not entry['result'].get('error')
         if 'result' in entry:
+            removed=entry['result'].get('observations',{}).get('removedFilename')
+            if removed:
+                path=pathlib.Path(removed).resolve()
+                owned=path.is_relative_to(pathlib.Path(download_directory).resolve())
+                entry['result']['checks']['removeFileActuallyRemoved']=owned and not path.exists()
+                entry['result']['observations']['removedPathIsOwned']=owned
             entry['passingChecks']=sum(value is True for value in entry['result'].get('checks',{}).values())
             entry['totalChecks']=len(entry['result'].get('checks',{}))
     except Exception as error:

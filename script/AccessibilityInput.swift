@@ -76,8 +76,9 @@ if mode=="press" {
     let identifier=arguments[3]
     let allowed=["glance-close":"Close Preview","glance-expand":"Expand Preview","glance-split":"Split Preview","folder-icon-star.fill":"Star","folder-icon-default":"Default Folder"]
     let extensionAccess=identifier.hasPrefix("extension-access-") && UUID(uuidString:String(identifier.dropFirst("extension-access-".count))) != nil
-    guard let label=allowed[identifier] ?? (extensionAccess ? "Requested Access…" : nil) else{fail("Unknown fixture action")}
-    let items=controls(includeLists:extensionAccess)
+    let bookmarkEdit=identifier.hasPrefix("bookmark-edit-") && UUID(uuidString:String(identifier.dropFirst("bookmark-edit-".count))) != nil
+    guard let label=allowed[identifier] ?? (extensionAccess ? "Requested Access…" : bookmarkEdit ? "Edit…" : nil) else{fail("Unknown fixture action")}
+    let items=controls(includeLists:extensionAccess || bookmarkEdit)
     let exact=items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && text($0,kAXIdentifierAttribute)==identifier}
     let matching=exact.isEmpty ? items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && [text($0,kAXTitleAttribute),text($0,kAXDescriptionAttribute)].contains(label)} : exact
     guard matching.count==1 else{fail("Expected exactly one \(identifier) control\n"+describe(items))}
@@ -121,7 +122,7 @@ if mode=="press" {
         guard let event=CGEvent(mouseEventSource:nil,mouseType:type,mouseCursorPosition:CGPoint(x:start.x+(end.x-start.x)*progress,y:start.y+(end.y-start.y)*progress),mouseButton:.left) else{fail("Could not create drag event")}
         event.post(tap:.cghidEventTap);Thread.sleep(forTimeInterval:0.03)
     }
-} else if mode=="fill" {
+} else if mode=="fill" || mode=="fill-only" {
     guard arguments.count==5 else{fail("Expected field identifier and text")}
     let items=controls()
     let matches=items.filter{editable($0) && text($0,kAXIdentifierAttribute)==arguments[3]}
@@ -131,7 +132,7 @@ if mode=="press" {
     key(0,flags:.maskCommand);type(arguments[4])
     Thread.sleep(forTimeInterval:0.15)
     guard text(matches[0],kAXValueAttribute)==arguments[4] else{fail("Field did not receive exact fixture text: \(text(matches[0],kAXValueAttribute))")}
-    key(36)
+    if mode=="fill" {key(36)}
     print("Entered text in \(arguments[3])")
 } else if mode=="expect-text" {
     guard arguments.count==5,arguments[3]=="downloads-result-count" else{fail("Expected download count identifier and text")}

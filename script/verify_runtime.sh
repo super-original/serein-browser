@@ -146,6 +146,20 @@ SPLITINPUT
       folder-name)
         native_input fill folder-name "Research notes" > "$ROOT/folder-name-input.log" 2>&1 || touch "$ROOT/folder-name.keyboard-failed"
         ;;
+      bookmark-open) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "d" using command down' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
+      bookmark-cancel) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
+      bookmark-title-save|bookmark-title-cancelled|bookmark-url-save)
+        INPUT_MODE=fill
+        BOOKMARK_FIELD=bookmark-title
+        BOOKMARK_TEXT="Research bookmark"
+        if test "$KEYBOARD_NAME" = bookmark-title-cancelled; then INPUT_MODE=fill-only; BOOKMARK_TEXT="Cancelled edit"; fi
+        if test "$KEYBOARD_NAME" = bookmark-url-save; then BOOKMARK_FIELD=bookmark-url; BOOKMARK_TEXT="http://127.0.0.1:8765/second.html?bookmark-edit=updated"; fi
+        native_input "$INPUT_MODE" "$BOOKMARK_FIELD" "$BOOKMARK_TEXT" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
+      bookmark-library-edit)
+        BOOKMARK_IDENTIFIER=$(cat "$ROOT/bookmark-edit-identifier")
+        native_input press "$BOOKMARK_IDENTIFIER" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
       extension-access-close) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
       extension-access)
         ACCESS_IDENTIFIER=$(cat "$ROOT/extension-access-identifier")

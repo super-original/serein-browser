@@ -5,6 +5,7 @@ struct LibraryPanelView: View {
     @Bindable var session: BrowserSession
     let panel: LibraryPanel
     @State private var query=""
+    @State private var bookmarkEditor:BookmarkEditorRequest?
     @AppStorage("searchProvider") private var searchProvider=SearchProvider.duckDuckGo
     @AppStorage("restoreTabHistory") private var restoreTabHistory=false
     @AppStorage("appearance") private var appearance="system"
@@ -22,7 +23,10 @@ struct LibraryPanelView: View {
                         HStack {
                             Button {session.navigate(record.url);session.libraryPanel=nil} label:{VStack(alignment:.leading){Text(record.title).lineLimit(1);Text(record.url).font(.caption).foregroundStyle(.secondary).lineLimit(1)}}.buttonStyle(.plain)
                             Spacer()
-                            if panel == .bookmarks {Button("Remove",systemImage:"trash"){manager.library.removeBookmark(record.id)}.labelStyle(.iconOnly)}
+                            if panel == .bookmarks {
+                                Button("Edit…"){bookmarkEditor = .init(original:record,title:record.title,url:record.url)}.accessibilityIdentifier("bookmark-edit-\(record.id)")
+                                Button("Remove",systemImage:"trash"){manager.library.removeBookmark(record.id)}.labelStyle(.iconOnly)
+                            }
                         }
                     }
                     if panel == .history {Button("Clear History…"){session.confirm("Clear browsing history?",detail:"This removes the saved history from Serein.",yes:"Clear"){if $0{manager.library.clearHistory()}}}}
@@ -56,6 +60,9 @@ struct LibraryPanelView: View {
                 if let error=manager.library.error ?? manager.restorationError {Text(error).foregroundStyle(.red).textSelection(.enabled)}
             }
         }.padding(24).frame(width:600,height:480)
+        .sheet(item:$bookmarkEditor){request in
+            if let store=session.manager?.library {BookmarkEditorView(store:store,request:request)}
+        }
     }
 }
 import SereinCore

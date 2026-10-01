@@ -178,3 +178,7 @@ Folder drags now distinguish the top/bottom ten points of a 36-point folder row 
 ### Native joined split tabs prepared
 
 Expanded/compact-revealed sidebars now present contiguous regular split members in a single joined native row, retaining each tab's accessible button, title, icon, selection, context menu and individual drag target. The strip preserves original tab/API index order; selecting a member keeps live panes, and Command-W closes the selected member. Collapsed sidebars retain individual reachable controls. Mixed-category and noncontiguous splits retain separate rows; persistent multiple split groups and cross-category group layout remain unfinished. Two model tests cover ordering/session/close and fallback cases; native AX geometry/selection and actual Command-W scenarios await CI. This changes native browser controls, not website content or the rendering gate.
+
+### Bookmark editing continuation
+
+The next native bookmark editor exposes name/address editing from Command-D and the bookmark library. Creation remains a draft until Save; Cancel preserves existing data. Updates retain identity/creation date, reject stale edits from other windows, and publish only after atomic persistence succeeds. Credential-bearing URL userinfo is removed as in the existing library policy. This native sheet is a deliberate macOS form treatment; Zen's bookmark folders, tags and full edit-popup geometry are not yet reproduced. Five store checks and eight native command/edit/persistence/capture checks are prepared; runtime and visual verification are pending.

@@ -24,7 +24,7 @@ def main():
                xcode=output(['xcodebuild','-version']),sdk=output(['xcrun','--sdk','macosx','--show-sdk-version']),
                swift=output(['xcrun','swift','--version']),memory_bytes=int(output(['sysctl','-n','hw.memsize'])),
                source_commit=COMMIT,repository=REPOSITORY,minimum_macos='27.0',compiler_jobs=2,
-               per_stage_minutes=dict(fetch=10,checkout=15,build=75),
+               per_stage_minutes=dict(metal_toolchain=10,fetch=10,checkout=15,build=75),
                disk_reserve_bytes=8*GIB,descendant_rss_limit_bytes=5*GIB,minimum_system_free_memory_percent=8)
     (evidence/'toolchain.json').write_text(json.dumps(facts,indent=2)+'\n')
     assert output(['sw_vers','-productVersion']).split('.')[0]=='27'
@@ -43,6 +43,10 @@ def main():
     def git(*args):subprocess.run(['git',*args],cwd=source,check=True,env=environment,timeout=30)
     if shutil.disk_usage(root).free<12*GIB:
         raise RuntimeError('Insufficient initial disk reserve for the source experiment')
+    # Apple's own compiler diagnostic requests this public optional component.
+    # Download only inside this disposable hosted runner, under the same guards.
+    if not stage('metal-toolchain',['xcodebuild','-downloadComponent','MetalToolchain'],600):return 1
+    (evidence/'metal-version.txt').write_text(output(['xcrun','metal','--version'])+'\n')
     git('init','--quiet');git('remote','add','origin',REPOSITORY)
     if not stage('fetch',['git','fetch','--depth=1','--filter=blob:none','origin',COMMIT],600):return 1
     git('sparse-checkout','init','--cone')

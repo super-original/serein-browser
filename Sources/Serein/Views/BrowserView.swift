@@ -50,6 +50,9 @@ struct BrowserView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration:0.16),value:session.compactRevealed)
         .ignoresSafeArea()
         .preferredColorScheme(appearance=="dark" ? .dark : appearance=="light" ? .light : nil)
+        .sheet(item:$session.bookmarkEditor,onDismiss:{session.focusContent(ifSelected:session.state.selectedTabID)}){request in
+            if let store=session.manager?.library {BookmarkEditorView(store:store,request:request)}
+        }
         .sheet(item:$session.libraryPanel){panel in LibraryPanelView(session:session,panel:panel)}
         .alert("Serein",isPresented:Binding(get:{session.error != nil},set:{if !$0{session.error=nil}})){Button("OK"){session.error=nil}} message:{Text(session.error ?? "")}
     }

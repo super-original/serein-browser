@@ -24,6 +24,7 @@ import SereinCore
     }
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         if item.action == #selector(savePageScreenshot) {guard let session=manager?.active else{return false};return PageSnapshot.available(in:session)}
+        if item.action == #selector(bookmark) {return manager?.active?.state.selectedTab != nil && manager?.active?.window?.attachedSheet==nil}
         if item.action == #selector(newFolder) {return manager != nil && manager?.active?.window?.attachedSheet==nil}
         if item.action == #selector(closeGlance) {return manager?.active?.state.activeGlance != nil && manager?.active?.window?.attachedSheet == nil && manager?.active?.findVisible == false && manager?.active?.addressFocused == false && manager?.active?.current?.loadedWebView?.fullscreenState == .notInFullscreen}
         if item.action == #selector(back) {return manager?.active?.current?.canGoBack ?? false}
