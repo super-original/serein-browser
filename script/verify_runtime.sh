@@ -98,6 +98,15 @@ on run arguments
 end run
 APPLESCRIPT
         ;;
+      split-rows|split-columns|split-grid|split-unsplit)
+        SPLIT_KEY=h
+        case "$KEYBOARD_NAME" in split-columns) SPLIT_KEY=v ;; split-grid) SPLIT_KEY=g ;; split-unsplit) SPLIT_KEY=u ;; esac
+        osascript - "$SPLIT_KEY" <<'SPLITINPUT' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+on run arguments
+  tell application "System Events" to tell process "Serein" to keystroke item 1 of arguments using {command down, option down}
+end run
+SPLITINPUT
+        ;;
       search-downloads)
         if native_input fill downloads-search resumed-download.bin; then
           native_input expect-text downloads-result-count "1 shown" || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"

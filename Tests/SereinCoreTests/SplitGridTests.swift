@@ -67,4 +67,33 @@ final class SplitGridTests:XCTestCase {
         XCTAssertEqual(state.splitFractions,[0.5,0,1])
     }
 
+    func testArrangementKeepsPaneIdentityAndFocusAndResetsOnlyOnChange() {
+        var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab(),c=state.newTab(),d=state.newTab()
+        state.setSplitTabs([a,b,c,d]);state.select(c)
+        state.setSplitLayout(.rows)
+        XCTAssertEqual(state.splitTabIDs,[a,b,c,d]);XCTAssertEqual(state.selectedTabID,c)
+        XCTAssertEqual((0..<3).map{state.splitFraction(at:$0)},[0.25,0.5,0.75])
+        state.setSplitFraction(0.3,at:0);state.setSplitLayout(.rows)
+        XCTAssertEqual(state.splitFraction(at:0),0.3)
+        state.setSplitLayout(.columns);XCTAssertEqual(state.splitFraction(at:0),0.25)
+        state.setSplitLayout(.grid);XCTAssertEqual(state.splitFraction(at:0),0.5)
+    }
+    func testArrangementPersistsAndLegacyDefaultsToGrid() throws {
+        var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab(),c=state.newTab()
+        state.setSplitTabs([a,b,c]);state.setSplitLayout(.columns);state.setSplitFraction(0.4,at:0)
+        let restored=try SavedSession.decode(SavedSession(windows:[state]).encoded()).windows[0]
+        XCTAssertEqual(restored.resolvedSplitLayout,.columns);XCTAssertEqual(restored.splitFraction(at:0),0.4)
+        var json=try XCTUnwrap(JSONSerialization.jsonObject(with:JSONEncoder().encode(state)) as? [String:Any])
+        json.removeValue(forKey:"splitLayout");json.removeValue(forKey:"splitFractions")
+        let legacy=try JSONDecoder().decode(BrowserWindowState.self,from:JSONSerialization.data(withJSONObject:json))
+        XCTAssertEqual(legacy.resolvedSplitLayout,.grid);XCTAssertEqual(legacy.splitFraction(at:0),0.5)
+    }
+    func testArrangementSurvivesPaneRemovalUntilSplitEnds() {
+        var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab(),c=state.newTab()
+        state.setSplitTabs([a,b,c]);state.setSplitLayout(.rows);state.close(c)
+        XCTAssertEqual(state.resolvedSplitLayout,.rows);XCTAssertEqual(state.splitTabIDs,[a,b]);XCTAssertEqual(state.splitFraction(at:0),0.5)
+        state.close(b);XCTAssertNil(state.splitLayout);XCTAssertNil(state.splitFractions)
+        state.setSplitLayout(.columns);XCTAssertNil(state.splitLayout)
+    }
+
 }

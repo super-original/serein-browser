@@ -1,6 +1,7 @@
 import Foundation
 
 public enum SidebarMode: String, Codable, CaseIterable, Sendable { case expanded, collapsed, compact }
+public enum SplitLayout:String,Codable,CaseIterable,Sendable {case grid,rows,columns}
 public enum TabKind: String, Codable, Sendable { case regular, pinned, essential }
 public struct BrowserTab: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
@@ -34,8 +35,10 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
     public var primarySplitTabID: UUID?
     // Optional for decoding sessions written before multi-pane support.
     public var additionalSplitTabIDs: [UUID]?
-    // Root, left-column and right-column divider proportions; legacy sessions default to halves.
+    // Grid: root/left/right proportions. Rows/columns: cumulative pane boundaries.
     public var splitFractions:[Double]?
+    public var splitLayout:SplitLayout?
+    public var resolvedSplitLayout:SplitLayout {splitLayout ?? .grid}
     public var sidebar: SidebarMode = .expanded
     public var sidebarWidth: Double = 230
     public var closedTabs: [BrowserTab] = []
@@ -165,7 +168,7 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         return [primarySplitTabID,secondaryTabID]+(additionalSplitTabIDs ?? [])
     }
     public mutating func clearSplit() {
-        primarySplitTabID=nil;secondaryTabID=nil;additionalSplitTabIDs=nil;splitFractions=nil
+        primarySplitTabID=nil;secondaryTabID=nil;additionalSplitTabIDs=nil;splitFractions=nil;splitLayout=nil
     }
     @discardableResult public mutating func setSplitTabs(_ ids:[UUID]) -> Bool {
         guard (2...4).contains(ids.count),Set(ids).count==ids.count,
@@ -176,8 +179,14 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         if !ids.contains(where:{$0==selectedTabID}) {selectedTabID=ids[0]}
         return true
     }
+    public mutating func setSplitLayout(_ layout:SplitLayout) {
+        guard splitTabIDs.count>=2 else{return}
+        if resolvedSplitLayout != layout {splitFractions=nil}
+        splitLayout=layout
+    }
     public func splitFraction(at index:Int)->Double {
-        guard let values=splitFractions,values.indices.contains(index),values[index].isFinite else{return 0.5}
+        let fallback=resolvedSplitLayout == .grid ? 0.5 : Double(index+1)/Double(max(2,splitTabIDs.count))
+        guard let values=splitFractions,values.indices.contains(index),values[index].isFinite else{return min(1,fallback)}
         return min(1,max(0,values[index]))
     }
     public mutating func setSplitFraction(_ value:Double,at index:Int) {

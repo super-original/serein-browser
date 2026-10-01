@@ -4,13 +4,13 @@
 
 ## Latest completed source
 
-`69e6b0414f41584136e4d8d6f3d50630ddb2888b`: [run 36828636207](https://github.com/super-original/serein-browser/actions/runs/36828636207) passes **132 Swift unit tests, three process-attribution tests and 686/716 browser checks**. All **32 favicon checks pass**, including native SVG pixels/aspect, CSP and external-request boundaries. The actual SVG sidebar and extension-error screenshots were inspected: the icon renders and the stale operation error is gone; website content remains blank.
+`b236aa816fc143d1d7f3fe0796b7b88fed79c780`: [run 36832346137](https://github.com/super-original/serein-browser/actions/runs/36832346137) passes **140 Swift unit tests, three process-attribution tests and 696/726 browser checks**. Four new download-search checks pass, including actual native keyboard input and a verified one-result count. The retrieved filtered-download screenshot was inspected: search, status controls, matching paused download and its Resume/Cancel actions are legible.
 
-**Production history persistence passes 24/24 checks across five launches**, including unloaded background state, live private-window and edited-document exclusions, reload, disabled-payload removal and corrupt/version fallback. All seven extension-error checks pass. uBO Lite is default 13/13 and experimental Firefox origin 12/13 (intermittent options/background timeout). Thirty structural browser failures and the actual desktop rendering gate remain failing.
+All six persistent-download-ID checks pass, and the separate-process download suite passes **21/21**. Legacy migration, non-reuse after clearing, private exclusion, failed-write retry and preservation of unsupported ledgers pass. Production history remains **24/24**, favicons **32/32** and extension errors **7/7**. Both uBO origin modes pass **13/13** this time; options timeouts remain intermittent rather than resolved. Thirty structural browser failures and the actual desktop rendering gate remain failing.
 
-[Development app](https://github.com/super-original/serein-browser/actions/runs/36828636207/artifacts/11146162539) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36828636207/artifacts/11146212432). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36832346137/artifacts/11147758524) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36832346137/artifacts/11147319662). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
 
-The next change adds persistent normal-download numeric identifiers with atomic counter/record storage, legacy migration, non-reuse after clearing, private exclusion and corruption preservation. Six core tests, six store-level runtime checks and four additional real restart checks are pending macOS execution. This is groundwork for missing extension downloads APIs, not namespace support.
+The next change adds native rows/columns/grid arrangement commands, live-view/focus preservation and saved divider positions. Native keyboard/geometry/drag/restoration checks and fresh pinned-Zen shortcut captures are pending. Arbitrary directional split trees and full extension downloads support remain missing.
 
 ## Measured performance and active follow-up
 
@@ -58,7 +58,7 @@ Unmodified uBO Lite Firefox 2026.930.1227 has passed 13/13 narrow functional che
 
 At `7d87985`, a twelve-second, three-tab warm-idle interval reports **395.25 MiB median aggregate RSS and 0.5% interval CPU** across six processes present at both endpoints. The mixed integration workload reports 58 samples, 395.39 MiB median and 1,366.56 MiB peak RSS. WebKit services are attributed by baseline PID difference, RSS may double-count shared pages, and endpoint CPU omits short-lived processes. Broken desktop composition and virtualized CI prevent physical-Mac, energy or representative scrolling claims.
 
-The standard free `xcode-27` image is 20260928.0222.1: macOS 27.0 26A428, Xcode 27.1 27A9269, SDK/minimum 27.0, ARM64. The app is ad-hoc signed and hardened, not Developer ID signed or notarized. The development download above is not a production-complete browser. No toolchains or build caches are installed on the user's Mac.
+The standard free `xcode-27` runner has used images 20260928.0222.1 and 20260921.0210 (the latter recorded at `9acb833`); the workflow records the exact image on every run. Verified toolchain/runtime: macOS 27.0 26A428, Xcode 27.1 27A9269, SDK/minimum 27.0, ARM64. The app is ad-hoc signed and hardened, not Developer ID signed or notarized. The development download above is not a production-complete browser. No toolchains or build caches are installed on the user's Mac.
 
 [Earlier verification history](VERIFICATION_HISTORY.md) · [October 1 checkpoint history](VERIFICATION_OCTOBER1_HISTORY.md). Historical pending statements remain archived rather than being silently rewritten as passes.
 

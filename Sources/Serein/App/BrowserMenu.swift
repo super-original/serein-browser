@@ -1,4 +1,5 @@
 import AppKit
+import SereinCore
 
 @MainActor final class BrowserMenu: NSObject, NSMenuItemValidation {
     weak var manager: BrowserManager?
@@ -14,7 +15,7 @@ import AppKit
         let edit=NSMenu(title:"Edit")
         for (name,key,selector) in [("Undo","z",Selector(("undo:"))),("Redo","Z",Selector(("redo:"))),("Cut","x",#selector(NSText.cut(_:))),("Copy","c",#selector(NSText.copy(_:))),("Paste","v",#selector(NSText.paste(_:))),("Select All","a",#selector(NSText.selectAll(_:)))] {edit.addItem(NSMenuItem(title:name,action:selector,keyEquivalent:key))}
         edit.addItem(.separator());edit.addItem(item("Find in Page…","f",action:#selector(find)));let editParent=NSMenuItem();editParent.submenu=edit;bar.addItem(editParent)
-        submenu("View",[item("Focus Address","l",action:#selector(address)),item("Reload","r",action:#selector(reload)),item("Stop Loading",".",action:#selector(stop)),.separator(),item("Toggle Sidebar","s",mods:[.command,.shift],action:#selector(sidebar)),item("Toggle Compact Mode","c",mods:[.command,.option],action:#selector(compact)),item("Split with Next Tab","s",mods:[.command,.option],action:#selector(split)),item("Exit Split View",action:#selector(unsplit)),item("Close Preview","\u{1b}",mods:[],action:#selector(closeGlance)),.separator(),item("Zoom In","+",action:#selector(zoomIn)),item("Zoom Out","-",action:#selector(zoomOut)),item("Actual Size","0",action:#selector(actualSize)),item("Enter Full Screen","f",mods:[.command,.control],action:#selector(fullscreen))])
+        submenu("View",[item("Focus Address","l",action:#selector(address)),item("Reload","r",action:#selector(reload)),item("Stop Loading",".",action:#selector(stop)),.separator(),item("Toggle Sidebar","s",mods:[.command,.shift],action:#selector(sidebar)),item("Toggle Compact Mode","c",mods:[.command,.option],action:#selector(compact)),item("Split with Next Tab","s",mods:[.command,.option],action:#selector(split)),item("Split Into Rows","h",mods:[.command,.option],action:#selector(splitRows)),item("Split Into Columns","v",mods:[.command,.option],action:#selector(splitColumns)),item("Split Into Grid","g",mods:[.command,.option],action:#selector(splitGrid)),item("Exit Split View","u",mods:[.command,.option],action:#selector(unsplit)),item("Close Preview","\u{1b}",mods:[],action:#selector(closeGlance)),.separator(),item("Zoom In","+",action:#selector(zoomIn)),item("Zoom Out","-",action:#selector(zoomOut)),item("Actual Size","0",action:#selector(actualSize)),item("Enter Full Screen","f",mods:[.command,.control],action:#selector(fullscreen))])
         submenu("History",[item("Back","[",action:#selector(back)),item("Forward","]",action:#selector(forward)),item("History","y",action:#selector(history))])
         submenu("Bookmarks",[item("Bookmark This Page","d",action:#selector(bookmark)),item("Show Bookmarks",action:#selector(bookmarks))])
         submenu("Tools",[item("Downloads","j",action:#selector(downloads)),item("Extensions",action:#selector(extensions)),.separator(),item("Save Page Screenshot…",action:#selector(savePageScreenshot))])
@@ -28,7 +29,7 @@ import AppKit
         if item.action == #selector(back) {return manager?.active?.current?.canGoBack ?? false}
         if item.action == #selector(forward) {return manager?.active?.current?.canGoForward ?? false}
         if item.action == #selector(unsplit) {return !(manager?.active?.state.splitTabIDs.isEmpty ?? true)}
-        if item.action == #selector(split) {
+        if let action=item.action,[#selector(split),#selector(splitRows),#selector(splitColumns),#selector(splitGrid)].contains(action) {
             guard let state=manager?.active?.state else{return false}
             return state.visibleTabs.contains{$0.id != state.selectedTabID}
         }
@@ -65,8 +66,20 @@ import AppKit
     @objc func settings(){if manager?.active==nil{manager?.newWindow()};manager?.active?.libraryPanel = .settings}
     @objc func sidebar(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .collapsed ? .expanded : .collapsed}
     @objc func compact(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .compact ? .expanded : .compact;s.compactRevealed=false}
-    @objc func split(){guard let s=manager?.active,let other=s.state.visibleTabs.first(where:{$0.id != s.state.selectedTabID}) else{return};s.state.split(with:other.id)}
-    @objc func unsplit(){manager?.active?.state.clearSplit()}
+    @objc func split(){guard let s=manager?.active,let other=s.state.adjacentVisibleTab(1),other != s.state.selectedTabID else{return};s.state.split(with:other);s.contentFocusRequest=s.state.selectedTabID}
+    @objc func splitRows(){arrangeSplit(.rows)}
+    @objc func splitColumns(){arrangeSplit(.columns)}
+    @objc func splitGrid(){arrangeSplit(.grid)}
+    private func arrangeSplit(_ layout:SplitLayout) {
+        guard let session=manager?.active else{return}
+        if session.state.splitTabIDs.isEmpty {
+            guard let next=session.state.adjacentVisibleTab(1),next != session.state.selectedTabID else{return}
+            session.state.split(with:next)
+        }
+        session.state.setSplitLayout(layout)
+        session.contentFocusRequest=session.state.selectedTabID
+    }
+    @objc func unsplit(){guard let session=manager?.active else{return};session.state.clearSplit();session.contentFocusRequest=session.state.selectedTabID}
     @objc func zoomIn(){if let runtime=manager?.active?.current{runtime.setZoom(min(5,runtime.webView.pageZoom+0.1))}}
     @objc func zoomOut(){if let runtime=manager?.active?.current{runtime.setZoom(max(0.25,runtime.webView.pageZoom-0.1))}}
     @objc func actualSize(){manager?.active?.current?.setZoom(0)}

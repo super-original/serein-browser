@@ -14,16 +14,23 @@ for _ in range(40):
 session=request('/session',{'capabilities':{'alwaysMatch':{'browserName':'firefox','moz:firefoxOptions':{'binary':'/tmp/Zen.app/Contents/MacOS/zen','prefs':{'zen.welcome-screen.seen':True,'browser.shell.checkDefaultBrowser':False,'browser.startup.homepage_override.mstone':'ignore','zen.view.use-single-toolbar':True,'zen.view.sidebar-expanded':True,'zen.view.compact.enable-at-startup':False,'layout.css.prefers-color-scheme.content-override':1}}}}})
 sid=session['sessionId']; prefix='/session/'+sid
 def js(code): return request(prefix+'/execute/sync',{'script':code,'args':[]})
-def snap(name,code=''):
+def snap(name,code='',key=None):
     try:
         if code: js(code)
+        if key:
+            pid=int(session['capabilities']['moz:processID'])
+            source=f'tell application "System Events" to tell (first application process whose unix id is {pid})\nset frontmost to true\nkeystroke "{key}" using {{command down, option down}}\nend tell'
+            subprocess.run(['osascript','-e',source],check=True,timeout=10)
         time.sleep(1.2)
         subprocess.run(['screencapture','-x',str(out/(name+'.png'))],check=True)
         geometry=js('return {width:outerWidth,height:outerHeight,scale:devicePixelRatio,sidebar:document.getElementById("navigator-toolbox").getBoundingClientRect().toJSON(),tabs:[...gBrowser.tabs].map(t=>({label:t.label,pinned:t.pinned,multiselected:!!t.multiselected,selected:!!t.selected,essential:t.hasAttribute("zen-essential"),rect:t.getBoundingClientRect().toJSON()}))};')
-        if name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid']:
+        if name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid','24-split-rows-keyboard','25-split-columns-keyboard']:
             geometry['splitPanes']=js('return window.referenceGridTabs.filter(t=>t.splitView).map(t=>({label:t.label,rect:t.linkedBrowser.getBoundingClientRect().toJSON()}));')
             expected=3 if name=='16-three-pane-grid' else 4
             if len(geometry['splitPanes'])!=expected or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['splitPanes']): raise RuntimeError('Incorrect visible split pane count or geometry')
+            panes=[p['rect'] for p in geometry['splitPanes']]
+            if name=='24-split-rows-keyboard' and not all(abs(a['x']-b['x'])<2 and a['bottom']<b['top'] for a,b in zip(panes,panes[1:])): raise RuntimeError('Command-Option-H did not produce rows')
+            if name=='25-split-columns-keyboard' and not all(abs(a['y']-b['y'])<2 and a['right']<b['left'] for a,b in zip(panes,panes[1:])): raise RuntimeError('Command-Option-V did not produce columns')
         if name in ['20-folder-expanded','21-folder-collapsed','22-folder-nested','23-folder-context']:
             geometry['folders']=js('return [...document.querySelectorAll("zen-folder")].map(f=>({label:f.label,collapsed:f.collapsed,parent:f.group?.label||null,rect:f.getBoundingClientRect().toJSON(),labelRect:f.labelElement.getBoundingClientRect().toJSON(),items:f.tabs.map(t=>({label:t.label,pinned:t.pinned,empty:t.hasAttribute("zen-empty-tab"),rect:t.getBoundingClientRect().toJSON()}))}));')
             relevant=[f for f in geometry['folders'] if f['label']=='Research notes']
@@ -73,6 +80,8 @@ try:
     snap('16-three-pane-grid','gZenViewSplitter.splitTabs(window.referenceGridTabs.slice(0,3),"grid");')
     snap('17-four-pane-addition','gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
     snap('18-four-pane-grid','gZenViewSplitter.unsplitCurrentView();gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
+    snap('24-split-rows-keyboard',key='h')
+    snap('25-split-columns-keyboard',key='v')
     snap('19-glance','gZenViewSplitter.unsplitCurrentView();gBrowser.selectedTab=window.referenceGridTabs[0];gZenGlanceManager.openGlance({},window.referenceGridTabs[1]);')
     js('gZenGlanceManager.closeGlance({noAnimation:true});gZenWorkspaces.createAndSaveWorkspace("Folder reference");')
     time.sleep(2)
@@ -94,3 +103,5 @@ if not all(any(x['name']==name and x['status']=='captured' for x in results) for
 if not any(x["name"]=="19-glance" and x["status"]=="captured" for x in results): raise SystemExit("Glance reference capture failed")
 
 if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['20-folder-expanded','21-folder-collapsed','22-folder-nested','23-folder-context']): raise SystemExit('Folder reference capture failed')
+
+if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['24-split-rows-keyboard','25-split-columns-keyboard']): raise SystemExit('Native arrangement shortcut references failed')

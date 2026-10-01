@@ -66,7 +66,7 @@ import SereinCore
             try? await Task.sleep(for:.milliseconds(250))
             split.window?.contentView?.layoutSubtreeIfNeeded()
             guard let window=split.window,let screen=NSScreen.screens.first,let first=split.subviews.first else{return false}
-            let length=(split.isVertical ? split.bounds.width : split.bounds.height)-split.dividerThickness
+            let length=(split.isVertical ? split.bounds.width : split.bounds.height)-split.dividerThickness*CGFloat(split.subviews.count-1)
             let start=split.isVertical ? NSPoint(x:first.frame.maxX+4,y:split.bounds.midY) : NSPoint(x:split.bounds.midX,y:first.frame.maxY+4)
             let end=split.isVertical ? NSPoint(x:length*fraction+4,y:start.y) : NSPoint(x:start.x,y:length*fraction+4)
             let from=window.convertPoint(toScreen:split.convert(start,to:nil)),to=window.convertPoint(toScreen:split.convert(end,to:nil))
@@ -107,6 +107,50 @@ import SereinCore
                 reopened.window?.close();session.window?.makeKeyAndOrderFront(nil)
             } catch {check("restored-native-dividers-use-saved-fractions",false,error.localizedDescription)}
         } else {check("actual-divider-drag-persists-both-axes",false,"Native split hierarchy unavailable")}
+        let views=ids.compactMap{session.runtimes[$0]?.loadedWebView}.map(ObjectIdentifier.init)
+        func layoutKey(_ name:String) async -> Bool {
+            let done=root.appendingPathComponent(name+".keyboard-finished"),failed=root.appendingPathComponent(name+".keyboard-failed")
+            try? FileManager.default.removeItem(at:done);try? FileManager.default.removeItem(at:failed)
+            try? name.write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+            for _ in 0..<100 {if FileManager.default.fileExists(atPath:done.path){break};try? await Task.sleep(for:.milliseconds(100))}
+            try? await Task.sleep(for:.milliseconds(350))
+            session.window?.contentView?.layoutSubtreeIfNeeded()
+            return FileManager.default.fileExists(atPath:done.path) && !FileManager.default.fileExists(atPath:failed.path)
+        }
+        for layout in [SplitLayout.rows,.columns,.grid] {
+            let key=await layoutKey("split-"+layout.rawValue)
+            let frames=ids.compactMap{session.runtimes[$0]?.loadedWebView}.map{$0.convert($0.bounds,to:nil)}
+            let ordered:Bool
+            if frames.count != 4 {ordered=false}
+            else if layout == .rows {ordered=zip(frames,frames.dropFirst()).allSatisfy{$0.minY>$1.maxY && abs($0.minX-$1.minX)<2 && abs($0.width-$1.width)<2 && abs($0.height-$1.height)<2}}
+            else if layout == .columns {ordered=zip(frames,frames.dropFirst()).allSatisfy{$0.maxX<$1.minX && abs($0.minY-$1.minY)<2 && abs($0.height-$1.height)<2 && abs($0.width-$1.width)<2}}
+            else {ordered=abs(frames[0].minX-frames[1].minX)<2 && frames[0].maxX<frames[2].minX && frames[0].minY>frames[1].minY}
+            check("split-"+layout.rawValue+"-keyboard-and-native-geometry",key && session.state.resolvedSplitLayout==layout && session.state.splitTabIDs==ids && ordered,frames.map{NSStringFromRect($0)}.joined(separator:"; "))
+            check("split-"+layout.rawValue+"-retains-live-documents",ids.compactMap{session.runtimes[$0]?.loadedWebView}.map(ObjectIdentifier.init)==views)
+            check("split-"+layout.rawValue+"-restores-content-focus",session.window?.firstResponder === session.current?.loadedWebView)
+            await capture(layout == .rows ? "63-split-rows" : layout == .columns ? "64-split-columns" : "65-split-grid-restored")
+            if layout == .rows,let split=findGrid(in:session.window?.contentView) {
+                let moved=await drag(split,to:0.3,name:"rows")
+                check("split-rows-native-divider-persists",moved && abs(session.state.splitFraction(at:0)-0.3)<0.02)
+                do {
+                    var saved=try SavedSession.decode(SavedSession(windows:[session.state]).encoded()).windows[0];saved.id=UUID()
+                    let restored=manager.newWindow(state:saved)
+                    try? await Task.sleep(for:.milliseconds(400));restored.window?.contentView?.layoutSubtreeIfNeeded()
+                    let native=findGrid(in:restored.window?.contentView)
+                    let fraction=native.flatMap {view->Double? in
+                        guard view.subviews.count==4 else{return nil}
+                        return Double(view.subviews[0].frame.height/(view.bounds.height-24))
+                    }
+                    check("split-rows-restored-native-boundaries",native?.isVertical==false && fraction.map{abs($0-0.3)<0.02}==true)
+                    restored.window?.close();session.window?.makeKeyAndOrderFront(nil)
+                } catch {check("split-rows-restored-native-boundaries",false,error.localizedDescription)}
+            }
+        }
+        let unsplit=await layoutKey("split-unsplit")
+        check("split-unsplit-keyboard",unsplit && session.state.splitTabIDs.isEmpty)
+        let pair=await layoutKey("split-columns")
+        check("split-layout-keyboard-creates-next-pair",pair && session.state.splitTabIDs.count==2 && session.state.resolvedSplitLayout == .columns)
+        _=session.state.setSplitTabs(ids);session.state.setSplitLayout(.grid)
         session.close(ids[3],ask:false)
         check("closing-grid-pane-retains-other-three",session.state.splitTabIDs==Array(ids.prefix(3)))
         return results

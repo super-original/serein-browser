@@ -27,7 +27,7 @@ struct BrowserView: View {
                     if let preview=session.state.activeGlance,let owner=preview.glanceParentID {
                         GlancePages(session:session,owner:owner,preview:preview.id)
                     } else if session.state.splitTabIDs.count>=2 {
-                        SplitPages(session:session,ids:session.state.splitTabIDs)
+                        SplitPages(session:session,ids:session.state.splitTabIDs,layout:session.state.resolvedSplitLayout)
                     } else if let selected=session.state.selectedTabID {PagePane(session:session,id:selected)}
                 }
                 .padding(.vertical,8).padding(.trailing,8)
@@ -55,11 +55,11 @@ struct BrowserView: View {
     }
 }
 enum PagePresentation {
-    case single,split([UUID]),glance(owner:UUID,preview:UUID)
+    case single,split([UUID],SplitLayout),glance(owner:UUID,preview:UUID)
     @MainActor func isCurrent(in session:BrowserSession,tab:UUID)->Bool {
         switch self {
         case .single:return session.state.activeGlance==nil && session.state.splitTabIDs.count<2 && session.state.selectedTabID==tab
-        case .split(let ids):return session.state.activeGlance==nil && ids==session.state.splitTabIDs && ids.contains(tab)
+        case .split(let ids,let layout):return session.state.activeGlance==nil && ids==session.state.splitTabIDs && layout==session.state.resolvedSplitLayout && ids.contains(tab)
         case .glance(let owner,let preview):return session.state.activeGlance?.id==preview && session.state.activeGlance?.glanceParentID==owner && (tab==owner || tab==preview)
         }
     }
