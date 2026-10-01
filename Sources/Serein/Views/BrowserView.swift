@@ -54,14 +54,25 @@ struct BrowserView: View {
         .alert("Serein",isPresented:Binding(get:{session.error != nil},set:{if !$0{session.error=nil}})){Button("OK"){session.error=nil}} message:{Text(session.error ?? "")}
     }
 }
+enum PagePresentation {
+    case single,split([UUID]),glance(owner:UUID,preview:UUID)
+    @MainActor func isCurrent(in session:BrowserSession,tab:UUID)->Bool {
+        switch self {
+        case .single:return session.state.activeGlance==nil && session.state.splitTabIDs.count<2 && session.state.selectedTabID==tab
+        case .split(let ids):return session.state.activeGlance==nil && ids==session.state.splitTabIDs && ids.contains(tab)
+        case .glance(let owner,let preview):return session.state.activeGlance?.id==preview && session.state.activeGlance?.glanceParentID==owner && (tab==owner || tab==preview)
+        }
+    }
+}
 struct PagePane: View {
     let session: BrowserSession
     let id: UUID
+    var presentation:PagePresentation = .single
     var body: some View {
         if session.state.tabs.contains(where:{$0.id==id}) {
             let runtime=session.runtime(id)
             ZStack {
-                WebContentView(runtime:runtime,session:session).id(runtime.viewRevision).id(ObjectIdentifier(runtime))
+                WebContentView(runtime:runtime,session:session,presentation:presentation).id(runtime.viewRevision).id(ObjectIdentifier(runtime))
                 if session.state.tabs.first(where:{$0.id==id})?.url=="about:blank" {
                     VStack(spacing:12) {
                         Image(systemName:session.state.isPrivate ? "hand.raised" : "sparkle").font(.system(size:32,weight:.light))
@@ -85,9 +96,10 @@ struct PagePane: View {
 struct WebContentView: NSViewRepresentable {
     let runtime: TabRuntime
     let session: BrowserSession
+    let presentation:PagePresentation
     func makeNSView(context: Context) -> NSView {
         let container=WebContentContainer(frame:NSRect(x:0,y:0,width:800,height:600))
-        guard runtime.session === session,session.runtimes[runtime.id] === runtime,session.state.tabs.contains(where:{$0.id==runtime.id}) else{return container}
+        guard presentation.isCurrent(in:session,tab:runtime.id),runtime.session === session,session.runtimes[runtime.id] === runtime,session.state.tabs.contains(where:{$0.id==runtime.id}) else{return container}
         container.runtime=runtime
         let view=runtime.webView
         context.coordinator.attach(to:view)
@@ -113,7 +125,7 @@ struct WebContentView: NSViewRepresentable {
         func gestureRecognizer(_ gestureRecognizer:NSGestureRecognizer,shouldRecognizeSimultaneouslyWith other:NSGestureRecognizer)->Bool{true}
     }
     func updateNSView(_ view: NSView,context: Context) {
-        guard let container=view as? WebContentContainer,
+        guard let container=view as? WebContentContainer,presentation.isCurrent(in:session,tab:runtime.id),
               runtime.session === session,session.runtimes[runtime.id] === runtime,session.state.tabs.contains(where:{$0.id==runtime.id}) else{return}
         container.runtime=runtime
         let page=runtime.webView

@@ -10,6 +10,13 @@ PAYLOAD = bytes(range(256)) * 32768
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
+        if self.path.split('?', 1)[0] == '/extension-network-redirect':
+            self.send_response(302)
+            self.send_header('Location', 'http://127.0.0.1:8765/extension-network.json?case=redirect')
+            self.send_header('Content-Length', '0')
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            return
         if self.path.split('?', 1)[0] != '/slow-download.bin':
             return super().do_GET()
         start, end = 0, len(PAYLOAD) - 1

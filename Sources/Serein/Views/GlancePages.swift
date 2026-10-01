@@ -9,11 +9,11 @@ struct GlancePages:View {
         GeometryReader {geometry in
             let width=min(geometry.size.width*0.8,max(0,geometry.size.width-112))
             ZStack {
-                PagePane(session:session,id:owner)
+                PagePane(session:session,id:owner,presentation:.glance(owner:owner,preview:preview))
                     .scaleEffect(0.97).opacity(0.3).allowsHitTesting(false).accessibilityHidden(true)
                 Color.clear.contentShape(Rectangle())
                     .onTapGesture{session.close(preview)}.accessibilityHidden(true)
-                PagePane(session:session,id:preview)
+                PagePane(session:session,id:preview,presentation:.glance(owner:owner,preview:preview))
                     .frame(width:width,height:geometry.size.height)
                     .clipShape(.rect(cornerRadius:8))
                     .shadow(color:.black.opacity(0.15),radius:8)

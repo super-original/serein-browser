@@ -20,8 +20,8 @@ import SereinCore
         await wait{runtime.hasUserEdits}
         let history=view.backForwardList.backList.map(\.url),payload=source.sidebarDrag(moving,kind:.tab)
         check("live-setup",runtime.hasUserEdits && !history.isEmpty && view.url?.query=="drag-live")
-        source.window?.setFrame(NSRect(x:10,y:70,width:640,height:600),display:true)
-        destination.window?.setFrame(NSRect(x:380,y:70,width:640,height:600),display:true)
+        source.window?.setFrame(NSRect(x:380,y:70,width:640,height:600),display:true)
+        destination.window?.setFrame(NSRect(x:10,y:70,width:640,height:600),display:true)
         destination.window?.makeKeyAndOrderFront(nil)
         try? await Task.sleep(for:.milliseconds(250))
         let name="sidebar-cross-window-drag",done=root.appendingPathComponent(name+".keyboard-finished"),failed=root.appendingPathComponent(name+".keyboard-failed")

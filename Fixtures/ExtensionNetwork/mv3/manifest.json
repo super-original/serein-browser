@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Serein MV3 network fixture",
+  "version": "1.0",
+  "permissions": [
+    "cookies"
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

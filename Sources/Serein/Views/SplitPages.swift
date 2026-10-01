@@ -26,7 +26,7 @@ struct SplitPages:NSViewRepresentable {
         }
         bind(root,0)
         func pane(_ id:UUID)->NSView {
-            let host=NSHostingView(rootView:PagePane(session:session,id:id))
+            let host=NSHostingView(rootView:PagePane(session:session,id:id,presentation:.split(ids)))
             host.safeAreaRegions=[]
             host.frame=NSRect(x:0,y:0,width:370,height:326)
             host.autoresizingMask=[.width,.height]
