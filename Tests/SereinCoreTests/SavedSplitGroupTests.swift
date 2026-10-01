@@ -2,6 +2,17 @@ import XCTest
 @testable import SereinCore
 
 final class SavedSplitGroupTests:XCTestCase {
+    func testContextUnsplitDoesNotActivateInactiveGroupOrDisturbCurrentLayout() {
+        var s=BrowserWindowState();let a=s.selectedTabID!,b=s.newTab(),c=s.newTab(),d=s.newTab()
+        s.setSplitTabs([a,b]);s.select(c);s.setSplitTabs([c,d]);s.setSplitLayout(.rows);s.setSplitFraction(0.61,at:0)
+        XCTAssertTrue(s.removeSplitGroup(containing:b))
+        XCTAssertEqual(s.selectedTabID,c);XCTAssertEqual(s.splitTabIDs,[c,d])
+        XCTAssertEqual(s.resolvedSplitLayout,.rows);XCTAssertEqual(s.splitFraction(at:0),0.61)
+        XCTAssertNil(s.inactiveSplitGroups);XCTAssertFalse(s.removeSplitGroup(containing:b))
+        s.select(a);XCTAssertTrue(s.splitTabIDs.isEmpty)
+        s.select(d);XCTAssertEqual(s.splitTabIDs,[c,d]);XCTAssertTrue(s.removeSplitGroup(containing:d))
+        XCTAssertTrue(s.splitGroups.isEmpty)
+    }
     func testIndependentGroupsRetainLayoutDividersAndSidebarAcrossSelection() {
         var s=BrowserWindowState();let a=s.selectedTabID!,b=s.newTab(),c=s.newTab(),d=s.newTab()
         s.setSplitTabs([a,b]);s.setSplitLayout(.rows);s.setSplitFraction(0.37,at:0)

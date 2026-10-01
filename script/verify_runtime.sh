@@ -142,6 +142,12 @@ SPLITINPUT
         SPLIT_IDENTIFIERS=$(cat "$ROOT/split-sidebar-identifiers")
         native_input split-tabs "$SPLIT_IDENTIFIERS" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;
+      split-inactive-unsplit)
+        native_input unsplit-tab "$(cat "$ROOT/split-inactive-identifier")" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
+      split-groups-check)
+        native_input split-groups "$(cat "$ROOT/split-sidebar-identifiers")" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
       split-sidebar-close)
         osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "w" using command down' > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;

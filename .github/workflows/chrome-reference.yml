@@ -2,7 +2,7 @@ name: Pinned Chrome real-extension reference
 on:
   workflow_dispatch:
   push:
-    paths: ['.github/workflows/chrome-reference.yml', 'script/chrome_formatter_reference.py', 'script/build_json_formatter_fixture.py', 'Fixtures/formatter.json']
+    paths: ['.github/workflows/chrome-reference.yml', 'script/chrome_formatter_reference.py', 'script/chrome_download_reference.py', 'script/build_json_formatter_fixture.py', 'Fixtures/formatter.json', 'Fixtures/DownloadAPI/**']
 permissions:
   contents: read
 concurrency:

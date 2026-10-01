@@ -9,6 +9,15 @@ public struct SavedSplitGroup:Codable,Equatable,Sendable {
 }
 
 extension BrowserWindowState {
+    /// Explicitly dissolve one group without activating it or touching others.
+    @discardableResult public mutating func removeSplitGroup(containing id:UUID)->Bool {
+        if splitTabIDs.contains(id) {clearSplit();return true}
+        guard let index=inactiveSplitGroups?.firstIndex(where:{$0.tabIDs.contains(id)}) else{return false}
+        inactiveSplitGroups?.remove(at:index)
+        if inactiveSplitGroups?.isEmpty==true {inactiveSplitGroups=nil}
+        return true
+    }
+
     public var splitGroups:[SavedSplitGroup] {
         let active = splitTabIDs.count>=2 ? [SavedSplitGroup(workspaceID:activeWorkspaceID,tabIDs:splitTabIDs,layout:resolvedSplitLayout,fractions:splitFractions)] : []
         return active+(inactiveSplitGroups ?? [])

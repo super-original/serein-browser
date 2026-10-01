@@ -15,8 +15,9 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from chrome_download_reference import prepare_download_reference, run_download_reference
 
-VERSION = '153.0.8010.52'
+VERSION = '154.0.8037.57'
 OUT = pathlib.Path('evidence/chrome-formatter-reference')
 APP = pathlib.Path('/Applications/Google Chrome for Testing.app')
 BINARY = APP / 'Contents/MacOS/Google Chrome for Testing'
@@ -57,9 +58,9 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
         report['os'] = platform.mac_ver()[0]
         info = plistlib.loads((APP / 'Contents/Info.plist').read_bytes())
         report['bundleVersion'] = info['CFBundleShortVersionString']
-        assert report['bundleVersion'] == VERSION, 'Runner browser changed; review and repin'
         report['driverVersion'] = subprocess.check_output([str(DRIVER), '--version'], text=True, timeout=10).strip()
-        assert report['driverVersion'].split()[1] == VERSION
+        assert report['bundleVersion'] == VERSION, 'Runner browser changed; review and repin'
+        assert report['driverVersion'].split()[1] == VERSION, 'Runner driver changed; review and repin'
         report['binarySHA256'] = digest(BINARY)
         report['driverSHA256'] = digest(DRIVER)
         signature = subprocess.run(['codesign', '--verify', '--deep', '--strict', str(APP)], capture_output=True, text=True, timeout=30)
@@ -70,6 +71,9 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
                         str(OUT / 'formatter-build.json')], check=True, timeout=240)
         extension = build / 'extension'
         report['originalManifestSHA256'] = hashlib.sha256((extension / 'manifest.json').read_bytes()).hexdigest()
+        downloads_extension = prepare_download_reference(temporary, OUT)
+        download_directory = pathlib.Path(temporary) / 'downloads'
+        download_directory.mkdir()
         server = http.server.ThreadingHTTPServer(('127.0.0.1', 8765),
             functools.partial(http.server.SimpleHTTPRequestHandler, directory='Fixtures'))
         server_thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -88,9 +92,10 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
         else:
             raise RuntimeError('Owned ChromeDriver readiness timeout')
         session = request('/session', {'capabilities': {'alwaysMatch': {
-            'browserName': 'chrome', 'goog:chromeOptions': {'binary': str(BINARY), 'args': [
+            'browserName': 'chrome', 'goog:chromeOptions': {'binary': str(BINARY),
+                'prefs': {'download.default_directory': str(download_directory), 'download.prompt_for_download': False}, 'args': [
                 '--user-data-dir=' + str(pathlib.Path(temporary) / 'profile'),
-                '--load-extension=' + str(extension.resolve()), '--no-first-run', '--no-default-browser-check']}}}})
+                '--load-extension=' + str(extension.resolve()) + ',' + str(downloads_extension.resolve()), '--no-first-run', '--no-default-browser-check']}}}})
         prefix = '/session/' + session['sessionId']
         report['capabilities'] = session['capabilities']
         assert report['capabilities']['browserVersion'] == VERSION
@@ -114,6 +119,7 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
                             'mainWorldGlobal': value.get('project') == 'Serein' and value.get('items') == 4}
         report['scenarioExecuted'] = True
         subprocess.run(['screencapture', '-x', str(OUT / 'formatter-reference.png')], check=True, timeout=10)
+        report['downloads'] = run_download_reference(request, script, prefix, OUT, download_directory)
     except Exception as error:
         report['error'] = str(error)
     finally:
@@ -143,3 +149,4 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
         (OUT / 'results.json').write_text(json.dumps(report, indent=2))
 
 assert report['scenarioExecuted'] and len(report['checks']) == 3 and all(report['checks'].values()), 'Chrome reference failed; diagnostics retained'
+assert report.get('downloads', {}).get('scenarioExecuted') and report['downloads']['passingChecks'] == report['downloads']['totalChecks'] == 16, 'Downloads reference failures retained'

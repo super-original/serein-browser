@@ -13,8 +13,8 @@ public struct BrowserTab: Identifiable, Codable, Equatable, Sendable {
     public var glanceParentID: UUID?
     public var folderID: UUID?
     public var openerTabID: UUID?
-    public init(id: UUID = UUID(), workspaceID: UUID, url: String = "about:blank", title: String = "New Tab", kind: TabKind = .regular) {
-        self.id=id; self.workspaceID=workspaceID; self.url=url; self.title=title; self.kind=kind
+    public init(id: UUID = UUID(), workspaceID: UUID, url: String = "about:blank", title: String? = nil, kind: TabKind = .regular) {
+        self.id=id; self.workspaceID=workspaceID; self.url=url; self.title=PageDisplayTitle.resolve(title,url:URL(string:url)); self.kind=kind
         homeURL = kind == .regular ? nil : url
     }
 }

@@ -84,6 +84,22 @@ if mode=="press" {
     guard matching.count==1 else{fail("Expected exactly one \(identifier) control\n"+describe(items))}
     guard AXUIElementPerformAction(matching[0],kAXPressAction as CFString) == .success else{fail("AXPress failed")}
     print("Pressed \(identifier) through \(exact.isEmpty ? "unique native label" : "identifier")")
+} else if mode=="unsplit-tab" {
+    let identifier=arguments[3]
+    guard identifier.hasPrefix("tab-"),UUID(uuidString:String(identifier.dropFirst(4))) != nil else{fail("Expected fixture tab identifier")}
+    let items=controls(),matches=items.filter{text($0,kAXIdentifierAttribute)==identifier && text($0,kAXRoleAttribute)==kAXButtonRole}
+    guard matches.count==1 else{fail("Expected one native tab control\n"+describe(items))}
+    guard AXUIElementPerformAction(matches[0],kAXShowMenuAction as CFString) == .success else{key(53);fail("Native tab context-menu action unavailable")}
+    Thread.sleep(forTimeInterval:0.2)
+    var queue=elements(application,kAXChildrenAttribute)+elements(application,kAXWindowsAttribute),seen=Set<CFHashCode>(),menus:[AXUIElement]=[]
+    while !queue.isEmpty,seen.count<500,ProcessInfo.processInfo.systemUptime<deadline {
+        let item=queue.removeFirst()
+        guard seen.insert(CFHash(item)).inserted else{continue}
+        if text(item,kAXRoleAttribute)==kAXMenuItemRole,text(item,kAXTitleAttribute)=="Exit Split View" {menus.append(item)}
+        if !["AXWebArea","AXBrowser","AXTable"].contains(text(item,kAXRoleAttribute)) {queue += elements(item,kAXChildrenAttribute)}
+    }
+    guard menus.count==1,AXUIElementPerformAction(menus[0],kAXPressAction as CFString) == .success else{key(53);fail("Expected one actionable Exit Split View menu item")}
+    print("Chose Exit Split View through the native tab context menu")
 } else if mode=="focus-tab" {
     let identifier=arguments[3]
     guard identifier.hasPrefix("tab-"),UUID(uuidString:String(identifier.dropFirst(4))) != nil else{fail("Expected fixture tab identifier")}
@@ -93,7 +109,7 @@ if mode=="press" {
     Thread.sleep(forTimeInterval:0.2)
     guard let current=focused(),text(current,kAXIdentifierAttribute)==identifier else{fail("Native focus did not reach fixture tab: "+(focused().map{describe([$0])} ?? "No focused element"))}
     print("Focused native tab")
-} else if mode=="split-tabs" {
+} else if mode=="split-tabs" || mode=="split-groups" {
     let identifiers=arguments[3].split(separator:",").map(String.init)
     guard (2...4).contains(identifiers.count),Set(identifiers).count==identifiers.count,
           identifiers.allSatisfy({$0.hasPrefix("tab-") && UUID(uuidString:String($0.dropFirst(4))) != nil}) else{fail("Expected two to four fixture tab identifiers")}
@@ -108,9 +124,16 @@ if mode=="press" {
               AXValueGetValue(unsafeBitCast(size,to:AXValue.self),.cgSize,&dimensions),dimensions.width>10,dimensions.height>10 else{fail("Invalid split tab bounds")}
         buttons.append(matches[0]);frames.append(CGRect(origin:point,size:dimensions))
     }
-    guard zip(frames,frames.dropFirst()).allSatisfy({a,b in abs(a.minY-b.minY)<2 && a.maxX<=b.minX+1}) else{fail("Split tabs are not independent horizontal native controls: \(frames)")}
-    guard let last=buttons.last,AXUIElementPerformAction(last,kAXPressAction as CFString) == .success else{fail("Split tab selection failed")}
-    print("Native horizontal split controls: \(frames)")
+    if mode=="split-groups" {
+        guard frames.count==4,abs(frames[0].minY-frames[1].minY)<2,abs(frames[2].minY-frames[3].minY)<2,
+              frames[0].maxX<=frames[1].minX+1,frames[2].maxX<=frames[3].minX+1,
+              frames[0].maxY<=frames[2].minY+1 else{fail("Expected two native horizontal split groups: \(frames)")}
+        print("Both native split-group rows: \(frames)")
+    } else {
+        guard zip(frames,frames.dropFirst()).allSatisfy({a,b in abs(a.minY-b.minY)<2 && a.maxX<=b.minX+1}) else{fail("Split tabs are not independent horizontal native controls: \(frames)")}
+        guard let last=buttons.last,AXUIElementPerformAction(last,kAXPressAction as CFString) == .success else{fail("Split tab selection failed")}
+        print("Native horizontal split controls: \(frames)")
+    }
 } else if mode=="drag" {
     guard arguments.count==6,["before","after"].contains(arguments[5]) else{fail("Expected source, destination and before/after placement")}
     let items=controls()

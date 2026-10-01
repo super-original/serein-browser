@@ -208,7 +208,7 @@ private struct TabRow: View {
             if session.tabSelection.ids.contains(tab.id),(2...4).contains(session.tabSelection.ids.count) {
                 Button("Split Selected Tabs"){session.splitHighlighted()}
             }
-            if !session.state.splitTabIDs.isEmpty,session.state.splitTabIDs.contains(tab.id) {Button("Exit Split View"){session.state.clearSplit()}}
+            if session.state.splitGroups.contains(where:{$0.tabIDs.contains(tab.id)}) {Button("Exit Split View"){session.state.removeSplitGroup(containing:tab.id)}}
             if tab.id != session.state.selectedTabID {Button("Split with Current Tab"){session.state.split(with:tab.id)};Button("Unload Tab…"){session.unload(tab.id)}.disabled(!session.canUnload(tab.id))}
             Divider()
             if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {Button("Close \(session.tabSelection.ids.count) Selected Tabs"){session.closeHighlighted()}}
