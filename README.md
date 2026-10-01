@@ -23,7 +23,7 @@ Artifacts expire after 14 days. Evidence artifacts expire after 7 days. The work
 
 ## Build without installing tools on your Mac
 
-Use the Actions workflow. Its clean checkout runs `script/build.sh` and `script/verify_runtime.sh`, and uploads the application and diagnostic evidence. Public-repository standard GitHub-hosted runners are used, with read-only repository token permissions and no paid services. No engine is compiled. A bounded compiler cache stays within the repository's free GitHub cache allowance; no cache is installed on your Mac.
+Use the Actions workflow. Its clean checkout runs `script/build.sh` and `script/verify_runtime.sh`, and uploads the application and diagnostic evidence. Public-repository standard GitHub-hosted runners are used, with read-only repository token permissions and no paid services. The application uses system WebKit. A separate bounded, unmodified WebKit build experiment measures custom-engine feasibility; it does not replace the shipped engine. A bounded compiler cache stays within the repository's free GitHub cache allowance; no cache is installed on your Mac.
 
 For a contributor who already has Xcode 27 on a separate development machine, the same scripts are the build contract. `Package.swift`, `Info.plist`, compiler environment, and Mach-O assertions all require macOS 27.0. This is not a request to install those tools on the user's Mac.
 

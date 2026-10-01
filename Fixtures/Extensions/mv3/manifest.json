@@ -37,9 +37,18 @@
         "http://127.0.0.1/*"
       ],
       "js": [
+        "document-end.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "http://127.0.0.1/*"
+      ],
+      "js": [
         "main-world.js"
       ],
-      "run_at": "document_end",
+      "run_at": "document_idle",
       "world": "MAIN"
     }
   ],

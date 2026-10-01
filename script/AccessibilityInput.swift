@@ -91,7 +91,7 @@ if mode=="press" {
     guard matches.count==1 else{fail("Expected one native tab control\n"+describe(items))}
     guard AXUIElementSetAttributeValue(matches[0],kAXFocusedAttribute as CFString,kCFBooleanTrue) == .success else{fail("Could not focus native tab control")}
     Thread.sleep(forTimeInterval:0.2)
-    guard let current=focused(),text(current,kAXIdentifierAttribute)==identifier else{fail("Native focus did not reach fixture tab")}
+    guard let current=focused(),text(current,kAXIdentifierAttribute)==identifier else{fail("Native focus did not reach fixture tab: "+(focused().map{describe([$0])} ?? "No focused element"))}
     print("Focused native tab")
 } else if mode=="split-tabs" {
     let identifiers=arguments[3].split(separator:",").map(String.init)

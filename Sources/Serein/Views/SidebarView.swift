@@ -149,6 +149,7 @@ private struct TabRow: View {
                 }.frame(maxWidth:.infinity,alignment:compact ? .center : .leading).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)").accessibilityAddTraits(session.tabSelection.ids.contains(tab.id) || session.state.sidebarSelectedTabID==tab.id ? .isSelected : [])
             .accessibilityHint("Up and Down select tabs. Shift extends selection. Return or Escape returns to the page.")
+            .focusable()
             .focused(focusedTab,equals:tab.id)
             .onKeyPress(keys:[.upArrow,.downArrow]){press in
                 guard press.modifiers.intersection([.command,.control,.option]).isEmpty,

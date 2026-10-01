@@ -38,8 +38,23 @@ import SereinCore
                 let optionTab=session.newTab(url:options.absoluteString),optionView=session.runtime(optionTab).webView
                 _=await wait{await js(optionView,"!!document.querySelector('input[name=theme]:checked')")}
                 _=await js(optionView,"document.querySelector('input[value=force_dark]').click();true")
-                let stored=try? await optionView.callAsyncJavaScript("return await new Promise(resolve=>chrome.storage.local.get('themeOverride',value=>resolve(value.themeOverride === 'force_dark')));",arguments:[:],in:nil,contentWorld:.page) as? Bool
-                check("original-options-storage",stored==true,"Read after the original options initialization selected a radio control")
+                var stored=false,storageDetail="No callback yet"
+                let storageStart=Date()
+                while !stored,Date().timeIntervalSince(storageStart)<5 {
+                    do {
+                        let reply=try await optionView.callAsyncJavaScript("""
+                        try {
+                          return await Promise.race([
+                            new Promise(resolve=>chrome.storage.local.get('themeOverride',value=>resolve({status:'reply',matches:value.themeOverride === 'force_dark',kind:typeof value.themeOverride}))),
+                            new Promise(resolve=>setTimeout(()=>resolve({status:'timeout'}),500))
+                          ]);
+                        } catch(error) {return {status:'error',error:String(error),chromeType:typeof chrome,browserType:typeof browser};}
+                        """,arguments:[:],in:nil,contentWorld:.page) as? [String:Any]
+                        stored=reply?["matches"] as? Bool==true;storageDetail=String(describing:reply)
+                    } catch {storageDetail=error.localizedDescription}
+                    if !stored {try? await Task.sleep(for:.milliseconds(100))}
+                }
+                check("original-options-storage",stored,"Original change listener writes asynchronously; bounded readback: \(storageDetail)")
                 session.close(optionTab,ask:false)
                 view.load(URLRequest(url:URL(string:"http://127.0.0.1:8765/formatter.json?formatter=theme")!))
                 check("stored-theme-applies-on-navigation",await wait{

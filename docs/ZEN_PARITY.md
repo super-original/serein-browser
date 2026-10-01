@@ -190,3 +190,5 @@ Native tab buttons now use window-local SwiftUI focus and public [onKeyPress](ht
 Two core tests cover boundary/hidden-row order and range contraction. Eight actual native-focus/keyboard/capture checks are prepared, including preserved live views and page-responder restoration. No passing runtime claim yet.
 
 Untitled loaded pages now use a filename or host instead of retaining “New Tab”; empty/new tabs retain that label. Explicit document titles remain authoritative. Fallbacks omit URL userinfo/query/fragment and avoid data/opaque payloads. Two core tests and the actual JSON-page label check are prepared after the defect was observed in `5959e2c`'s desktop screenshot.
+
+At `656146e`, the sidebar core tests pass but six native focus/selection checks fail (capture/live-view preservation pass). AX assignment reports success without moving focus to the requested tab; inspected capture shows no extended range. Explicit SwiftUI focusability is the next repair, not a verified feature yet. Both title core tests and the actual untitled-page check pass; inspected capture shows `formatter.json`.
