@@ -16,7 +16,7 @@ import ImageIO
     }
     static func load(from view:WKWebView) async->NSImage? {
         guard ["http","https"].contains(view.url?.scheme?.lowercased() ?? "") else{return nil}
-        let encoded:String?=await withCheckedContinuation {continuation in
+        let encoded:String?=await withCheckedContinuation {(continuation:CheckedContinuation<String?,Never>) in
         let reply=Reply(continuation)
         reply.deadline=Task {try? await Task.sleep(for:.seconds(4));if !Task.isCancelled{reply.finish(nil)}}
         view.callAsyncJavaScript("""
