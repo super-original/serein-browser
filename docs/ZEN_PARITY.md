@@ -236,3 +236,15 @@ the pair is joined above the pinned divider. Group-wide pin/unpin is now verifie
 cases; mixed-category/cross-folder presentation, group-wide movement/closing and the context
 menu AX action remain incomplete. [Inspected original group comparisons](evidence/2026-10-01/persistent-split-groups/README.md)
 preserve the prior equal-split reference states and disclose unmatched conditions.
+
+### Named tab accessibility actions (pending)
+
+Tabs now expose Duplicate and Close actions, plus group Pin/Unpin and Exit Split View when
+they belong to a group, using Apple's public
+[`accessibilityActions`](https://developer.apple.com/documentation/swiftui/view/accessibilityactions(_:))
+(macOS 13+, available on the required macOS 27 target). This gives assistive technology a
+named action path independent of SwiftUI's missing AXShowMenu action. A separate bounded
+native AX test enumerates public action names/descriptions and invokes Exit Split View on
+an inactive group; it must preserve the selected group. The ordinary right-click/menu test
+remains independent. This is not a claim that VoiceOver, every locale or full accessibility
+has been verified.

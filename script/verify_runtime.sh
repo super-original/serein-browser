@@ -145,6 +145,9 @@ SPLITINPUT
       split-inactive-unsplit)
         native_input unsplit-tab "$(cat "$ROOT/split-inactive-identifier")" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;
+      split-accessible-unsplit)
+        native_input accessible-unsplit "$(cat "$ROOT/split-accessible-identifier")" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
       split-groups-check)
         native_input split-groups "$(cat "$ROOT/split-sidebar-identifiers")" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;

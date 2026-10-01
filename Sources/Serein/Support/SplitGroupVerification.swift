@@ -97,6 +97,14 @@ import SereinCore
         session.setPinned(inactive[1],true)
         check("split-groups-pin-inactive-preserves-selection",session.state.selectedTabID==active[0] && session.state.splitTabIDs==active && session.state.splitGroups.count==2 && inactive.allSatisfy{id in session.state.tabs.first{$0.id==id}?.kind == .pinned})
         session.setPinned(inactive[0],false)
+        try? ("tab-"+inactive[0].uuidString).write(to:root.appendingPathComponent("split-accessible-identifier"),atomically:true,encoding:.utf8)
+        try? "split-accessible-unsplit".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+        for _ in 0..<100 {
+            if FileManager.default.fileExists(atPath:root.appendingPathComponent("split-accessible-unsplit.keyboard-finished").path){break}
+            try? await Task.sleep(for:.milliseconds(100))
+        }
+        check("split-groups-named-accessibility-action",FileManager.default.fileExists(atPath:root.appendingPathComponent("split-accessible-unsplit.keyboard-finished").path) && !FileManager.default.fileExists(atPath:root.appendingPathComponent("split-accessible-unsplit.keyboard-failed").path) && session.state.splitGroups.count==1 && session.state.splitTabIDs==active && session.state.selectedTabID==active[0])
+        await capture("81-accessible-split-removed")
         return results
     }
 }

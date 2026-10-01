@@ -175,6 +175,14 @@ private struct TabRow: View {
                 DispatchQueue.main.async {session.completeContentFocusRequest()}
             }
             .contextMenu {tabContextMenu}
+            .accessibilityActions {
+                Button("Duplicate Tab"){session.duplicate(tab.id)}
+                Button("Close Tab"){session.close(tab.id)}
+                if session.state.splitGroups.contains(where:{$0.tabIDs.contains(tab.id)}) {
+                    Button(tab.kind == .pinned ? "Unpin Split Group" : "Pin Split Group"){session.setPinned(tab.id,tab.kind != .pinned)}
+                    Button("Exit Split View"){session.state.removeSplitGroup(containing:tab.id)}
+                }
+            }
             if session.state.glance(for:tab.id) != nil {
                 Button {session.select(tab.id)} label:{Image(systemName:"rectangle.on.rectangle").font(.system(size:12)).frame(width:24,height:24)}.buttonStyle(.plain).accessibilityLabel("Show Link Preview").help("Show Link Preview")
             }

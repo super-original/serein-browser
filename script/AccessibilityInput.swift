@@ -118,6 +118,23 @@ if mode=="press" {
     }
     guard menus.count==1,AXUIElementPerformAction(menus[0],kAXPressAction as CFString) == .success else{key(53);fail("Expected one actionable Exit Split View menu item")}
     print("Chose Exit Split View through the native tab context menu")
+} else if mode=="accessible-unsplit" {
+    let identifier=arguments[3]
+    guard identifier.hasPrefix("tab-"),UUID(uuidString:String(identifier.dropFirst(4))) != nil else{fail("Expected fixture tab identifier")}
+    let matches=controls().filter{text($0,kAXIdentifierAttribute)==identifier && text($0,kAXRoleAttribute)==kAXButtonRole}
+    guard matches.count==1 else{fail("Expected one accessible tab")}
+    var actions:CFArray?
+    guard AXUIElementCopyActionNames(matches[0],&actions) == .success,let names=actions as? [String] else{fail("Accessible tab has no actions")}
+    var matching:[String]=[]
+    for name in names {
+        var description:CFString?
+        _=AXUIElementCopyActionDescription(matches[0],name as CFString,&description)
+        let label=description.map{$0 as String} ?? ""
+        print("Tab action \(name): \(label)")
+        if name=="Exit Split View" || label == "Exit Split View" {matching.append(name)}
+    }
+    guard matching.count==1,AXUIElementPerformAction(matches[0],matching[0] as CFString) == .success else{fail("Expected accessible Exit Split View action")}
+    print("Performed the public named accessibility action")
 } else if mode=="focus-tab" {
     let identifier=arguments[3]
     guard identifier.hasPrefix("tab-"),UUID(uuidString:String(identifier.dropFirst(4))) != nil else{fail("Expected fixture tab identifier")}
