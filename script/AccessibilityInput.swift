@@ -112,6 +112,12 @@ if mode=="press" {
     guard text(matches[0],kAXValueAttribute)==arguments[4] else{fail("Field did not receive exact fixture text: \(text(matches[0],kAXValueAttribute))")}
     key(36)
     print("Entered text in \(arguments[3])")
+} else if mode=="expect-text" {
+    guard arguments.count==5,arguments[3]=="downloads-result-count" else{fail("Expected download count identifier and text")}
+    let items=controls()
+    let matches=items.filter{text($0,kAXIdentifierAttribute)==arguments[3]}
+    guard matches.count==1,text(matches[0],kAXValueAttribute)==arguments[4] || text(matches[0],kAXTitleAttribute)==arguments[4] else{fail("Expected exact native result count\n"+describe(items))}
+    print("Verified native download count: \(arguments[4])")
 } else if mode=="pick-file" {
     let path=arguments[3]
     guard path.hasPrefix("/"),!path.contains("\n"),!path.contains("\r") else{fail("Expected absolute fixture path")}

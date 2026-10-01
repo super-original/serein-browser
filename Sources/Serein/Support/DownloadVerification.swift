@@ -86,6 +86,15 @@ import SereinCore
         try? capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         let captured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path)}
         check("download-paused-ui-capture",captured && FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".png").path))
+        check("download-search-owner-isolation",manager.downloads.visible(in:session,query:"private-b-download").isEmpty && manager.downloads.visible(in:privateB,query:"private-b-download").map(\.id)==[b.id])
+        check("download-search-status",manager.downloads.visible(in:session,query:"resumed-download",filter:.paused).map(\.id)==[resumable.id] && manager.downloads.visible(in:session,query:"resumed-download",filter:.complete).isEmpty)
+        try? "search-downloads".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+        let searchFinished=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("search-downloads.keyboard-finished").path)}
+        check("download-search-native-keyboard",searchFinished && !FileManager.default.fileExists(atPath:root.appendingPathComponent("search-downloads.keyboard-failed").path))
+        let searchCapture="62-downloads-search"
+        try? searchCapture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+        let searchCaptured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(searchCapture+".capture-finished").path)}
+        check("download-search-capture",searchCaptured && FileManager.default.fileExists(atPath:root.appendingPathComponent(searchCapture+".png").path))
         session.libraryPanel=nil
         try? await Task.sleep(for:.milliseconds(500))
         resumable.resume(in:privateB)

@@ -98,6 +98,13 @@ on run arguments
 end run
 APPLESCRIPT
         ;;
+      search-downloads)
+        if native_input fill downloads-search resumed-download.bin; then
+          native_input expect-text downloads-result-count "1 shown" || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        else
+          touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        fi
+        ;;
       save-download|save-snapshot) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
       address-cancel-query)
         osascript -e 'tell application "System Events" to tell process "Serein"' -e 'keystroke "l" using command down' -e 'keystroke "a" using command down' -e 'keystroke "https://serein-cancel.invalid/"' -e 'end tell'

@@ -194,8 +194,9 @@ import SereinCore
         error="Downloads are still stopping. Wait for them to pause and quit again."
         return false
     }
-    func visible(in session:BrowserSession)->[DownloadItem] {
+    func visible(in session:BrowserSession,query:String="",filter:DownloadListFilter = .all)->[DownloadItem] {
         items.filter{session.state.isPrivate ? $0.record.privateWindowID==session.state.id : !$0.privateMode}
+            .filter{filter.includes($0.record) && $0.record.matchesSearch(query)}
     }
     func clearFinished(in session:BrowserSession) {
         let ids=Set(visible(in:session).filter(\.finished).map(\.id))
