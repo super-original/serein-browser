@@ -82,21 +82,8 @@ for i in $(seq 1 2400); do
       prepare-save-download|prepare-save-snapshot)
         SAVE_NAME="native-save-result.txt"
         if test "$KEYBOARD_NAME" = prepare-save-snapshot; then SAVE_NAME="native-page-screenshot.png"; fi
-        osascript - "$ROOT" "$SAVE_NAME" <<'APPLESCRIPT'
-on run arguments
-  with timeout of 5 seconds
-  tell application "System Events" to tell process "Serein"
-    keystroke "g" using {command down, shift down}
-    delay 0.5
-    keystroke item 1 of arguments
-    key code 36
-    delay 0.7
-    keystroke "a" using command down
-    keystroke item 2 of arguments
-  end tell
-  end timeout
-end run
-APPLESCRIPT
+        INITIAL_SAVE_NAME=$(cat "$ROOT/save-panel-initial-name")
+        native_input prepare-save "$ROOT" "$SAVE_NAME" "$INITIAL_SAVE_NAME" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;
       split-page-key) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "k"' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
       split-rows|split-columns|split-grid|split-unsplit)

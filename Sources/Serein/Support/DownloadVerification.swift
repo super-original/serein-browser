@@ -24,8 +24,10 @@ import SereinCore
         let presented=await wait{session.window?.attachedSheet is NSSavePanel}
         check("download-save-panel-visible",presented)
         if let panel=session.window?.attachedSheet as? NSSavePanel {
+            try? panel.nameFieldStringValue.write(to:root.appendingPathComponent("save-panel-initial-name"),atomically:true,encoding:.utf8)
             try? "prepare-save-download".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
             _=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("prepare-save-download.keyboard-finished").path)}
+            check("download-save-filename-entry",!FileManager.default.fileExists(atPath:root.appendingPathComponent("prepare-save-download.keyboard-failed").path) && panel.nameFieldStringValue=="native-save-result.txt" && panel.directoryURL?.resolvingSymlinksInPath()==root.resolvingSymlinksInPath())
             let capture="21-download-save-panel"
             try? capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
             let captured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path)}

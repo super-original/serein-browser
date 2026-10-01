@@ -4,15 +4,19 @@
 
 ## Latest completed source
 
-`89aa2493ec168422cd43f4946adca2277716efcf`: [run 36838423580](https://github.com/super-original/serein-browser/actions/runs/36838423580) passes **147 Swift unit tests, three process-attribution tests and 731/761 browser checks**. All eight new folder-placement checks pass, including actual before/after pointer drags, tree/icon/live-page preservation, atomic rejection and session order. The retrieved original `70-folder-reordered.png` was inspected; the collapsed folder retains its selected page and custom symbol in the expected order. The 30 retained structural failures and desktop-rendering gate still fail.
+`4d98576242c157790937e2f2c81d7cd1306d041d`: [run 36839705733](https://github.com/super-original/serein-browser/actions/runs/36839705733) passes **149 Swift unit tests, three process-attribution tests and 732/764 browser checks**. All three new split-sidebar checks pass: actual horizontal control geometry, native selection preserving all live panes, and Command-W closing the selected pane. Retrieved original four-pane and three-pane screenshots were inspected. Four labels are heavily truncated at the pinned sidebar width; three remain more readable. Website content is still blank.
 
-[Development app](https://github.com/super-original/serein-browser/actions/runs/36838423580/artifacts/11151300151) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36838423580/artifacts/11150324320). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36839705733/artifacts/11150493392) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36839705733/artifacts/11150902510). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+
+The 30 retained structural failures and desktop-rendering gate still fail. Two additional screenshot-save checks fail because native filename typing raced focus restoration: the inspected save-panel capture contains `ot.png`. The pending repair waits for stable Save As focus and verifies exact directory/name entry for both downloads and screenshots before confirmation; destination and PNG assertions remain unchanged.
+
+At `89aa2493`, all eight folder-placement checks pass, including actual before/after pointer drags, tree/icon/live-page preservation, atomic rejection and session order. Its retrieved `70-folder-reordered.png` was inspected; the collapsed folder retains its selected page and custom symbol in the expected order.
 
 At `81dafd3`, all 26 folder checks pass, including native icon selection, staged editing, Save, Cancel, reset and persistence. Its picker and sidebar screenshots were inspected. Split focus/restoration repairs remain verified: actual page keys reach the selected WKWebView after arrangement changes, and restored boundaries match saved fractions.
 
 The pinned Zen [reference run 36835530027](https://github.com/super-original/serein-browser/actions/runs/36835530027) passes all 25 captures. Both new three-pane shortcut screenshots and both matching Serein captures were retrieved and inspected; [side-by-side comparison and limitations](evidence/2026-10-01/split-layouts/README.md). Serein's website content remains blank, despite correct native pane geometry. Both uBO origin scenarios pass 13/13 narrow checks; history/privacy restart is 24/24 and download restart 21/21.
 
-The next change joins contiguous regular split tabs in a native sidebar strip, preserving tab/API order and individual controls. Two model tests and three native/keyboard checks await macOS verification. Mixed-category/noncontiguous and persistent multiple groups remain unfinished.
+Contiguous regular split tabs now join in a native sidebar strip, preserving tab/API order and individual controls; two model tests and three native/keyboard checks pass. Mixed-category/noncontiguous and persistent multiple groups remain unfinished.
 
 At `b236aa8`, all four download-search checks, six persistent-ID checks, 21 cross-launch download checks, 24 history/privacy checks, 32 favicon checks and seven extension-error checks pass. Both uBO origin modes passed 13/13 then; earlier options timeouts remain intermittent. The filtered-download screenshot and exact native keyboard result count were inspected.
 
@@ -46,7 +50,7 @@ Fresh baseline and WebGPU-first fullscreen each fail four checks in af67df3. Web
 | 2 | Browser completeness | File/extension back/forward history, profiles/containers, import/sync, wider settings and recovery coverage; see [parity checklist](ZEN_PARITY.md) |
 | 3 | Distribution acceptance | Working ARM64 app, actual installation/signing status, reproducible exact-source CI, inspected runtime and complete feature/extension evidence |
 
-The [extension matrix](EXTENSIONS.md) separates feasible host/API implementation gaps from public platform restrictions. The original seven exact packages request missing capabilities including downloads, history, sessions, tabGroups, idle, identity, offscreen, sidePanel, privacy and blocking webRequest. A narrow isolated native-message namespace experiment passes MV2/MV3, but is not a downloads implementation or a production admission exception. Native Safari formats have no established public host entry point. A custom-engine build/distribution/security-update plan has not been proven feasible within the free-runner limit.
+The [extension matrix](EXTENSIONS.md) separates feasible host/API implementation gaps from public platform restrictions. The original seven exact packages request missing capabilities including downloads, history, sessions, tabGroups, idle, identity, offscreen, sidePanel, privacy and blocking webRequest. A narrow isolated native-message namespace experiment passes MV2/MV3, but is not a downloads implementation or a production admission exception. Native Safari formats have no established public host entry point. A bounded unmodified public-WebKit build experiment is prepared with explicit time, disk and memory stops; [plan and acceptance limits](WEBKIT_FEASIBILITY.md). No build feasibility, engine adoption or compatibility result is claimed before it runs.
 
 ## Verified scope and limits
 

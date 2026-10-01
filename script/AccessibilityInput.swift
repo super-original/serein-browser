@@ -136,6 +136,31 @@ if mode=="press" {
     let matches=items.filter{text($0,kAXIdentifierAttribute)==arguments[3]}
     guard matches.count==1,text(matches[0],kAXValueAttribute)==arguments[4] || text(matches[0],kAXTitleAttribute)==arguments[4] else{fail("Expected exact native result count\n"+describe(items))}
     print("Verified native download count: \(arguments[4])")
+} else if mode=="prepare-save" {
+    guard arguments.count==6 else{fail("Expected directory, filename and initial save name")}
+    let path=arguments[3],name=arguments[4],initial=arguments[5]
+    guard path.hasPrefix("/"),!path.contains("\n"),!path.contains("\r"),!name.isEmpty,!name.contains("/"),!initial.isEmpty else{fail("Invalid fixture save destination")}
+    key(5,flags:[.maskCommand,.maskShift])
+    Thread.sleep(forTimeInterval:0.35)
+    guard let field=focused(),editable(field) else{fail("Go to Folder editor unavailable")}
+    key(0,flags:.maskCommand);type(path,throughSystem:true)
+    Thread.sleep(forTimeInterval:0.2)
+    guard let entered=focused(),editable(entered),text(entered,kAXValueAttribute)==path else{fail("Go to Folder did not receive exact directory")}
+    key(36)
+    let initialNames=[initial,(initial as NSString).deletingPathExtension]
+    var ready:AXUIElement?
+    while ProcessInfo.processInfo.systemUptime<deadline {
+        if let field=focused(),editable(field),initialNames.contains(text(field,kAXValueAttribute)) {
+            Thread.sleep(forTimeInterval:0.15)
+            if let stable=focused(),CFEqual(field,stable),initialNames.contains(text(stable,kAXValueAttribute)) {ready=stable;break}
+        }
+        Thread.sleep(forTimeInterval:0.05)
+    }
+    guard let ready else{fail("Save As editor did not regain stable focus\n"+describe(controls()))}
+    key(0,flags:.maskCommand);type(name,throughSystem:true)
+    Thread.sleep(forTimeInterval:0.2)
+    guard text(ready,kAXValueAttribute)==name else{fail("Save As field did not receive exact filename: \(text(ready,kAXValueAttribute))")}
+    print("Prepared exact native Save As name; confirmation left untouched")
 } else if mode=="pick-file" {
     let path=arguments[3]
     guard path.hasPrefix("/"),!path.contains("\n"),!path.contains("\r") else{fail("Expected absolute fixture path")}

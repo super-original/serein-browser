@@ -34,9 +34,11 @@ import WebKit
             let saved=Task{try await PageSnapshot.save(in:session)}
             let presented=await wait{session.window?.attachedSheet is NSSavePanel}
             check("save-sheet",presented)
-            if presented {
+            if presented,let panel=session.window?.attachedSheet as? NSSavePanel {
+                try panel.nameFieldStringValue.write(to:root.appendingPathComponent("save-panel-initial-name"),atomically:true,encoding:.utf8)
                 try "prepare-save-snapshot".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
                 _=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("prepare-save-snapshot.keyboard-finished").path)}
+                check("native-save-filename-entry",!FileManager.default.fileExists(atPath:root.appendingPathComponent("prepare-save-snapshot.keyboard-failed").path) && panel.nameFieldStringValue=="native-page-screenshot.png" && panel.directoryURL?.resolvingSymlinksInPath()==root.resolvingSymlinksInPath())
                 try "58-page-screenshot-save".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
                 let captured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("58-page-screenshot-save.capture-finished").path)}
                 check("save-sheet-capture",captured)
