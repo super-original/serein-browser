@@ -79,9 +79,9 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Containers / profiles / per-site isolation | U | Not implemented |
 | Zen Mods / themes / gradient editor | U | Not implemented; native glass adaptation is separate |
 | Sync / account / import wizard | U | Not implemented |
-| Tab unloading | P | Manual with warning and document/selection revalidation; old-view release and in-memory back/current/forward/zoom restoration verified at `3209fee`, including extension resources. No automatic suspension or cross-launch history restoration |
+| Tab unloading | P | Manual with warning and document/selection revalidation; old-view release and in-memory back/current/forward/zoom restoration verified at `3209fee`, including extension resources. Opt-in automatic idle unloading passes 20 policy and five real-audio checks at `49e5da0`. No cross-launch history restoration |
 | Keyboard customization | U | Fixed native shortcuts only |
-| Picture-in-picture / screenshot tools | U | Not implemented as browser commands |
+| Picture-in-picture / screenshot tools | P | Viewport PNG save command with native destination sheet implemented, pending runtime verification; full-page/region selection and picture-in-picture commands absent |
 | Full extension compatibility | U | See detailed matrix; target remains unmet |
 
 This checklist is intentionally not a claim of complete Zen parity.

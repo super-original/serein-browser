@@ -23,6 +23,7 @@ import SereinCore
     var folderEditor:FolderEditorRequest?
     var compactRevealed=false
     var error: String?
+    var savingPageSnapshot=false
     @ObservationIgnored weak var manager: BrowserManager?
     @ObservationIgnored weak var window: NSWindow?
     @ObservationIgnored var runtimes: [UUID:TabRuntime] = [:]

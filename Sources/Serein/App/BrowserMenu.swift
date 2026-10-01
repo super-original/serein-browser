@@ -17,11 +17,12 @@ import AppKit
         submenu("View",[item("Focus Address","l",action:#selector(address)),item("Reload","r",action:#selector(reload)),item("Stop Loading",".",action:#selector(stop)),.separator(),item("Toggle Sidebar","s",mods:[.command,.shift],action:#selector(sidebar)),item("Toggle Compact Mode","c",mods:[.command,.option],action:#selector(compact)),item("Split with Next Tab","s",mods:[.command,.option],action:#selector(split)),item("Exit Split View",action:#selector(unsplit)),item("Close Preview","\u{1b}",mods:[],action:#selector(closeGlance)),.separator(),item("Zoom In","+",action:#selector(zoomIn)),item("Zoom Out","-",action:#selector(zoomOut)),item("Actual Size","0",action:#selector(actualSize)),item("Enter Full Screen","f",mods:[.command,.control],action:#selector(fullscreen))])
         submenu("History",[item("Back","[",action:#selector(back)),item("Forward","]",action:#selector(forward)),item("History","y",action:#selector(history))])
         submenu("Bookmarks",[item("Bookmark This Page","d",action:#selector(bookmark)),item("Show Bookmarks",action:#selector(bookmarks))])
-        submenu("Tools",[item("Downloads","j",action:#selector(downloads)),item("Extensions",action:#selector(extensions))])
+        submenu("Tools",[item("Downloads","j",action:#selector(downloads)),item("Extensions",action:#selector(extensions)),.separator(),item("Save Page Screenshot…",action:#selector(savePageScreenshot))])
         submenu("Window",[item("Minimize","m",action:#selector(minimize)),item("Next Tab","\t",mods:.control,action:#selector(nextTab)),item("Previous Tab","\t",mods:[.control,.shift],action:#selector(previousTab))])
         NSApp.mainMenu=bar;NSApp.windowsMenu=bar.items.last?.submenu
     }
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == #selector(savePageScreenshot) {guard let session=manager?.active else{return false};return PageSnapshot.available(in:session)}
         if item.action == #selector(newFolder) {return manager != nil && manager?.active?.window?.attachedSheet==nil}
         if item.action == #selector(closeGlance) {return manager?.active?.state.activeGlance != nil && manager?.active?.window?.attachedSheet == nil && manager?.active?.findVisible == false && manager?.active?.addressFocused == false && manager?.active?.current?.loadedWebView?.fullscreenState == .notInFullscreen}
         if item.action == #selector(back) {return manager?.active?.current?.canGoBack ?? false}
@@ -57,6 +58,10 @@ import AppKit
     @objc func bookmark(){manager?.active?.bookmark()}
     @objc func downloads(){manager?.active?.libraryPanel = .downloads}
     @objc func extensions(){manager?.active?.libraryPanel = .extensions}
+    @objc func savePageScreenshot(){
+        guard let session=manager?.active else{return}
+        Task {do{_ = try await PageSnapshot.save(in:session)}catch{session.error=error.localizedDescription}}
+    }
     @objc func settings(){if manager?.active==nil{manager?.newWindow()};manager?.active?.libraryPanel = .settings}
     @objc func sidebar(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .collapsed ? .expanded : .collapsed}
     @objc func compact(){guard let s=manager?.active else{return};s.state.sidebar=s.state.sidebar == .compact ? .expanded : .compact;s.compactRevealed=false}

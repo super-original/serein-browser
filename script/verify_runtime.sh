@@ -74,8 +74,10 @@ for i in $(seq 1 2400); do
     KEYBOARD_NAME=$(cat "$ROOT/keyboard-request")
     rm "$ROOT/keyboard-request"
     case "$KEYBOARD_NAME" in
-      prepare-save-download)
-        osascript - "$ROOT" <<'APPLESCRIPT'
+      prepare-save-download|prepare-save-snapshot)
+        SAVE_NAME="native-save-result.txt"
+        if test "$KEYBOARD_NAME" = prepare-save-snapshot; then SAVE_NAME="native-page-screenshot.png"; fi
+        osascript - "$ROOT" "$SAVE_NAME" <<'APPLESCRIPT'
 on run arguments
   with timeout of 5 seconds
   tell application "System Events" to tell process "Serein"
@@ -85,13 +87,13 @@ on run arguments
     key code 36
     delay 0.7
     keystroke "a" using command down
-    keystroke "native-save-result.txt"
+    keystroke item 2 of arguments
   end tell
   end timeout
 end run
 APPLESCRIPT
         ;;
-      save-download) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
+      save-download|save-snapshot) osascript -e 'tell application "System Events" to tell process "Serein" to key code 36' ;;
       address-cancel-query)
         osascript -e 'tell application "System Events" to tell process "Serein"' -e 'keystroke "l" using command down' -e 'keystroke "a" using command down' -e 'keystroke "https://serein-cancel.invalid/"' -e 'end tell'
         ;;

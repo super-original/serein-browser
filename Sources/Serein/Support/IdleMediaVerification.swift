@@ -33,6 +33,8 @@ import WebKit
         check("public-playing-state",foreground==WKMediaPlaybackState.playing,String(describing:foreground))
         if let owner{session.select(owner)}else{session.newTab()}
         await wait{view.window==nil}
+        let background=await TabSuspensionController.playbackState(view)
+        check("inactive-page-still-playing",background==WKMediaPlaybackState.playing,String(describing:background))
         runtime.noteActivity(at:ContinuousClock().now.advanced(by:.seconds(-16*60)))
         let playingCount=await manager.tabSuspension.sweep(idleMinutes:15)
         check("inactive-playing-page-retained",playingCount==0 && runtime.loadedWebView === view)

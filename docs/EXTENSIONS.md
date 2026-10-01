@@ -9,7 +9,7 @@
 | Chrome Manifest V2 | Partial | ZIP/unpacked loading; controlled persistent-background fixture passes limited semantics. CRX3 verification tested; CRX2/store installation absent. |
 | Firefox Manifest V2 | Partial | XPI/unpacked loading; Firefox-specific semantics and APIs not implemented universally. |
 | Chrome Manifest V3 | Partial | Controlled service-worker fixture passes limited semantics. Lifetime, wakeup, DNR, offscreen and full Chrome API conformance not established. |
-| Firefox Manifest V3 | Partial / functional failures | uBO Lite 2026.930.1227 loads, but shipped-rule blocking and original options/background messaging fail; no functional compatibility established. |
+| Firefox Manifest V3 | Partial | Unmodified uBO Lite 2026.930.1227 passes 13/13 narrow blocking/options/disable checks in both tested origin modes at `f8e857d`. Experimental custom-origin messaging times out again at `49e5da0` (12/13); full Firefox API/lifecycle compatibility is not established. |
 | Safari Web Extensions | Partial | Shared manifest resources load through public WebKit; intact Safari Web Extension `.appex` installation passes controlled runtime checks. App Store acquisition and Safari native handlers remain unsupported. |
 | Native Safari App Extensions | Blocked / unsupported | No documented third-party hosting entry point found for arbitrary SafariServices native extension handlers. |
 | Legacy Safari `.safariextz` and earlier | Unsupported | No loader or compatibility runtime. |
