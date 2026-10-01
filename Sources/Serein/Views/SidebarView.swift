@@ -103,7 +103,7 @@ struct SidebarView: View {
         TabRow(session:session,tab:tab,compact:collapsed || essential)
             .draggable(session.sidebarDrag(tab.id,kind:.tab))
             .dropDestination(for:SidebarDragItem.self){items,point in
-                session.acceptSidebarDrop(items,at:point.y>18 ? .afterTab(tab.id) : .beforeTab(tab.id))
+                session.acceptSidebarDrop(items,at:point.y>(tab.kind == .essential ? 22 : 18) ? .afterTab(tab.id) : .beforeTab(tab.id))
             }
     }
 }

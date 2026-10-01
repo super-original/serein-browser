@@ -25,6 +25,7 @@ import SereinCore
                 guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("No extension context")}
                 check("\(name)-declared-action-available",host.hasAction(id) && host.actionEnabled(id,in:session))
                 check("\(name)-resource-origin-scheme",context.baseURL.scheme=="webkit-extension","Default resource origins; custom Firefox origin is isolated in a separate process")
+                results += await ExtensionSenderVerification.resourcePage(session:session,context:context,name:name)
                 results += await ExtensionWindowCloseVerification.run(manager:manager,context:context,name:name)
                 for pattern in context.webExtension.requestedPermissionMatchPatterns {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
                 session.current!.webView.reload()

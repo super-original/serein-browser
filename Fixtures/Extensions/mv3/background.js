@@ -56,6 +56,11 @@ browser.commands?.onCommand?.addListener(async command => {
 // Serialize this fixture's destructive lifecycle scenario, not browser events.
 let probeQueue = Promise.resolve();
 browser.runtime.onMessage.addListener((message, sender, reply) => {
+  if (message.type === 'sender-probe') {
+    reply({senderURL:sender.url ?? null,origin:sender.origin ?? null,
+      frameId:sender.frameId ?? null,backgroundURL:browser.runtime.getURL('')});
+    return false;
+  }
   if (message.type !== 'probe') return false;
   probeQueue = probeQueue.then(async () => {
     const previous = await browser.storage.local.get('count');

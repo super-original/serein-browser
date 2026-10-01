@@ -35,6 +35,7 @@ import SereinCore
             stage("background")
             let failure=await ExtensionBackgroundProbe.failure(for:context)
             check("background-load-completes",failure==nil,failure ?? "")
+            results += await ExtensionSenderVerification.run(view:view,context:context,name:"custom-origin")
             stage("capture")
             try? "resource-page".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
             for _ in 0..<50 {if FileManager.default.fileExists(atPath:root.appendingPathComponent("resource-page.capture-finished").path){break};try? await Task.sleep(for:.milliseconds(100))}
