@@ -80,6 +80,24 @@ if mode=="press" {
     guard matching.count==1 else{fail("Expected exactly one \(identifier) control\n"+describe(items))}
     guard AXUIElementPerformAction(matching[0],kAXPressAction as CFString) == .success else{fail("AXPress failed")}
     print("Pressed \(identifier) through \(exact.isEmpty ? "unique native label" : "identifier")")
+} else if mode=="split-tabs" {
+    let identifiers=arguments[3].split(separator:",").map(String.init)
+    guard (2...4).contains(identifiers.count),Set(identifiers).count==identifiers.count,
+          identifiers.allSatisfy({$0.hasPrefix("tab-") && UUID(uuidString:String($0.dropFirst(4))) != nil}) else{fail("Expected two to four fixture tab identifiers")}
+    let items=controls()
+    var buttons:[AXUIElement]=[],frames:[CGRect]=[]
+    for identifier in identifiers {
+        let matches=items.filter{text($0,kAXIdentifierAttribute)==identifier && text($0,kAXRoleAttribute)==kAXButtonRole}
+        guard matches.count==1,let position=value(matches[0],kAXPositionAttribute),let size=value(matches[0],kAXSizeAttribute),
+              CFGetTypeID(position)==AXValueGetTypeID(),CFGetTypeID(size)==AXValueGetTypeID() else{fail("Split tab control missing or duplicated: \(identifier)\n"+describe(items))}
+        var point=CGPoint.zero,dimensions=CGSize.zero
+        guard AXValueGetValue(unsafeBitCast(position,to:AXValue.self),.cgPoint,&point),
+              AXValueGetValue(unsafeBitCast(size,to:AXValue.self),.cgSize,&dimensions),dimensions.width>10,dimensions.height>10 else{fail("Invalid split tab bounds")}
+        buttons.append(matches[0]);frames.append(CGRect(origin:point,size:dimensions))
+    }
+    guard zip(frames,frames.dropFirst()).allSatisfy({a,b in abs(a.minY-b.minY)<2 && a.maxX<=b.minX+1}) else{fail("Split tabs are not independent horizontal native controls: \(frames)")}
+    guard let last=buttons.last,AXUIElementPerformAction(last,kAXPressAction as CFString) == .success else{fail("Split tab selection failed")}
+    print("Native horizontal split controls: \(frames)")
 } else if mode=="drag" {
     guard arguments.count==6,["before","after"].contains(arguments[5]) else{fail("Expected source, destination and before/after placement")}
     let items=controls()

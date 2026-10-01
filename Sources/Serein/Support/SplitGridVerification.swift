@@ -37,6 +37,13 @@ import SereinCore
         check("four-pane-native-grid-geometry",grid,frames.map{NSStringFromRect($0)}.joined(separator:"; "))
         let balanced=frames.count==4 && abs(frames[0].height-frames[1].height)<=1 && abs(frames[2].height-frames[3].height)<=1 && abs(frames[0].width-frames[2].width)<=1 && abs(frames[2].minX-frames[0].maxX-8)<=1
         check("four-pane-balanced-rows-and-reference-gap",balanced,frames.map{NSStringFromRect($0)}.joined(separator:"; "))
+        try? ids.map{"tab-"+$0.uuidString}.joined(separator:",").write(to:root.appendingPathComponent("split-sidebar-identifiers"),atomically:true,encoding:.utf8)
+        let sidebarViews=ids.compactMap{session.runtimes[$0]?.loadedWebView}.map(ObjectIdentifier.init)
+        let sidebarDone=root.appendingPathComponent("split-sidebar-select.keyboard-finished")
+        try? "split-sidebar-select".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+        for _ in 0..<100 {if FileManager.default.fileExists(atPath:sidebarDone.path){break};try? await Task.sleep(for:.milliseconds(100))}
+        check("split-sidebar-horizontal-native-controls",FileManager.default.fileExists(atPath:sidebarDone.path) && !FileManager.default.fileExists(atPath:root.appendingPathComponent("split-sidebar-select.keyboard-failed").path))
+        check("split-sidebar-native-selection-retains-panes-and-live-views",session.state.selectedTabID==ids.last && session.state.splitTabIDs==ids && ids.compactMap{session.runtimes[$0]?.loadedWebView}.map(ObjectIdentifier.init)==sidebarViews)
         var focus=true
         for id in ids {
             session.select(id);session.focusContent(ifSelected:id)
@@ -157,7 +164,9 @@ import SereinCore
         let pair=await layoutKey("split-columns")
         check("split-layout-keyboard-creates-next-pair",pair && session.state.splitTabIDs.count==2 && session.state.resolvedSplitLayout == .columns)
         _=session.state.setSplitTabs(ids);session.state.setSplitLayout(.grid)
-        session.close(ids[3],ask:false)
+        session.select(ids[3])
+        let closedByKeyboard=await layoutKey("split-sidebar-close")
+        check("split-sidebar-keyboard-close",closedByKeyboard && !session.state.tabs.contains{$0.id==ids[3]})
         check("closing-grid-pane-retains-other-three",session.state.splitTabIDs==Array(ids.prefix(3)))
         for layout in [SplitLayout.rows,.columns] {
             let key=await layoutKey("split-"+layout.rawValue)

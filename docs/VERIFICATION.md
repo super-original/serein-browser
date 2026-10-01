@@ -4,15 +4,15 @@
 
 ## Latest completed source
 
-`81dafd37dc30a9e5497cfbf8e906711ce62744d4`: [run 36837180808](https://github.com/super-original/serein-browser/actions/runs/36837180808) passes **145 Swift unit tests, three process-attribution tests and 723/753 browser checks**. All 26 folder checks pass, including native icon selection, staged editing, Save, Cancel, reset and persistence. Both new original screenshots (`68-folder-icon-picker.png`, `69-folder-custom-icon.png`) were retrieved and inspected: clear selected styling, visible labels, unclipped native sheet and saved sidebar symbol. The 30 retained structural failures and desktop-rendering gate still fail.
+`89aa2493ec168422cd43f4946adca2277716efcf`: [run 36838423580](https://github.com/super-original/serein-browser/actions/runs/36838423580) passes **147 Swift unit tests, three process-attribution tests and 731/761 browser checks**. All eight new folder-placement checks pass, including actual before/after pointer drags, tree/icon/live-page preservation, atomic rejection and session order. The retrieved original `70-folder-reordered.png` was inspected; the collapsed folder retains its selected page and custom symbol in the expected order. The 30 retained structural failures and desktop-rendering gate still fail.
 
-[Development app](https://github.com/super-original/serein-browser/actions/runs/36837180808/artifacts/11149953031) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36837180808/artifacts/11150067685). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36838423580/artifacts/11151300151) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36838423580/artifacts/11150324320). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
 
-All four earlier split defects remain repaired: actual page keys reach the selected WKWebView after rows/columns/grid changes, and restored native row boundaries match saved fractions. Live documents, native dragging and keyboard geometry pass.
+At `81dafd3`, all 26 folder checks pass, including native icon selection, staged editing, Save, Cancel, reset and persistence. Its picker and sidebar screenshots were inspected. Split focus/restoration repairs remain verified: actual page keys reach the selected WKWebView after arrangement changes, and restored boundaries match saved fractions.
 
 The pinned Zen [reference run 36835530027](https://github.com/super-original/serein-browser/actions/runs/36835530027) passes all 25 captures. Both new three-pane shortcut screenshots and both matching Serein captures were retrieved and inspected; [side-by-side comparison and limitations](evidence/2026-10-01/split-layouts/README.md). Serein's website content remains blank, despite correct native pane geometry. Both uBO origin scenarios pass 13/13 narrow checks; history/privacy restart is 24/24 and download restart 21/21.
 
-The next change adds before/after folder sibling placement with atomic validation, two core tests and eight native/runtime checks. It is pending macOS verification; no full folder parity is claimed.
+The next change joins contiguous regular split tabs in a native sidebar strip, preserving tab/API order and individual controls. Two model tests and three native/keyboard checks await macOS verification. Mixed-category/noncontiguous and persistent multiple groups remain unfinished.
 
 At `b236aa8`, all four download-search checks, six persistent-ID checks, 21 cross-launch download checks, 24 history/privacy checks, 32 favicon checks and seven extension-error checks pass. Both uBO origin modes passed 13/13 then; earlier options timeouts remain intermittent. The filtered-download screenshot and exact native keyboard result count were inspected.
 

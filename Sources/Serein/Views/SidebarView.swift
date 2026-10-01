@@ -48,7 +48,19 @@ struct SidebarView: View {
                     Divider().padding(.vertical,8)
                     Button {session.newTab()} label:{HStack(spacing:10){Image(systemName:"plus");if !collapsed {Text("New Tab");Spacer()}}.frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,10).frame(height:36)}
                         .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityIdentifier("new-tab")
-                    ForEach(session.state.visibleTabs.filter{$0.kind == .regular}){tab in tabRow(tab)}
+                    ForEach(session.state.regularSidebarRows) { row in
+                        if row.tabIDs.count>1 {
+                            HStack(spacing:4) {
+                                ForEach(row.tabIDs,id:\.self) { id in
+                                    if let tab=session.state.tabs.first(where:{$0.id==id}) {tabRow(tab,joined:true)}
+                                }
+                            }.padding(4)
+                                .background(Color.primary.opacity(0.045),in:.rect(cornerRadius:10))
+                                .accessibilityElement(children:.contain)
+                                .accessibilityLabel("Split View, \(row.tabIDs.count) tabs")
+                                .accessibilityIdentifier("split-tab-group")
+                        } else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
+                    }
                 }
             }.scrollIndicators(.hidden)
             if let host=session.extensions,!host.records.filter({$0.enabled && host.hasAction($0.id)}).isEmpty {
@@ -99,11 +111,11 @@ struct SidebarView: View {
             }.padding(24).frame(width:320)
         }
     }
-    private func tabRow(_ tab: BrowserTab,essential: Bool = false) -> some View {
-        TabRow(session:session,tab:tab,compact:collapsed || essential)
+    private func tabRow(_ tab: BrowserTab,essential: Bool = false,joined:Bool=false) -> some View {
+        TabRow(session:session,tab:tab,compact:collapsed || essential,joined:joined)
             .draggable(session.sidebarDrag(tab.id,kind:.tab))
             .dropDestination(for:SidebarDragItem.self){items,point in
-                session.acceptSidebarDrop(items,at:point.y>(tab.kind == .essential ? 22 : 18) ? .afterTab(tab.id) : .beforeTab(tab.id))
+                session.acceptSidebarDrop(items,at:point.y>(tab.kind == .essential ? 22 : joined ? 14 : 18) ? .afterTab(tab.id) : .beforeTab(tab.id))
             }
     }
 }
@@ -111,11 +123,12 @@ private struct TabRow: View {
     let session: BrowserSession
     let tab: BrowserTab
     let compact: Bool
+    let joined: Bool
     @State private var hovering=false
     var body: some View {
-        HStack(spacing:10) {
+        HStack(spacing:joined ? 4 : 10) {
             Button {session.clickTab(tab.id,modifiers:NSApp.currentEvent?.modifierFlags ?? [])} label: {
-                HStack(spacing:10) {
+                HStack(spacing:joined ? 4 : 10) {
                     if let icon=session.runtimes[tab.id]?.pageIcon {Image(nsImage:icon).resizable().interpolation(.high).scaledToFit().frame(width:16,height:16).accessibilityHidden(true)}
                     else {Image(systemName:tab.kind == .essential ? "star.fill" : "globe").font(.system(size:14)).frame(width:16,height:16).accessibilityHidden(true)}
                     if !compact {Text(tab.title).font(.system(size:13,weight:session.state.sidebarSelectedTabID==tab.id ? .semibold : .regular)).lineLimit(1);Spacer(minLength:0)}
@@ -124,9 +137,9 @@ private struct TabRow: View {
             if session.state.glance(for:tab.id) != nil {
                 Button {session.select(tab.id)} label:{Image(systemName:"rectangle.on.rectangle").font(.system(size:12)).frame(width:24,height:24)}.buttonStyle(.plain).accessibilityLabel("Show Link Preview").help("Show Link Preview")
             }
-            if !compact,hovering,tab.kind == .regular {Button("Close Tab",systemImage:"xmark"){session.close(tab.id)}.labelStyle(.iconOnly).font(.system(size:10)).buttonStyle(.plain)}
+            if !compact,!joined,hovering,tab.kind == .regular {Button("Close Tab",systemImage:"xmark"){session.close(tab.id)}.labelStyle(.iconOnly).font(.system(size:10)).buttonStyle(.plain)}
         }
-        .padding(.horizontal,10).frame(height:tab.kind == .essential ? 44 : 36)
+        .padding(.horizontal,joined ? 4 : 10).frame(maxWidth:.infinity).frame(height:tab.kind == .essential ? 44 : joined ? 28 : 36)
         .background(session.state.sidebarSelectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : tab.kind == .essential ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
         .onHover{hovering=$0}.help(tab.title+"\n"+tab.url)
         .contextMenu {

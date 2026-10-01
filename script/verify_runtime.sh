@@ -149,6 +149,13 @@ SPLITINPUT
         if test "$KEYBOARD_NAME" = sidebar-reorder-after || test "$KEYBOARD_NAME" = sidebar-folder-after; then DROP_PLACEMENT=after; fi
         native_input drag "$SOURCE_IDENTIFIER" "$TARGET_IDENTIFIER" "$DROP_PLACEMENT" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;
+      split-sidebar-select)
+        SPLIT_IDENTIFIERS=$(cat "$ROOT/split-sidebar-identifiers")
+        native_input split-tabs "$SPLIT_IDENTIFIERS" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
+      split-sidebar-close)
+        osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "w" using command down' > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
       folder-name)
         native_input fill folder-name "Research notes" > "$ROOT/folder-name-input.log" 2>&1 || touch "$ROOT/folder-name.keyboard-failed"
         ;;
