@@ -62,9 +62,27 @@ import SereinCore
                 suspendedState=nil;view.pageZoom=suspendedZoom
                 if configurationContext != nil {prepareHistoryRestore(state,in:view,at:url)}
                 else {view.interactionState=state}
+            } else if let record=session?.manager?.restoredNavigation.removeValue(forKey:id),
+                      session?.manager?.restoresNavigation==true,session?.state.isPrivate==false,
+                      record.windowID==session?.state.id,record.url==url.absoluteString,
+                      record.engine==BrowserManager.navigationEngine {
+                view.interactionState=record.state
+                if view.backForwardList.currentItem?.url != url {view.load(url)}
             } else if url.absoluteString != "about:blank" {view.load(url)}
         }
         return view
+    }
+    func savedNavigation(engine:String)->SavedNavigationHistory? {
+        guard !engine.isEmpty,let session,!session.state.isPrivate,let view=storedView,!view.isLoading,
+              !hasUserEdits,!crashed,failure==nil,
+              let current=view.backForwardList.currentItem,
+              let tab=session.state.tabs.first(where:{$0.id==id}),tab.url==current.url.absoluteString,
+              let data=view.interactionState as? Data,!data.isEmpty,data.count<=2*1024*1024 else{return nil}
+        let entries=view.backForwardList.backList+[current]+view.backForwardList.forwardList
+        guard entries.allSatisfy({item in
+            [item.url,item.initialURL].allSatisfy{StoredPageURL.webHistoryURL($0.absoluteString)==$0.absoluteString}
+        }) else{return nil}
+        return SavedNavigationHistory(windowID:session.state.id,tabID:id,url:tab.url,engine:engine,state:data)
     }
     private func makeView(for url:URL?) -> WKWebView {
         let context=url.flatMap{session?.extensions?.controller.extensionContext(for:$0)}

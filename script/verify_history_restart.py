@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Probe public opaque navigation-state restoration across two app processes."""
+"""Exercise production history persistence and fallback in separate app processes."""
 import json
 import pathlib
 import stat
@@ -36,11 +36,23 @@ with (root / 'server.log').open('w') as log:
                 time.sleep(.1)
         else:
             raise AssertionError('Fixture server did not become ready')
-        for stage, expected in [('prepare', 2), ('resume', 5)]:
+        prepared = None
+        for stage, expected in [('prepare', 2), ('resume', 5), ('disabled', 2), ('mismatched-engine', 2), ('corrupt-state', 2)]:
+            fallback = stage not in ['prepare', 'resume']
+            app_stage = 'fallback' if fallback else stage
+            ready = root / f'{app_stage}-results.json'
+            ready.unlink(missing_ok=True)
+            if fallback:
+                session = json.loads(prepared)
+                if stage == 'mismatched-engine':
+                    session['navigationHistory'][0]['engine'] = 'different-WebKit-build'
+                elif stage == 'corrupt-state':
+                    session['navigationHistory'][0]['checksum'] = 'corrupt'
+                (root / 'session.json').write_text(json.dumps(session))
+
             with (root / f'{stage}.log').open('w') as stdout, (root / f'{stage}-error.log').open('w') as stderr:
-                process = subprocess.Popen([str(app), '--test-root', str(root), f'--history-restart-{stage}'], stdout=stdout, stderr=stderr)
+                process = subprocess.Popen([str(app), '--test-root', str(root), f'--history-restart-{app_stage}', '-restoreTabHistory', 'NO' if stage == 'disabled' else 'YES'], stdout=stdout, stderr=stderr)
                 try:
-                    ready = root / f'{stage}-results.json'
                     deadline = time.monotonic() + 70
                     while not ready.exists() and time.monotonic() < deadline:
                         assert process.poll() is None, f'{stage} exited before publishing readiness'
@@ -66,16 +78,22 @@ with (root / 'server.log').open('w') as log:
                 finally:
                     stop(process)
             assert code == 0, f'{stage} app exited with {code}'
-            stage_results = json.loads((root / f'{stage}-results.json').read_text())
+            stage_results = json.loads(ready.read_text())
+            if stage == 'prepare':
+                prepared = (root / 'session.json').read_text()
+            for item in stage_results:
+                item['name'] = stage + ':' + item['name']
+            if fallback:
+                (root / f'{stage}-results.json').write_text(json.dumps(stage_results, indent=2))
             results.extend(stage_results)
-            modes = {name: stat.S_IMODE((root / name).stat().st_mode) for name in ['.', 'session.json', 'fixture-interaction-state.bin']}
-            protected = modes == {'.': 0o700, 'session.json': 0o600, 'fixture-interaction-state.bin': 0o600}
+            modes = {name: stat.S_IMODE((root / name).stat().st_mode) for name in ['.', 'session.json']}
+            protected = modes == {'.': 0o700, 'session.json': 0o600}
             results.append({'name': f'{stage}-private-storage-permissions', 'passed': protected, 'detail': str(modes)})
             (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
             print(json.dumps(stage_results, indent=2), flush=True)
             assert len(stage_results) == expected, stage_results
             assert protected, modes
-        results.append({'name':'history-independent-process-exits','passed':True,'detail':'Two independent launches exited with status 0; history semantics are reported separately.'})
+        results.append({'name':'history-independent-process-exits','passed':True,'detail':'Five independent launches exited with status 0; history and fallback semantics are reported separately.'})
         (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
         assert all(item['passed'] for item in results), 'History restoration failures retained'
     finally:

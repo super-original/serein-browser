@@ -63,7 +63,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Compact mode | P | Edge reveal/hide; Zen's complete toolbar variants absent |
 | Split views | P | Explicit selected-tab grids up to four panes verified at `d4c80d1`; balanced native dividers and minimum-window bounds verified at `e32960d`; split-group tabs, incremental layout preservation and drag composition remain absent |
 | Multiple windows / moving tabs | P | Normal live-tab transfer through menu and typed drop targets; isolated private transfer deliberately rejected |
-| Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; full navigation-history restoration across launches remains absent |
+| Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; opt-in bounded HTTP(S) Back/Forward persistence implemented with build/version/privacy fallback, pending five-launch verification; file/extension and suspended-tab histories remain gaps |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
 | Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume passed the separate-process integrity/privacy gate at `29dabbf`; live ordinary downloads now pause on real Command-Q and resume after relaunch with full byte integrity at `c1e2498`; a live private transfer stays out of recovery files |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |

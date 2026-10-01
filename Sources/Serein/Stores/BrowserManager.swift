@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import WebKit
 import SereinCore
 
 @MainActor @Observable final class BrowserManager {
@@ -13,6 +14,17 @@ import SereinCore
     @ObservationIgnored lazy var menu=BrowserMenu(manager:self)
     @ObservationIgnored lazy var tabSuspension=TabSuspensionController(manager:self)
     let sidebarDragToken=UUID()
+    @ObservationIgnored var restoredNavigation:[UUID:SavedNavigationHistory]=[:]
+    static var navigationEngine:String {
+        guard let version=Bundle(for:WKWebView.self).object(forInfoDictionaryKey:"CFBundleVersion") as? String,!version.isEmpty else{return ""}
+        return ProcessInfo.processInfo.operatingSystemVersionString+"|"+version
+    }
+    var restoresNavigation:Bool {UserDefaults.standard.bool(forKey:"restoreTabHistory")}
+    func setRestoresNavigation(_ enabled:Bool) {
+        UserDefaults.standard.set(enabled,forKey:"restoreTabHistory")
+        if !enabled {restoredNavigation.removeAll()}
+        saveNow()
+    }
     let root: URL
     init(root: URL) {
         var storageError:String?
@@ -33,7 +45,17 @@ import SereinCore
     func restore() {
         let file=root.appendingPathComponent("session.json")
         if FileManager.default.fileExists(atPath:file.path) {
-            do {let saved=try SavedSession.decode(Data(contentsOf:file));for state in saved.windows {newWindow(state:state)}}
+            do {
+                let size=(try file.resourceValues(forKeys:[.fileSizeKey])).fileSize ?? Int.max
+                guard size<=32*1024*1024 else{throw PersistenceError.oversizedSession}
+                let saved=try SavedSession.decode(Data(contentsOf:file))
+                if restoresNavigation {
+                    for record in saved.navigationHistory ?? [] where record.engine==Self.navigationEngine {
+                        restoredNavigation[record.tabID]=record
+                    }
+                }
+                for state in saved.windows {newWindow(state:state)}
+            }
             catch {restorationError="The saved session could not be read. It has been preserved for recovery: \(error.localizedDescription)";try? FileManager.default.copyItem(at:file,to:root.appendingPathComponent("session-recovery-\(Int(Date().timeIntervalSince1970)).json"))}
         }
         if windows.isEmpty {newWindow()}
@@ -90,7 +112,23 @@ import SereinCore
     }
     @discardableResult func saveNow()->Bool {
         do {
-            try PrivateFileStore.write(SavedSession(windows:windows.map{$0.session.state}).encoded(),to:root.appendingPathComponent("session.json"))
+            var history:[SavedNavigationHistory]=[],historyBytes=0
+            func appendHistory(_ record:SavedNavigationHistory) {
+                guard history.count<128,historyBytes+record.state.count<=16*1024*1024 else{return}
+                history.append(record);historyBytes+=record.state.count
+            }
+            if restoresNavigation {
+                for controller in windows where !controller.session.state.isPrivate {
+                    let session=controller.session
+                    for tab in session.state.tabs {
+                        if let runtime=session.runtimes[tab.id] {
+                            if let record=runtime.savedNavigation(engine:Self.navigationEngine) {appendHistory(record)}
+                            else if runtime.loadedWebView==nil,let record=restoredNavigation[tab.id],record.windowID==session.state.id,record.url==tab.url {appendHistory(record)}
+                        } else if let record=restoredNavigation[tab.id],record.windowID==session.state.id,record.url==tab.url {appendHistory(record)}
+                    }
+                }
+            }
+            try PrivateFileStore.write(SavedSession(windows:windows.map{$0.session.state},navigationHistory:history).encoded(),to:root.appendingPathComponent("session.json"))
             if restorationError?.hasPrefix("Session could not be saved:")==true {restorationError=nil}
             return true
         }
