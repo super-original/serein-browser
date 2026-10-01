@@ -15,8 +15,8 @@ import SereinCore
     private var provisionalURL: URL?
     private(set) var failedURL: URL?
     var hasUserEdits=false
-    @ObservationIgnored private(set) var lastActivity=Date()
-    func noteActivity(at date:Date=Date()){lastActivity=date}
+    @ObservationIgnored private(set) var lastActivity=ContinuousClock().now
+    func noteActivity(at instant:ContinuousClock.Instant=ContinuousClock().now){lastActivity=instant}
     var crashed=false
     private(set) var documentID=UUID()
     @ObservationIgnored weak var session: BrowserSession?

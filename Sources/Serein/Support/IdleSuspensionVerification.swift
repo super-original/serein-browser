@@ -17,7 +17,7 @@ import SereinCore
         _=runtime.setZoom(1.3)
         let expected=runtime.loadedWebView?.url,history=runtime.loadedWebView?.backForwardList.backList.map(\.url)
         let active=session.newTab(),controller=manager.tabSuspension
-        let now=Date(),old=now.addingTimeInterval(-16*60)
+        let now=ContinuousClock().now,old=now.advanced(by:.seconds(-16*60))
         await wait{runtime.loadedWebView?.window==nil}
         func age(){runtime.noteActivity(at:old)}
         func kept(_ name:String,_ policy:TabSuspensionController?=nil,minutes:Int=15) async {
@@ -33,6 +33,7 @@ import SereinCore
         session.setKind(id,.pinned);age();await kept("pinned-page-kept");session.setKind(id,.regular)
         session.openGlance(URL(string:"http://127.0.0.1:8765/index.html?idle=preview")!,from:id)
         let preview=session.state.glance(for:id)?.id
+        check("preview-setup",preview != nil)
         session.select(active);age();await kept("preview-owner-kept")
         if let preview {session.close(preview,ask:false)}
         session.select(active);await wait{runtime.loadedWebView?.window==nil}
@@ -68,6 +69,7 @@ import SereinCore
         session.select(id)
         await wait{runtime.loadedWebView?.url==expected && runtime.loadedWebView?.isLoading==false}
         check("restores-history-position-and-zoom",runtime.loadedWebView?.url==expected && runtime.loadedWebView?.backForwardList.backList.map(\.url)==history && runtime.loadedWebView?.backForwardList.forwardList.map(\.url)==savedForward && abs(runtime.zoomFactor-1.3)<0.001)
+        results += await IdleMediaVerification.run(session:session,root:root)
         session.window?.makeKeyAndOrderFront(nil);session.libraryPanel = .settings
         await wait{session.window?.attachedSheet != nil}
         try? "57-idle-tab-settings".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)

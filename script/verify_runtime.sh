@@ -176,6 +176,10 @@ APPLESCRIPT
         native_input pick-file "$NATIVE_MANIFEST" > "$ROOT/native-host-picker-input.log" 2>&1 || touch "$ROOT/native-host-registration-file.keyboard-failed"
         cp "$ROOT/native-host-picker-input.log" "$ROOT/native-host-picker-$NATIVE_PICKER_ATTEMPT.log"
         ;;
+      idle-media-play)
+        read -r MEDIA_X MEDIA_Y < "$ROOT/idle-media-click-point"
+        /tmp/serein-pointer "$MEDIA_X" "$MEDIA_Y" plain > "$ROOT/idle-media-pointer.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
       fullscreen-enter)
         read -r FULLSCREEN_X FULLSCREEN_Y < "$ROOT/fullscreen-click-point"
         /tmp/serein-pointer "$FULLSCREEN_X" "$FULLSCREEN_Y" plain > "$ROOT/fullscreen-pointer-input.log" 2>&1

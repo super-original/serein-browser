@@ -3,13 +3,61 @@
 import argparse
 import functools
 import http.server
+import io
+import math
+import struct
+import wave
 import re
 import time
 
 PAYLOAD = bytes(range(256)) * 32768
 
+def tone_wave():
+    output = io.BytesIO()
+    with wave.open(output, 'wb') as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(8000)
+        audio.writeframes(b''.join(struct.pack('<h', round(1000 * math.sin(2 * math.pi * 440 * index / 8000))) for index in range(8000)))
+    return output.getvalue()
+
+TONE = tone_wave()
+
 class Handler(http.server.SimpleHTTPRequestHandler):
+    def tone(self):
+        start, end = 0, len(TONE) - 1
+        value = self.headers.get('Range')
+        if value:
+            match = re.fullmatch(r'bytes=(\d+)-(\d*)', value)
+            if not match:
+                self.send_error(416)
+                return
+            start = int(match[1])
+            end = min(end, int(match[2])) if match[2] else end
+            if start > end:
+                self.send_error(416)
+                return
+        self.send_response(206 if value else 200)
+        self.send_header('Content-Type', 'audio/wav')
+        self.send_header('Content-Length', str(end - start + 1))
+        self.send_header('Accept-Ranges', 'bytes')
+        if value:
+            self.send_header('Content-Range', f'bytes {start}-{end}/{len(TONE)}')
+        self.end_headers()
+        if self.command != 'HEAD':
+            try:
+                self.wfile.write(TONE[start:end + 1])
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+    def do_HEAD(self):
+        if self.path.split('?', 1)[0] == '/serein-tone.wav':
+            return self.tone()
+        return super().do_HEAD()
+
     def do_GET(self):
+        if self.path.split('?', 1)[0] == '/serein-tone.wav':
+            return self.tone()
         if self.path.split('?', 1)[0] in ['/ads/!rotator/probe.js', '/serein-clean-probe.js']:
             payload = b'window.sereinBlockerLoads=(window.sereinBlockerLoads||0)+1;'
             self.send_response(200)

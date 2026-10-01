@@ -35,7 +35,7 @@ import WebKit
               view.cameraCaptureState == .none,view.microphoneCaptureState == .none else{return false}
         return true
     }
-    @discardableResult func sweep(now:Date=Date(),idleMinutes:Int?=nil) async->Int {
+    @discardableResult func sweep(now:ContinuousClock.Instant=ContinuousClock().now,idleMinutes:Int?=nil) async->Int {
         let minutes=idleMinutes ?? UserDefaults.standard.integer(forKey:"idleTabUnloadMinutes")
         guard [15,30,60].contains(minutes),!sweeping,let manager else{return 0}
         sweeping=true;defer{sweeping=false}
@@ -44,7 +44,7 @@ import WebKit
             for runtime in Array(session.runtimes.values) {
                 guard eligible(runtime,in:session) else{runtime.noteActivity(at:now);continue}
                 let activity=runtime.lastActivity,document=runtime.documentID
-                guard now.timeIntervalSince(activity)>=Double(minutes)*60,
+                guard activity.duration(to:now) >= .seconds(minutes*60),
                       let view=runtime.loadedWebView else{continue}
                 let playback=await mediaState(view)
                 guard playback == WKMediaPlaybackState.none else{runtime.noteActivity(at:now);continue}
