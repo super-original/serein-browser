@@ -13,11 +13,16 @@ def run_formatter_reference(request, script, prefix, out, temporary):
     build = pathlib.Path(temporary) / 'formatter-build'
     entry = {'browser': 'Zen 1.22.2b (Gecko)', 'extension': 'JSON Formatter 0.8.0',
              'sourceCommit': '27aa9955e54757ca9919f2a3a5f9cfe8f1888272',
+             'referencePreferences': {'devtools.jsonview.enabled': False},
              'manifestAdaptation': 'Added only browser_specific_settings.gecko.id for temporary Gecko installation. Original scripts, required permissions, host declarations and run_at/world entries are preserved.',
              'scope': 'Source-built real extension, not a signed store package. WebDriver inspects the actual page global through Gecko wrappedJSObject; this is reference automation only.',
              'checks': {}, 'scenarioExecuted': False}
     installed = False
     try:
+        request(prefix + '/moz/context', {'context': 'chrome'})
+        entry['observedJSONViewerEnabled'] = script('return Services.prefs.getBoolPref("devtools.jsonview.enabled");')
+        request(prefix + '/moz/context', {'context': 'content'})
+        assert entry['observedJSONViewerEnabled'] is False, 'Reference still uses the built-in JSON viewer'
         subprocess.run([sys.executable, 'script/build_json_formatter_fixture.py', str(build),
                         str(out / 'formatter-build.json')], check=True, timeout=240)
         source = build / 'extension'
@@ -57,6 +62,10 @@ def run_formatter_reference(request, script, prefix, out, temporary):
     except Exception as error:
         entry['error'] = str(error)
     finally:
+        try:
+            request(prefix + '/moz/context', {'context': 'content'})
+        except Exception as error:
+            entry['contextCleanupError'] = str(error)
         if installed:
             try:
                 request(prefix + '/moz/addon/uninstall', {'id': addon_id})

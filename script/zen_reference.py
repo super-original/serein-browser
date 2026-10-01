@@ -37,6 +37,13 @@ def snap(name,code='',key=None):
             if len(relevant)!=1 or relevant[0]['labelRect']['width']<=0: raise RuntimeError('Folder label missing or hidden')
             if name=='21-folder-collapsed' and not relevant[0]['collapsed']: raise RuntimeError('Folder did not collapse')
             if name=='22-folder-nested' and not any(f['parent']=='Research notes' for f in geometry['folders']): raise RuntimeError('Nested folder has no parent')
+        if name in ['26-first-split-group','27-second-split-group','28-return-first-split-group']:
+            geometry['splitGroups']=js('return window.referencePairTabs.map((t,index)=>({index,label:t.label,split:!!t.splitView,selected:t===gBrowser.selectedTab,parentTag:t.parentElement?.localName,parentID:t.parentElement?.id,rect:t.linkedBrowser.getBoundingClientRect().toJSON()}));')
+            members=geometry['splitGroups']
+            active=[2,3] if name=='27-second-split-group' else [0,1]
+            if len(members)!=4 or any(not members[i]['split'] or members[i]['rect']['width']<=0 or members[i]['rect']['height']<=0 for i in active): raise RuntimeError('Expected selected split group has no visible panes')
+            if name!='26-first-split-group' and not all(t['split'] for t in members): raise RuntimeError('Switching groups did not preserve both memberships')
+            if not members[active[0]]['selected']: raise RuntimeError('Wrong selected group member')
         if name=='19-glance':
             geometry['glance']=js('return [...document.querySelectorAll(".zen-glance-overlay .browserContainer, .zen-glance-overlay .zen-glance-sidebar-container")].map(e=>({className:e.className,rect:e.getBoundingClientRect().toJSON()}));')
             if len(geometry['glance'])<2 or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['glance']): raise RuntimeError('Glance overlay or controls are not visible')
@@ -91,6 +98,13 @@ try:
     snap('21-folder-collapsed','window.referenceFolder.labelElement.click();')
     snap('22-folder-nested','window.referenceFolder.collapsed=false;window.referenceSubfolder=gZenFolders.createFolder([],{renameFolder:false,label:"Reading list"});window.referenceFolder.tabs[0].after(window.referenceSubfolder);')
     snap('23-folder-context','document.getElementById("zenFolderActions").openPopup(window.referenceFolder.labelElement,"after_start",0,0,true,false);')
+    js('document.getElementById("zenFolderActions").hidePopup();gZenWorkspaces.createAndSaveWorkspace("Split groups");')
+    time.sleep(2)
+    js('window.referencePairTabs=[0,1,2,3].map(i=>gBrowser.addTab("http://127.0.0.1:8765/"+(i%2 ? "second.html" : "index.html")+"?pair="+i,{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()}));gBrowser.selectedTab=window.referencePairTabs[0];')
+    time.sleep(2)
+    snap('26-first-split-group','gZenViewSplitter.splitTabs(window.referencePairTabs.slice(0,2),"grid");')
+    snap('27-second-split-group','gBrowser.selectedTab=window.referencePairTabs[2];gZenViewSplitter.splitTabs(window.referencePairTabs.slice(2),"grid");')
+    snap('28-return-first-split-group','gBrowser.selectedTab=window.referencePairTabs[0];')
 finally:
     (out/'manifest.json').write_text(json.dumps({'zen':'1.22.2b','theme':'Built-in default, no mods','requestedWindow':[1000,700],'results':results},indent=2))
     request(prefix,method='DELETE')
@@ -105,3 +119,5 @@ if not any(x["name"]=="19-glance" and x["status"]=="captured" for x in results):
 if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['20-folder-expanded','21-folder-collapsed','22-folder-nested','23-folder-context']): raise SystemExit('Folder reference capture failed')
 
 if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['24-split-rows-keyboard','25-split-columns-keyboard']): raise SystemExit('Native arrangement shortcut references failed')
+
+if not all(any(x['name']==name and x['status']=='captured' for x in results) for name in ['26-first-split-group','27-second-split-group','28-return-first-split-group']): raise SystemExit('Persistent split-group reference failed')

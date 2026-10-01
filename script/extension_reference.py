@@ -48,6 +48,7 @@ try:
         'binary': '/tmp/SereinPortReference.app/Contents/MacOS/zen',
         'prefs': {'zen.welcome-screen.seen': True, 'browser.shell.checkDefaultBrowser': False,
                   'browser.startup.homepage_override.mstone': 'ignore',
+                  'devtools.jsonview.enabled':False,
                   'browser.download.folderList':2,'browser.download.useDownloadDir':True,
                   'browser.download.dir':download_directory.name}}}}})
     prefix = '/session/' + session['sessionId']
