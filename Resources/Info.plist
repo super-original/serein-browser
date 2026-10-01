@@ -15,4 +15,9 @@
 <key>NSMicrophoneUsageDescription</key><string>Websites can request microphone access. Serein applies your site permission choices before granting access.</string>
 <key>NSLocationUsageDescription</key><string>Websites can request your location. Serein applies your site permission choices before granting access.</string>
 <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>Web address</string><key>CFBundleTypeRole</key><string>Viewer</string><key>CFBundleURLSchemes</key><array><string>http</string><string>https</string></array></dict></array>
+<key>UTExportedTypeDeclarations</key><array><dict>
+<key>UTTypeIdentifier</key><string>dev.serein.sidebar-item</string>
+<key>UTTypeDescription</key><string>Serein Sidebar Item</string>
+<key>UTTypeConformsTo</key><array><string>public.data</string></array>
+</dict></array>
 </dict></plist>

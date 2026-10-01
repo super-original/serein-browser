@@ -304,6 +304,7 @@ import SereinCore
         try? Data().write(to:root.appendingPathComponent("idle-end"))
         results += await SplitGridVerification.run(manager:manager,root:root)
         results += await GlanceVerification.run(manager:manager,root:root)
+        results += await SidebarDropVerification.run(manager:manager,root:root)
         results += await FullscreenVerification.run(manager:manager,root:root)
         results += await TabSuspensionVerification.run(manager:manager)
         results += await WindowPlacementVerification.run(manager:manager,root:root)

@@ -30,7 +30,7 @@ for native in [False, True]:
     setup_error = root / "native-setup-error"
     assert not setup_error.exists(), setup_error.read_text() if setup_error.exists() else ""
     results = json.loads((root / "results.json").read_text())
-    assert len(results) == 3 and all(item["passed"] for item in results), results
+    assert len(results) == 5 and all(item["passed"] for item in results), results
     session = json.loads((root / "session.json").read_text())
     assert len(session["windows"]) == 1 and len(session["windows"][0]["tabs"]) == (3 if native else 2), "Final consent did not save the current session"
     results.append({"name": "quit-exits-and-saves-current-session", "passed": True, "detail": "Supervised process exited with status 0; current tabs persisted"})

@@ -51,7 +51,28 @@ import AppKit
         case 5:
             guard let sheet=window.attachedSheet else{return}
             check("quit-fresh-consent-required",true)
-            timer?.invalidate();timer=nil;stage=6
+            // Only the isolated fixture root is obstructed. Keep its earlier file
+            // as evidence, and make the atomic session rename fail deterministically.
+            do {
+                let file=root.appendingPathComponent("session.json")
+                if FileManager.default.fileExists(atPath:file.path) {try FileManager.default.moveItem(at:file,to:root.appendingPathComponent("session-before-save-failure.json"))}
+                try FileManager.default.createDirectory(at:file,withIntermediateDirectories:false)
+                stage=6;window.endSheet(sheet,returnCode:.alertFirstButtonReturn)
+            } catch {check("quit-storage-failure-setup",false);timer?.invalidate()}
+        case 6:
+            guard let error=manager.restorationError,error.hasPrefix("Session could not be saved:"),session.error==error else{return}
+            check("quit-save-failure-keeps-app-and-edits",runtime.hasUserEdits && manager.windows.contains{$0.session===session})
+            do {
+                try FileManager.default.removeItem(at:root.appendingPathComponent("session.json"))
+                stage=7;session.error=nil
+            } catch {check("quit-storage-failure-repair",false);timer?.invalidate()}
+        case 7:
+            guard window.attachedSheet==nil else{return}
+            stage=8;perform(#selector(requestQuit),with:nil,afterDelay:0)
+        case 8:
+            guard let sheet=window.attachedSheet else{return}
+            check("quit-after-save-failure-requires-fresh-consent",runtime.hasUserEdits)
+            timer?.invalidate();timer=nil;stage=9
             window.endSheet(sheet,returnCode:.alertFirstButtonReturn)
         default:break
         }

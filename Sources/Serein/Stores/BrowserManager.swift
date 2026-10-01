@@ -11,6 +11,7 @@ import SereinCore
     let extensions: ExtensionHost
     @ObservationIgnored private var saveTask: Task<Void,Never>?
     @ObservationIgnored lazy var menu=BrowserMenu(manager:self)
+    let sidebarDragToken=UUID()
     let root: URL
     init(root: URL) {
         var storageError:String?
@@ -86,8 +87,12 @@ import SereinCore
     func scheduleSave() {
         saveTask?.cancel();saveTask=Task {try? await Task.sleep(for:.milliseconds(350));guard !Task.isCancelled else{return};saveNow()}
     }
-    func saveNow() {
-        do {try PrivateFileStore.write(SavedSession(windows:windows.map{$0.session.state}).encoded(),to:root.appendingPathComponent("session.json"))}
-        catch {restorationError="Session could not be saved: \(error.localizedDescription)"}
+    @discardableResult func saveNow()->Bool {
+        do {
+            try PrivateFileStore.write(SavedSession(windows:windows.map{$0.session.state}).encoded(),to:root.appendingPathComponent("session.json"))
+            if restorationError?.hasPrefix("Session could not be saved:")==true {restorationError=nil}
+            return true
+        }
+        catch {restorationError="Session could not be saved: \(error.localizedDescription)";return false}
     }
 }

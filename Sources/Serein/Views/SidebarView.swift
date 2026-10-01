@@ -101,8 +101,8 @@ struct SidebarView: View {
     }
     private func tabRow(_ tab: BrowserTab,essential: Bool = false) -> some View {
         TabRow(session:session,tab:tab,compact:collapsed || essential)
-            .draggable(tab.id.uuidString)
-            .dropDestination(for:String.self){items,_ in guard let value=items.first,let id=UUID(uuidString:value) else{return false};session.move(id,before:tab.id);return true}
+            .draggable(session.sidebarDrag(tab.id,kind:.tab))
+            .dropDestination(for:SidebarDragItem.self){items,_ in session.acceptSidebarDrop(items,at:.beforeTab(tab.id))}
     }
 }
 private struct TabRow: View {

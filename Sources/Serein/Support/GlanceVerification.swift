@@ -110,7 +110,12 @@ import WebKit
             check("native-escape-closes-preview",escaped && session.state.selectedTabID==owner && !session.state.tabs.contains{$0.id==last.id})
             let typed=await keyboard("find-page-key")
             let delivered=try? await parent.webView.evaluateJavaScript("document.documentElement.dataset.glanceKey || ''") as? String
-            check("close-returns-parent-keyboard",typed && delivered=="received",String(describing:delivered))
+            let focusDetail=try? await parent.webView.evaluateJavaScript("JSON.stringify({focus:document.hasFocus(),active:document.activeElement?.tagName,listener:typeof window.sereinGlanceKey,url:location.href})")
+            check("close-returns-parent-keyboard",typed && delivered=="received","delivered=\(String(describing:delivered)) DOM=\(String(describing:focusDetail)) responder=\(String(describing:window.firstResponder)) key=\(window.isKeyWindow) parentAttached=\(parent.loadedWebView?.window === window) selected=\(String(describing:session.state.selectedTabID)) requested=\(String(describing:session.contentFocusRequest))")
+            if delivered != "received" {
+                try? "glance-focus-failure".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("glance-focus-failure.capture-finished").path)}
+            }
         }
         session.select(owner);session.openGlance(target,from:owner)
         if let closing=session.state.activeGlance {

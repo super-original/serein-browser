@@ -56,13 +56,13 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 |---|---|---|
 | Back/forward, reload/stop, URL/search | I | WKWebView; local-history/bookmark suggestions only |
 | Create/close/reopen/duplicate tabs | I | Unsaved form-input warning; broader app state detection incomplete |
-| Reorder | P | Drag strings within the same tab kind; cross-window dragging absent |
+| Reorder | P | Typed same-process tab/folder payloads; cross-window normal-tab dragging and folder drops implemented, awaiting actual-pointer CI; category changes, cross-window folder trees and drag-to-new-window remain absent |
 | Pins and essentials | I | Essentials span workspaces; pins preserve reset URL |
 | Multiple workspaces | P | Create, rename, remove, switch; no containers or per-workspace cookie stores |
 | Expanded/collapsed sidebar | I | Visual inspection required across resizing and focus |
 | Compact mode | P | Edge reveal/hide; Zen's complete toolbar variants absent |
 | Split views | P | Explicit selected-tab grids up to four panes verified at `d4c80d1`; balanced native dividers and minimum-window bounds verified at `e32960d`; split-group tabs, incremental layout preservation and drag composition remain absent |
-| Multiple windows / moving tabs | P | Normal live-tab transfer; isolated private transfer deliberately rejected |
+| Multiple windows / moving tabs | P | Normal live-tab transfer through menu and typed drop targets; isolated private transfer deliberately rejected |
 | Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; full navigation-history restoration across launches remains absent |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
 | Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume passed the separate-process integrity/privacy gate at `29dabbf`; live ordinary downloads now pause on real Command-Q and resume after relaunch with full byte integrity at `c1e2498`; a live private transfer stays out of recovery files |
@@ -137,3 +137,10 @@ The native split grid already allows dragging its eight-point dividers. The foll
 Address cancellation now restores the current location and requests page focus after dismissing suggestions. A real Command-L/type/Escape check passes at `f8800b0`, verifying unchanged navigation and restored location/focus.
 
 October 1 reference refresh [36794469990](https://github.com/super-original/serein-browser/actions/runs/36794469990) retains the pinned binary and now emits a compact evidence index. All 26 file hashes were checked. Light/dark expanded windows and expanded/collapsed folders were inspected again. At `32b17e3`, the sole essential uses the occupied full-width column in Serein; earlier adaptive-grid placement notes are historical, not the current layout. Active/inactive window state still needs a matched comparison.
+
+
+### Live cross-window drag continuation
+
+Tab rows and folder rows now share an original typed `Transferable` payload, exported as `dev.serein.sidebar-item`. A per-launch token and the source window/tab identity reject foreign or stale payloads before any model mutation. Dropping before a tab retains its category; dropping into a folder pins the moved owner and preserves its live preview. Existing native transfer logic carries WKWebView, history, zoom, document edits and extension tab identity. Cross-window private transfers remain rejected because each private window has a separate nonpersistent store; within-window private reordering is allowed.
+
+The new runtime scenario locates two actual native tab controls and sends a real pointer drag between their visible sidebars, then checks live-object identity, script state, history, zoom, insertion order, document edits, privacy rejection, stale data, preview ownership and persisted folder membership. A direct handler fallback is separately labeled if the physical gesture fails. These additions await macOS 27 CI and inspected screenshots; no drag pass is claimed from compilation. Cross-window folder-tree transfer, multi-item drag, category-changing drops and drag-to-create-window are still missing.

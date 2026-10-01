@@ -39,21 +39,27 @@ func describe(_ items:[AXUIElement])->String {
     }.joined(separator:"\n")
 }
 func key(_ code:CGKeyCode,flags:CGEventFlags=[]) {
+    guard NSWorkspace.shared.frontmostApplication?.processIdentifier==pid else{fail("Fixture lost foreground before keyboard input")}
     for down in [true,false] {
         guard let event=CGEvent(keyboardEventSource:nil,virtualKey:code,keyDown:down) else{fail("Could not create keyboard event")}
-        event.flags=flags;event.postToPid(pid)
+        event.flags=flags;event.post(tap:.cghidEventTap)
     }
 }
 func type(_ string:String) {
+    guard NSWorkspace.shared.frontmostApplication?.processIdentifier==pid else{fail("Fixture lost foreground before text input")}
     let units=Array(string.utf16)
     guard let event=CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:true) else{fail("Could not create text event")}
     units.withUnsafeBufferPointer{event.keyboardSetUnicodeString(stringLength:$0.count,unicodeString:$0.baseAddress!)}
-    event.postToPid(pid)
-    if let up=CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:false){up.postToPid(pid)}
+    event.post(tap:.cghidEventTap)
+    if let up=CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:false){up.post(tap:.cghidEventTap)}
 }
 func editable(_ element:AXUIElement)->Bool {[kAXTextFieldRole,kAXComboBoxRole,kAXTextAreaRole].contains(text(element,kAXRoleAttribute))}
 guard AXIsProcessTrusted() else{fail("Accessibility access is unavailable for this runner helper; no permission settings changed")}
 app.activate(options:[])
+for _ in 0..<10 {
+    if NSWorkspace.shared.frontmostApplication?.processIdentifier==pid {break}
+    Thread.sleep(forTimeInterval:0.05)
+}
 let mode=arguments[2]
 if mode=="press" {
     let identifier=arguments[3]
@@ -65,6 +71,26 @@ if mode=="press" {
     guard matching.count==1 else{fail("Expected exactly one \(identifier) control\n"+describe(items))}
     guard AXUIElementPerformAction(matching[0],kAXPressAction as CFString) == .success else{fail("AXPress failed")}
     print("Pressed \(identifier) through \(exact.isEmpty ? "unique native label" : "identifier")")
+} else if mode=="drag" {
+    guard arguments.count==5 else{fail("Expected source and destination identifiers")}
+    let items=controls()
+    func center(_ identifier:String)->CGPoint? {
+        let matches=items.filter{text($0,kAXIdentifierAttribute)==identifier && text($0,kAXRoleAttribute)==kAXButtonRole}
+        guard matches.count==1,let position=value(matches[0],kAXPositionAttribute),let size=value(matches[0],kAXSizeAttribute),
+              CFGetTypeID(position)==AXValueGetTypeID(),CFGetTypeID(size)==AXValueGetTypeID() else{return nil}
+        var point=CGPoint.zero,dimensions=CGSize.zero
+        guard AXValueGetValue(unsafeBitCast(position,to:AXValue.self),.cgPoint,&point),
+              AXValueGetValue(unsafeBitCast(size,to:AXValue.self),.cgSize,&dimensions),dimensions.width>0,dimensions.height>0 else{return nil}
+        return CGPoint(x:point.x+dimensions.width/2,y:point.y+dimensions.height/2)
+    }
+    guard let start=center(arguments[3]),let end=center(arguments[4]) else{fail("Native drag controls not uniquely located\n"+describe(items))}
+    print("Native drag from \(start) to \(end)")
+    for step in 0...32 {
+        let progress=Double(max(0,min(30,step-1)))/30
+        let type:CGEventType=step==0 ? .mouseMoved : step==1 ? .leftMouseDown : step==32 ? .leftMouseUp : .leftMouseDragged
+        guard let event=CGEvent(mouseEventSource:nil,mouseType:type,mouseCursorPosition:CGPoint(x:start.x+(end.x-start.x)*progress,y:start.y+(end.y-start.y)*progress),mouseButton:.left) else{fail("Could not create drag event")}
+        event.post(tap:.cghidEventTap);Thread.sleep(forTimeInterval:0.03)
+    }
 } else if mode=="fill" {
     guard arguments.count==5 else{fail("Expected field identifier and text")}
     let items=controls()
@@ -72,7 +98,9 @@ if mode=="press" {
     guard matches.count==1 else{fail("Expected exactly one text field\n"+describe(items))}
     guard AXUIElementSetAttributeValue(matches[0],kAXFocusedAttribute as CFString,kCFBooleanTrue) == .success else{fail("Could not focus field")}
     Thread.sleep(forTimeInterval:0.1)
-    key(0,flags:.maskCommand);type(arguments[4]);key(36)
+    key(0,flags:.maskCommand);type(arguments[4])
+    Thread.sleep(forTimeInterval:0.15)
+    key(36)
     print("Entered text in \(arguments[3])")
 } else if mode=="pick-file" {
     let path=arguments[3]

@@ -17,13 +17,8 @@ struct FolderRow:View {
         .onHover{hovering=$0}.help(folder.name)
         .accessibilityLabel(folder.name).accessibilityValue(folder.collapsed ? "Collapsed folder" : "Expanded folder")
         .accessibilityIdentifier("folder-\(folder.id)")
-        .draggable("folder:"+folder.id.uuidString)
-        .dropDestination(for:String.self){values,_ in
-            guard values.count==1,let value=values.first else{return false}
-            if value.hasPrefix("folder:"),let id=UUID(uuidString:String(value.dropFirst(7))) {return session.state.moveFolder(id,into:folder.id)}
-            guard let id=UUID(uuidString:value) else{return false}
-            return session.moveTabIntoFolder(id,folder.id)
-        }
+        .draggable(session.sidebarDrag(folder.id,kind:.folder))
+        .dropDestination(for:SidebarDragItem.self){items,_ in session.acceptSidebarDrop(items,at:.folder(folder.id))}
         .contextMenu {
             Button("Rename Folder…"){session.folderEditor = .init(editingID:folder.id,name:folder.name)}
             Button("New Tab in Folder"){session.newTab(inFolder:folder.id)}
@@ -53,19 +48,25 @@ struct FolderEditorView:View {
     var body:some View {
         VStack(alignment:.leading,spacing:18) {
             Text(request.editingID==nil ? "New Folder" : "Rename Folder").font(.headline)
-            TextField("Name",text:$name).textFieldStyle(.bordered).accessibilityIdentifier("folder-name").focused($nameFocused)
+            TextField("Name",text:$name).textFieldStyle(.bordered).accessibilityIdentifier("folder-name").focused($nameFocused).onSubmit{save()}
             if let error {Text(error).foregroundStyle(.red).font(.caption)}
             HStack {
                 Button("Cancel"){session.folderEditor=nil}.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button(request.editingID==nil ? "Create" : "Rename") {
-                    if let id=request.editingID {
-                        guard session.state.folder(id) != nil else{error="This folder is no longer available.";return}
-                        session.state.renameFolder(id,to:name)
-                    } else if session.createFolder(name:name,tabIDs:request.tabIDs,parentID:request.parentID)==nil {error="The workspace or selected tabs changed. Close this dialog and try again.";return}
-                    session.folderEditor=nil
-                }.keyboardShortcut(.defaultAction).disabled(name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
+                Button(request.editingID==nil ? "Create" : "Rename"){save()}
+                    .keyboardShortcut(.defaultAction).disabled(name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
             }
         }.padding(24).frame(width:320).onAppear{nameFocused=true}
     }
+    private func save() {
+        guard !name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else{return}
+        if let id=request.editingID {
+            guard session.state.folder(id) != nil else{error="This folder is no longer available.";return}
+            session.state.renameFolder(id,to:name)
+        } else if session.createFolder(name:name,tabIDs:request.tabIDs,parentID:request.parentID)==nil {
+            error="The workspace or selected tabs changed. Close this dialog and try again.";return
+        }
+        session.folderEditor=nil
+    }
+
 }

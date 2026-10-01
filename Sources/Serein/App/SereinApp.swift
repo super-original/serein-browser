@@ -68,7 +68,12 @@ import SwiftUI
                 let current=Dictionary(uniqueKeysWithValues:self.manager.windows.map{($0.session.state.id,$0.session.closeConsentSnapshot)})
                 let approved=allowed && current==documents
                 if approved {
-                    if self.finishTermination(sender) == .terminateNow {sender.reply(toApplicationShouldTerminate:true)}
+                    switch self.finishTermination(sender) {
+                    case .terminateNow:sender.reply(toApplicationShouldTerminate:true)
+                    case .terminateCancel:sender.reply(toApplicationShouldTerminate:false)
+                    case .terminateLater:break
+                    @unknown default:sender.reply(toApplicationShouldTerminate:false)
+                    }
                 } else {sender.reply(toApplicationShouldTerminate:false)}
             }
             return .terminateLater
@@ -77,16 +82,25 @@ import SwiftUI
     }
     private func finishTermination(_ sender:NSApplication)->NSApplication.TerminateReply {
         guard let manager else{return .terminateNow}
-        guard manager.extensions.nativeMessaging.hasConnections || manager.downloads.items.contains(where: {$0.isActive || $0.canResume}) else{manager.saveNow();return .terminateNow}
+        guard manager.extensions.nativeMessaging.hasConnections || manager.downloads.items.contains(where: {$0.isActive || $0.canResume}) else {
+            guard manager.saveNow() else {
+                manager.active?.error=manager.restorationError
+                return .terminateCancel
+            }
+            return .terminateNow
+        }
         let documents=Dictionary(uniqueKeysWithValues:manager.windows.map{($0.session.state.id,$0.session.closeConsentSnapshot)})
         Task {
             await manager.extensions.nativeMessaging.shutdown()
             let downloadsReady=await manager.downloads.prepareForTermination()
             let current=Dictionary(uniqueKeysWithValues:manager.windows.map{($0.session.state.id,$0.session.closeConsentSnapshot)})
             let unchanged=current==documents && downloadsReady
-            if unchanged {manager.saveNow()}
-            else {manager.extensions.nativeMessaging.resumeAcceptingConnections();manager.active?.error=downloadsReady ? "Open pages changed while downloads and native applications were closing. Review your work and quit again." : manager.downloads.error}
-            sender.reply(toApplicationShouldTerminate:unchanged)
+            let saved=unchanged && manager.saveNow()
+            if !saved {
+                manager.extensions.nativeMessaging.resumeAcceptingConnections()
+                manager.active?.error = !downloadsReady ? manager.downloads.error : !unchanged ? "Open pages changed while downloads and native applications were closing. Review your work and quit again." : manager.restorationError
+            }
+            sender.reply(toApplicationShouldTerminate:saved)
         }
         return .terminateLater
     }
