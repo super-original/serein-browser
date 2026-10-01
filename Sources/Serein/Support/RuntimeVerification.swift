@@ -334,6 +334,8 @@ import SereinCore
         results += await ExtensionVerification.run(manager:manager,session:session,root:root)
         checkpoint("PortMessagingVerification")
         results += await PortMessagingVerification.run(manager:manager)
+        checkpoint("DeclarativeRuleVerification")
+        results += await DeclarativeRuleVerification.run(manager:manager)
         checkpoint("ExtensionNetworkVerification")
         results += await ExtensionNetworkVerification.run(manager:manager)
         checkpoint("ExtensionPromptVerification")

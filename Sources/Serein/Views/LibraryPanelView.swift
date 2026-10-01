@@ -103,7 +103,13 @@ private struct ExtensionListView: View {
                 }.padding(.vertical,4).disabled(host.busyIDs.contains(record.id))
             }
             Button("Install Extension…"){host.chooseInstall(in:session)}
-            if let error=host.error {Text(error).foregroundStyle(.red).font(.caption).textSelection(.enabled)}
+            if let error=host.error {
+                HStack(alignment:.top) {
+                    Text(error).foregroundStyle(.red).font(.caption).textSelection(.enabled)
+                    Spacer()
+                    Button("Dismiss"){host.error=nil}.accessibilityLabel("Dismiss extension operation error")
+                }
+            }
         }
     }
 }
