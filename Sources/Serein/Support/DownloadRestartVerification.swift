@@ -34,8 +34,14 @@ import SereinCore
             check("restart-resume-owner-only",mode?.intValue==0o700 && fileMode?.intValue==0o600)
             let live=await start(in:session,name:"quit-download.bin",pause:false)
             check("restart-quit-starts-with-active-download",live.isActive && live.fraction>0 && live.fraction<1,live.status)
+            check("restart-normal-identifiers-persisted",normal.record.browserIdentifier==1 && live.record.browserIdentifier==2)
+            check("restart-private-has-no-browser-identifier",privateItem.record.browserIdentifier==nil)
+            let identifiers=[normal.id.uuidString:normal.record.browserIdentifier ?? -1,live.id.uuidString:live.record.browserIdentifier ?? -1]
+            try? JSONEncoder().encode(identifiers).write(to:root.appendingPathComponent("restart-download-identifiers.json"),options:.atomic)
         } else {
             check("restart-private-history-excluded",manager.downloads.items.count==2 && manager.downloads.items.allSatisfy{!$0.privateMode})
+            let identifiers=(try? JSONDecoder().decode([String:Int64].self,from:Data(contentsOf:root.appendingPathComponent("restart-download-identifiers.json")))) ?? [:]
+            check("restart-identifiers-survive-process-exit",identifiers.count==2 && manager.downloads.items.allSatisfy{identifiers[$0.id.uuidString]==$0.record.browserIdentifier})
             for item in manager.downloads.items {
                 let prefix=item.name=="quit-download.bin" ? "quit-" : "manual-"
                 check(prefix+"restart-restores-resumable-item",item.canResume && item.record.phase == .paused,item.status)
@@ -47,6 +53,7 @@ import SereinCore
             }
             let files=(try? FileManager.default.contentsOfDirectory(atPath:manager.downloads.resumeDirectory.path)) ?? []
             check("restart-completion-discards-resume-data",files.isEmpty)
+            check("restart-resume-keeps-identifiers",identifiers.count==2 && manager.downloads.items.allSatisfy{identifiers[$0.id.uuidString]==$0.record.browserIdentifier})
         }
         try? JSONEncoder().encode(results).write(to:root.appendingPathComponent(prepare ? "prepare-results.json" : "resume-results.json"),options:.atomic)
         // Return from this Swift task before the supervisor sends real Command-Q.

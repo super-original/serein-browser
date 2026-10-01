@@ -36,7 +36,7 @@ with (root / 'server.log').open('w') as log:
                 time.sleep(.1)
         else:
             raise AssertionError('Fixture server did not become ready')
-        for stage, expected in [('prepare', 5), ('resume', 8)]:
+        for stage, expected in [('prepare', 7), ('resume', 10)]:
             with (root / f'{stage}.log').open('w') as stdout, (root / f'{stage}-error.log').open('w') as stderr:
                 process = subprocess.Popen([str(app), '--test-root', str(root), f'--download-restart-{stage}'], stdout=stdout, stderr=stderr)
                 try:
@@ -76,7 +76,7 @@ with (root / 'server.log').open('w') as log:
             assert len(stage_results) == expected and all(item['passed'] for item in stage_results), stage_results
             assert protected, modes
             if stage == 'prepare':
-                history = json.loads((root / 'downloads.json').read_text())
+                history = json.loads((root / 'downloads.json').read_text())['records']
                 live = [item for item in history if item['name'] == 'quit-download.bin']
                 paused = len(live) == 1 and live[0]['phase'] == 'paused'
                 recovery = root / 'DownloadResume' / (live[0]['id'] + '.resume') if live else None

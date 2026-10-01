@@ -119,12 +119,18 @@ import SereinCore
     var error:String?
     let file:URL
     let resumeDirectory:URL
+    @ObservationIgnored private var history=DownloadHistory()
+    @ObservationIgnored private var historyAvailable=true
     init(root:URL) {
         resumeDirectory=root.appendingPathComponent("DownloadResume",isDirectory:true)
         file=root.appendingPathComponent("downloads.json")
         do {
             if FileManager.default.fileExists(atPath:file.path) {
-                items=try DownloadRecord.restoredHistory(Data(contentsOf:file)).map { record in
+                let size=(try file.resourceValues(forKeys:[.fileSizeKey])).fileSize ?? Int.max
+                guard size<=32*1024*1024 else{throw DownloadHistory.Failure.oversized}
+                let restored=try DownloadHistory.decode(Data(contentsOf:file))
+                history=restored.history
+                items=history.records.map { record in
                     let item=DownloadItem(record:record,store:self)
                     if [.interrupted,.failed].contains(record.phase),
                        let data=try? Data(contentsOf:resumeFile(record.id)),!data.isEmpty {
@@ -134,19 +140,31 @@ import SereinCore
                     }
                     return item
                 }
+                if restored.migrated {save()}
             }
-        } catch {self.error="Could not restore downloads: \(error.localizedDescription)"}
+        } catch {historyAvailable=false;self.error="Could not restore downloads. The original history file has been preserved: \(error.localizedDescription)"}
     }
-    func save() {
+    @discardableResult func save()->Bool {
+        guard historyAvailable else{return false}
         do {
+            var candidate=history
+            var records=items.map(\.record)
+            for index in records.indices where records[index].privateWindowID==nil && records[index].browserIdentifier==nil {
+                records[index].browserIdentifier=try candidate.allocate()
+            }
+            let encoded=try candidate.encoded(records:records)
             for item in items where !item.privateMode {
                 if let data=item.resumeData {
                     try PrivateFileStore.write(data,to:resumeFile(item.id))
                 } else {try discardResume(item.id)}
             }
-            try PrivateFileStore.write(DownloadRecord.encodedHistory(items.map(\.record)),to:file)
+            try PrivateFileStore.write(encoded,to:file)
+            history=candidate;history.records=[]
+            for (item,record) in zip(items,records) {item.record.browserIdentifier=record.browserIdentifier}
+            if error?.hasPrefix("Could not save downloads:")==true {error=nil}
+            return true
         }
-        catch {self.error="Could not save downloads: \(error.localizedDescription)"}
+        catch {self.error="Could not save downloads: \(error.localizedDescription)";return false}
     }
     private func resumeFile(_ id:UUID)->URL {resumeDirectory.appendingPathComponent(id.uuidString+".resume")}
     private func discardResume(_ id:UUID) throws {
@@ -156,7 +174,9 @@ import SereinCore
     @discardableResult func add(_ download:WKDownload,in session:BrowserSession,destination:URL?=nil)->DownloadItem {
         let record=DownloadRecord(source:download.originalRequest?.url,destination:destination,privateWindowID:session.state.isPrivate ? session.state.id : nil)
         let item=DownloadItem(record:record,store:self,session:session)
-        items.insert(item,at:0);item.attach(download);if !item.privateMode {save()};return item
+        items.insert(item,at:0);item.attach(download)
+        if !item.privateMode {save()}
+        return item
     }
     /// Request opaque WebKit resume data before process exit. Private items stay
     /// memory-only, including when a later consent check cancels termination.
@@ -165,8 +185,9 @@ import SereinCore
         let clock=ContinuousClock(),deadline=clock.now.advanced(by:.seconds(5))
         while clock.now<deadline {
             if !items.contains(where: \.isActive) {
-                error=nil;save()
-                return error==nil
+                guard historyAvailable else{return false}
+                error=nil
+                return save()
             }
             try? await Task.sleep(for:.milliseconds(50))
         }

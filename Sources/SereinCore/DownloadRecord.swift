@@ -7,6 +7,7 @@ public enum DownloadPhase: String, Codable, Sendable {
 }
 public struct DownloadRecord: Identifiable, Codable, Sendable {
     public var id: UUID
+    public var browserIdentifier:Int64?
     public var name: String
     public var source: URL?
     public var destination: URL?
