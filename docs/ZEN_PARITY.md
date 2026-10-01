@@ -224,3 +224,8 @@ Four new core cases cover active/inactive groups, home URLs, hidden workspaces a
 visibility. Native runtime checks and screenshot 80 cover actual pinned panes and unpin
 restoration. These additions await macOS CI; group-wide movement/closing and exact Zen
 placement still remain open.
+
+The follow-up also exercises real `browser.tabs.update` promises from an extension resource
+page in both manifest generations, queries both group members, and counts `tabs.onUpdated`
+pin/unpin events. Repeated pin must not deliver duplicates. These twelve checks remain
+pending; native event-dispatch calls alone are not counted as successful event delivery.
