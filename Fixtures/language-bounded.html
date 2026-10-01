@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>Bounded language sample</title><body><script>
+const fragment=document.createDocumentFragment();
+for(let i=0;i<10000;i++) fragment.appendChild(document.createElement('span'));
+const paragraph=document.createElement('p');
+paragraph.textContent='This English paragraph occurs after the bounded traversal. The browser should stop examining this document before reaching these words rather than walking an unlimited number of elements.';
+fragment.appendChild(paragraph);document.body.appendChild(fragment);
+</script></body>

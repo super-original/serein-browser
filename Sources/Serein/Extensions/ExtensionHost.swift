@@ -146,7 +146,7 @@ struct InstalledExtension: Identifiable, Codable {
             let provenance = identity.map { "Original CRX3 archive signature verified. Developer ID: \($0.extensionID). This is self-signed integrity, not Chrome Web Store approval. Normalized installed files are not the signed archive." } ?? "The package publisher signature has not been verified."
             let formatNote=try ExtensionPackageLayout.inspect(destination).isSafariBundle ? "\n\nSafari native handlers and containing-app integration are not supported." : ""
             let details="Version: \(ext.version ?? "Unknown")\n\nPermissions:\n\(permissions.joined(separator:"\n"))\n\nWebsite access:\n\(hosts.joined(separator:"\n"))\(formatNote)\n\n\(provenance) Install only if you trust its source. Private browsing access is disabled."
-            let allowed=await withCheckedContinuation{continuation in session.confirm("Install \(ext.displayName ?? "extension")?",detail:details,yes:"Install"){continuation.resume(returning:$0)}}
+            let allowed=await withCheckedContinuation{continuation in session.confirm("Install \(ext.displayName ?? "extension")?",detail:details,yes:"Install",identifier:"extension-install-\(id)"){continuation.resume(returning:$0)}}
             guard allowed else {try FileManager.default.removeItem(at:destination);return}
             if let identity, records.contains(where: { $0.packageIdentity?.extensionID == identity.extensionID }) {
                 throw ExtensionValidationError.invalid("This CRX3 developer identity was installed while consent was pending.")

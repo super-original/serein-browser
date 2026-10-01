@@ -106,3 +106,13 @@ plus native verification plausible within a six-hour job, but future security pa
 fresh measurements. Pin revisions, review upstream security fixes and produce a new exact-head
 artifact for every update; never silently keep an unsupported engine revision after known
 security fixes. No production update SLA or owner approval is claimed here.
+
+## Reviewable phase-order patch, not an adopted engine
+
+[The four-file phase experiment](../engine/patches/README.md) separates internal
+extension DocumentIdle from DocumentEnd and runs it after end injection across all
+worlds. Original/proposed hashes, upstream notices and exact applicability checks
+are recorded. The patch is uncompiled/unexecuted and is not applied by any workflow.
+It does not change signing or runtime protections. The pending product audit and
+listed build/reentrancy/permission/runtime regressions remain prerequisites; no
+system-WebKit failure is marked fixed by this source experiment.

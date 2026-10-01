@@ -416,15 +416,17 @@ scenario. These additional boundary checks await macOS CI.
 (macOS 15.4+, nondeprecated) and
 [`NLLanguageRecognizer`](https://developer.apple.com/documentation/naturallanguage/nllanguagerecognizer)
 (macOS 10.14+, nondeprecated). Both are available on the required macOS 27 target.
-The host reads at most 32,768 UTF-16 units from the loaded HTTP(S) top document in
-its isolated client world and classifies locally. Empty/unclassified samples return `und`.
+The host samples at most 8,192 DOM nodes and 32,768 UTF-16 units from the loaded HTTP(S)
+top document in its isolated client world and classifies locally. Hidden subtrees and
+script/style/template text are excluded. It does not construct the entire page text
+before truncating; very large documents can produce incomplete/unknown classifications. Empty/unclassified samples return `und`.
 Current tab/host access, enabled context, document identity and URL are checked before
-sampling and before replying. Private/unloaded/non-HTTP(S) tabs reject. Requests have
+sampling and before replying, including after background classification. Private/unloaded/non-HTTP(S) tabs reject. Requests have
 a five-second bound, four-per-context and sixteen-global pending limits.
 
 [Firefox documents CLD](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/detectLanguage);
 Apple's classifier is different. Mixed languages, short/ambiguous text, Chinese script
 variants, subframes, file/extension pages and full CLD conformance remain gaps. No
 classification equivalence is claimed. Actual MV2/MV3 background requests test English,
-French, Japanese and empty documents; separate native boundary tests cover mid-request
+French, Japanese, empty, hidden-text and traversal-bound documents; separate native boundary tests cover mid-request
 revocation/navigation, unregistered contexts and private tabs. Results are pending.

@@ -192,13 +192,22 @@ import SereinCore
         do {
             let host = manager.extensions
             let source = Bundle.main.resourceURL!.appendingPathComponent("Fixtures/Packages/signed-fixture.crx")
+            let previousSheet=session.window?.attachedSheet
             let installation = Task { await host.install(source, in: session) }
+            func installationSheet() -> NSWindow? {
+                var sheet=session.window?.attachedSheet
+                for _ in 0..<8 {
+                    guard let current=sheet else{return nil}
+                    if current !== previousSheet,current.identifier?.rawValue.hasPrefix("extension-install-")==true {return current}
+                    sheet=current.attachedSheet
+                }
+                return nil
+            }
             for _ in 0..<100 {
-                if session.dialogWindow?.attachedSheet != nil { break }
+                if installationSheet() != nil { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
-            let owner = session.dialogWindow
-            let consent = owner?.attachedSheet
+            let consent = installationSheet()
             check("crx3-install-consent-visible", consent != nil)
             if let consent {
                 let name = "22-crx3-install-consent"
@@ -208,7 +217,7 @@ import SereinCore
                     try await Task.sleep(for: .milliseconds(100))
                 }
                 check("crx3-install-consent-capture", FileManager.default.fileExists(atPath: root.appendingPathComponent(name+".png").path))
-                owner?.endSheet(consent, returnCode: .alertFirstButtonReturn)
+                consent.sheetParent?.endSheet(consent, returnCode: .alertFirstButtonReturn)
             }
             await installation.value
             let installed = host.records.first { $0.packageIdentity?.format == "CRX3" }
