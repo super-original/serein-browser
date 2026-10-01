@@ -91,12 +91,46 @@ if mode=="press" {
     guard identifier.hasPrefix("tab-"),UUID(uuidString:String(identifier.dropFirst(4))) != nil else{fail("Expected fixture tab identifier")}
     let items=controls(),matches=items.filter{text($0,kAXIdentifierAttribute)==identifier && text($0,kAXRoleAttribute)==kAXButtonRole}
     guard matches.count==1 else{fail("Expected one native tab control\n"+describe(items))}
+    func contextualItems()->[AXUIElement] {
+        var roots=elements(application,kAXChildrenAttribute)+elements(application,kAXWindowsAttribute)+elements(matches[0],kAXChildrenAttribute)
+        if let current=focused() {
+            roots.append(current)
+            // A contextual menu can be an AX focus ancestor rather than an
+            // application's window child. Include that public AX relationship.
+            var ancestor=current
+            for _ in 0..<4 {
+                guard let parent=value(ancestor,kAXParentAttribute),CFGetTypeID(parent)==AXUIElementGetTypeID() else{break}
+                ancestor=unsafeBitCast(parent,to:AXUIElement.self)
+                if text(ancestor,kAXRoleAttribute)==kAXMenuRole {roots.append(ancestor)}
+                if text(ancestor,kAXRoleAttribute)==kAXMenuBarRole {break}
+            }
+        }
+        var queue=roots,seen=Set<CFHashCode>(),menus:[AXUIElement]=[]
+        while !queue.isEmpty,seen.count<500,ProcessInfo.processInfo.systemUptime<deadline {
+            let item=queue.removeFirst()
+            guard seen.insert(CFHash(item)).inserted else{continue}
+            let role=text(item,kAXRoleAttribute)
+            if role==kAXMenuItemRole,text(item,kAXTitleAttribute)=="Exit Split View" {
+                var ancestor=item,isMenuBar=false
+                for _ in 0..<16 {
+                    guard let parent=value(ancestor,kAXParentAttribute),CFGetTypeID(parent)==AXUIElementGetTypeID() else{break}
+                    ancestor=unsafeBitCast(parent,to:AXUIElement.self)
+                    if text(ancestor,kAXRoleAttribute)==kAXMenuBarRole {isMenuBar=true;break}
+                }
+                if !isMenuBar {menus.append(item)}
+            }
+            if !["AXWebArea","AXBrowser","AXTable",kAXMenuBarRole].contains(role) {queue += elements(item,kAXChildrenAttribute)}
+        }
+        return menus
+    }
     let menuAction=AXUIElementPerformAction(matches[0],kAXShowMenuAction as CFString)
-    if menuAction != .success {
-        // SwiftUI does not advertise AXShowMenu for this Button on the pinned
-        // runtime. Exercise an actual right click on its measured native bounds.
-        // The original AX failure remains in the evidence; no model action runs.
-        print("AXShowMenu unavailable (\(menuAction.rawValue)); trying native right click")
+    print("AXShowMenu returned \(menuAction.rawValue)")
+    Thread.sleep(forTimeInterval:0.15)
+    var menus=contextualItems()
+    // AXShowMenu can time out while a native menu is already tracking. Inspect
+    // it before posting another right click, which could dismiss that menu.
+    if menus.isEmpty,menuAction != .success {
+        print("No contextual item after AXShowMenu; trying native right click")
         guard let position=value(matches[0],kAXPositionAttribute),let size=value(matches[0],kAXSizeAttribute),
               CFGetTypeID(position)==AXValueGetTypeID(),CFGetTypeID(size)==AXValueGetTypeID() else{fail("Missing tab bounds for context click")}
         var point=CGPoint.zero,dimensions=CGSize.zero
@@ -104,22 +138,16 @@ if mode=="press" {
               AXValueGetValue(unsafeBitCast(size,to:AXValue.self),.cgSize,&dimensions),
               point.x.isFinite,point.y.isFinite,dimensions.width>10,dimensions.height>10 else{fail("Invalid tab context-click bounds")}
         let center=CGPoint(x:point.x+dimensions.width/2,y:point.y+dimensions.height/2)
+        print("Context click at \(center), tab bounds \(point) \(dimensions)")
         for type in [CGEventType.mouseMoved,.rightMouseDown,.rightMouseUp] {
             guard NSWorkspace.shared.frontmostApplication?.processIdentifier==pid,
                   let event=CGEvent(mouseEventSource:nil,mouseType:type,mouseCursorPosition:center,mouseButton:.right) else{fail("Fixture lost foreground before context click")}
             event.post(tap:.cghidEventTap);Thread.sleep(forTimeInterval:0.06)
         }
     }
-    Thread.sleep(forTimeInterval:0.2)
-    var queue=elements(application,kAXChildrenAttribute)+elements(application,kAXWindowsAttribute),seen=Set<CFHashCode>(),menus:[AXUIElement]=[]
-    while !queue.isEmpty,seen.count<500,ProcessInfo.processInfo.systemUptime<deadline {
-        let item=queue.removeFirst()
-        guard seen.insert(CFHash(item)).inserted else{continue}
-        if text(item,kAXRoleAttribute)==kAXMenuItemRole,text(item,kAXTitleAttribute)=="Exit Split View" {menus.append(item)}
-        // The application menu bar also has View > Exit Split View, which
-        // operates on the active group. Never mistake it for the clicked tab's
-        // contextual action: exclude the entire menu-bar subtree.
-        if !["AXWebArea","AXBrowser","AXTable",kAXMenuBarRole].contains(text(item,kAXRoleAttribute)) {queue += elements(item,kAXChildrenAttribute)}
+    if menus.isEmpty {
+        Thread.sleep(forTimeInterval:0.2)
+        menus=contextualItems()
     }
     guard menus.count==1,AXUIElementPerformAction(menus[0],kAXPressAction as CFString) == .success else{key(53);fail("Expected one contextual Exit Split View item outside the application menu bar; found \(menus.count)")}
     print("Chose Exit Split View through the native tab context menu")

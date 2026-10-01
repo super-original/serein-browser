@@ -56,6 +56,7 @@ import SereinCore
                     check("mv3-document-idle-follows-end-across-worlds",world?["order"]=="ready" && world?["endNow"]=="ready",String(describing:world))
                 }
                 results += await ExtensionSplitGroupVerification.run(manager:manager,context:context,name:name)
+                results += await ExtensionLanguageVerification.run(manager:manager,context:context,name:name)
                 results += await ExtensionFrameVerification.run(session:session,generation:generation)
                 results += await ExtensionResourceVerification.run(context:context,session:session,generation:generation)
                 let firstCount=payload?["count"] as? Int ?? 0

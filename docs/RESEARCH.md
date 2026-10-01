@@ -296,3 +296,14 @@ At exact `8c767956e080ec32bb99954687f63a1a07050df3`, [run 36827489300](https://g
 ### Native linear split arrangements
 
 Apple's public [NSSplitView manual-sizing delegate](https://developer.apple.com/documentation/appkit/nssplitviewdelegate/splitview(_:resizesubviewswitholdsize:)) permits assigning pane frames when the split view does not use Auto Layout for their sizing. The application already uses autoresizing frames. For linear layouts, compute all pane lengths plus native divider gaps in one pass; enforce available-space bounds, and retain native divider dragging/resize notifications. The first sequential-divider restoration check failed at `7d7088f`; the replacement requires actual dragged/restored geometry tests and is not yet verified. Focus requests also must wait for the new native hierarchy, rather than being consumed by the outgoing arrangement. Tests now require actual document key delivery as well as an appropriate responder.
+
+### Public tab-language delegate, October 1
+
+Apple's current documentation JSON marks `WKWebExtensionTab.detectWebpageLocale` public,
+nondeprecated and available since macOS 15.4. Its absent implementation performs no action.
+The implementation now uses the current public `NLLanguageRecognizer` (macOS 10.14+),
+as no public WKWebView language-classification method is documented. This older public
+framework remains appropriate for local classification; it is not a private WebKit hook.
+Source-linked scope and differences from Firefox's CLD are in
+[the compatibility matrix](EXTENSIONS.md#tab-language-detection-native-verification-pending).
+Native compilation and real API promises remain the acceptance evidence.

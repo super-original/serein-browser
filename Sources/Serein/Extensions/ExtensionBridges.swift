@@ -55,7 +55,10 @@ import SereinCore
     func webView(for context: WKWebExtensionContext) -> WKWebView? {session?.runtimes[id]?.loadedWebView}
     func title(for context: WKWebExtensionContext) -> String? {tab?.title}
     func url(for context: WKWebExtensionContext) -> URL? {tab.flatMap{URL(string:$0.url)}}
-    func isPinned(for context: WKWebExtensionContext) -> Bool {tab?.kind != .regular}
+    func isPinned(for context: WKWebExtensionContext) -> Bool {tab.map{$0.kind != .regular} ?? false}
+    func detectWebpageLocale(for context:WKWebExtensionContext,completionHandler:@escaping (Locale?,(any Error)?)->Void) {
+        ExtensionPageLanguage.detect(tab:self,context:context,completion:completionHandler)
+    }
     func isSelected(for context: WKWebExtensionContext) -> Bool {
         let value=session?.tabSelection.ids.contains(id) ?? false
         ExtensionSelectionTrace.record("query",id:id,value:value,count:session?.tabSelection.ids.count ?? 0)

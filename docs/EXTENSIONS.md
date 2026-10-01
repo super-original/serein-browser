@@ -8,7 +8,7 @@
 |---|---|---|
 | Chrome Manifest V2 | Partial | ZIP/unpacked loading; controlled persistent-background fixture passes limited semantics. CRX3 verification tested; CRX2/store installation absent. |
 | Firefox Manifest V2 | Partial | XPI/unpacked loading; Firefox-specific semantics and APIs not implemented universally. |
-| Chrome Manifest V3 | Partial | Controlled service-worker fixture passes limited semantics; unmodified source-built JSON Formatter 0.8.0 passes 14/15 at `6c156fa` (original MAIN global fails). Lifetime, wakeup, DNR, offscreen and full Chrome API conformance not established. |
+| Chrome Manifest V3 | Partial | Controlled service-worker fixture passes limited semantics; unmodified source-built JSON Formatter 0.8.0 is intermittent: 15/15 at `32e6a92`, 14/15 at `d8e534e` (original MAIN global fails). Lifetime, wakeup, DNR, offscreen and full Chrome API conformance not established. |
 | Firefox Manifest V3 | Partial | Unmodified uBO Lite 2026.930.1227 passes 13/13 narrow blocking/options/disable checks in both tested origin modes at `f8e857d`. At `cfb3661`, default origin is 13/13 and experimental Firefox origin 12/13; the latter replies 162 ms after its original ten-second options timeout, which remains failed; full Firefox API/lifecycle compatibility is not established. |
 | Safari Web Extensions | Partial | Shared manifest resources load through public WebKit; intact Safari Web Extension `.appex` installation passes controlled runtime checks. App Store acquisition and Safari native handlers remain unsupported. |
 | Native Safari App Extensions | Blocked / unsupported | No documented third-party hosting entry point found for arbitrary SafariServices native extension handlers. |
@@ -23,22 +23,22 @@
 | Updates | Partial | Reviewed local same-developer CRX3 updates; storage/identity/denials verified; options refresh and native cross-origin navigation exercised, repeated context recovery/back-list counts pass at `d4c80d1`; complete back/forward URL-list and zoom comparisons pass at `e32960d`. No automatic store or unsigned/XPI update protocol |
 | Permissions / host access | Partial, network enforcement failures | All 12 stale-context/private/tab native-consent checks pass at `a16b46c`; saved grants/denials and content injection are exercised. Revoked background fetch access still succeeds after two seconds in both generations. |
 | Private access | Unsupported by policy in this build | No extension controller in private web views; no opt-in UI |
-| Tabs / windows | Partial | Native bridges, navigation, creation, focus, closure, pinning, duplication and window state; per-tab highlighted update/query/events tested; batch `tabs.highlight` absent; exhaustive ordering/concurrency unverified |
+| Tabs / windows | Partial | Native bridges, navigation, creation, focus, closure, pinning, duplication and window state; per-tab highlighted update/query/events and batch `tabs.highlight` exercised; group-wide pinning passes twelve MV2/MV3 promise/event checks; exhaustive ordering/concurrency unverified |
 | Tab zoom | Partial / unsupported event | Native setter and public notification hook implemented; `tabs.onZoomChange` is absent in both tested backgrounds. Set/get/reset verified at `f3757e9`; modes/scopes and per-site persistence unimplemented |
 | Navigation events | Partial / untested semantics | WebKit engine events plus host tab changes; no exhaustive ordering/redirect/frame suite |
-| Content scripts / isolated worlds | Partially verified | Controlled DOM injection succeeds after grant; page cannot see isolated extension globals. MAIN execution/global visibility pass; end-before-idle passes at `6c156fa` but fails at `719f0cf`, so phase ordering is intermittent. Real Formatter global visibility still fails. |
+| Content scripts / isolated worlds | Partially verified | Controlled DOM injection succeeds after grant; page cannot see isolated extension globals. MAIN execution/global visibility pass; end-before-idle passes at `6c156fa` but fails at `719f0cf`, so phase ordering is intermittent. Real Formatter global visibility remains intermittent, including failure at `d8e534e`; no engine ordering fix has been applied. |
 | Frames / dynamic scripting | Partially verified | `53d93bc` passes same-origin injection, unrequested-origin exclusion and isolated globals in HTTP iframes for both generations; nested-frame origin inheritance and executeScript conformance remain untested |
 | MV2 persistent backgrounds | Partially verified | Message → storage → tabs query → response exercised |
 | MV3 service workers | Partially verified | Same controlled path; suspension, restart and queued-event semantics not established |
 | Runtime messaging | Partially verified | One-shot messaging and single-recipient runtime ports: ordered nested payloads, sender metadata and explicit disconnect pass in MV2/MV3 at `029feec`; document-bound retest at `32b17e3` fails disable-disconnect for both MV2/MV3 (earlier readiness could consume the previous page). Cross-extension and multi-recipient semantics remain untested |
 | Storage | Partially verified | Local counter survives unload/reload with stable context ID; sync/quota/restart/error semantics untested |
-| Cross-origin network | Partial, failing revocation / redirect cases | Initial denied and granted requests pass. Both generations retain fetch access after host revocation; MV2 reads a denied redirect host. Public context recreation is under investigation; no complete header/auth/cross-origin suite. |
+| Cross-origin network | Partial, failing revocation / redirect cases | Initial denied and granted requests pass. Both generations retain fetch access after host revocation; MV2 reads a denied redirect host. Public context recreation also retains revoked-host access in the controlled tests; no complete header/auth/cross-origin suite. |
 | Cookies | Partial, event/error mismatches | Set/get/remove and ordinary-store/private exclusion pass in MV2/MV3. Host denial hides the value but returns null instead of rejection. Required onChanged payload/order is not verified; observed event arrays are empty. |
-| Downloads / history / bookmarks | Incomplete | Native browser features exist; not equivalent to implementing these extension API families |
+| Downloads / history / bookmarks | Incomplete | Native browser features include durable download IDs/metadata and atomic scoped history removal; the extension namespaces, query contracts, permission adapters and events remain absent |
 | Context menus | Partial / untested | Engine and action-menu hooks exist; full native menu integration not complete |
 | Request interception | Blocked or unverified per operation | Safari's documented blocking webRequest differences are material; no equivalent engine-level implementation added |
 | Declarative network rules | Partially verified, one real-package scenario passes | `e2339f2`: 21/21 controlled checks, including implicit resource types; uBO Lite 13/13 with production default origin after 9.63-second startup. Experimental Firefox origin 12/13 (options timeout). Limits, priorities, headers and broad real-package semantics remain unverified. |
-| Native messaging | Partial, controlled runtime verified | Verified CRX3 identity, explicit Chrome host-manifest registration and consent, framed stdio; Firefox host identities and automatic discovery unsupported |
+| Native messaging | Partial, controlled runtime verified | Verified CRX3 identity, explicit Chrome host-manifest registration/consent, framed stdio and original permission declaration enforcement (MV2/MV3 at `32e6a92`); Firefox host identities and automatic discovery unsupported |
 | External messaging / devtools | Unsupported | Manifest installation fails with a clear error |
 | Commands | Partial | Actual MV2/MV3 keyboard delivery, management-menu dispatch and private exclusion pass at `e32960d`; conflicts, remapping, global and real-extension shortcuts remain unverified |
 | Notifications | Untested | No complete consent/delivery/action semantics suite |
@@ -116,7 +116,7 @@ Serein now adds only `description: "Activate extension"` to empty, version-appro
 | Gap | Feasibility / next implementation boundary |
 |---|---|
 | Empty reserved action-command metadata | Host-side normalization implemented; no permissions removed. Run 36709180847 verified controlled loading and re-audited the seven pinned packages. |
-| Durable permissions and per-site revocation | Public context dictionaries/notifications permit host implementation; implemented and verified in both controlled manifest generations. |
+| Durable permissions and per-site revocation | Public context dictionaries/notifications and persistence are implemented; background-network revocation still fails in both controlled manifest generations, even after context recreation. Production site denial also disables the extension. |
 | Downloads, history, sessions, tabGroups, theme | Browser models can supply much of the underlying behavior, but the inspected macOS 27 public `WKWebExtensionControllerDelegate` exposes no namespace-registration or corresponding API dispatch hook. A complete isolated extension execution/compatibility bridge or custom WebKit integration is needed; adding native browser buttons is insufficient. These are substantial implementation gaps, not proven impossible. |
 | Identity, idle, clipboard access | Potential host services with explicit consent, OAuth/clipboard/privacy semantics and event handling; same missing dispatch boundary. No blanket native access granted. |
 | Offscreen / sidebar / notifications | Current upstream namespace code has build/runtime gates; observed system permission omission cannot be repaired merely by implementing a delegate. A public system API path or a measured custom-WebKit plan must be established first. |
@@ -408,3 +408,23 @@ patterns. Native MV2/MV3 fixtures retain a valid context grant and registered ho
 only the declaration from the native test cache; the real messaging request must be denied
 without spawning a process. Restoring the declaration must allow the existing actual-process
 scenario. These additional boundary checks await macOS CI.
+
+### Tab language detection (native verification pending)
+
+`tabs.detectLanguage` now has a production implementation through public
+[`detectWebpageLocale`](https://developer.apple.com/documentation/webkit/wkwebextensiontab/detectwebpagelocale(for:completionhandler:))
+(macOS 15.4+, nondeprecated) and
+[`NLLanguageRecognizer`](https://developer.apple.com/documentation/naturallanguage/nllanguagerecognizer)
+(macOS 10.14+, nondeprecated). Both are available on the required macOS 27 target.
+The host reads at most 32,768 UTF-16 units from the loaded HTTP(S) top document in
+its isolated client world and classifies locally. Empty/unclassified samples return `und`.
+Current tab/host access, enabled context, document identity and URL are checked before
+sampling and before replying. Private/unloaded/non-HTTP(S) tabs reject. Requests have
+a five-second bound, four-per-context and sixteen-global pending limits.
+
+[Firefox documents CLD](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/detectLanguage);
+Apple's classifier is different. Mixed languages, short/ambiguous text, Chinese script
+variants, subframes, file/extension pages and full CLD conformance remain gaps. No
+classification equivalence is claimed. Actual MV2/MV3 background requests test English,
+French, Japanese and empty documents; separate native boundary tests cover mid-request
+revocation/navigation, unregistered contexts and private tabs. Results are pending.

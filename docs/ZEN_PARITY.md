@@ -61,7 +61,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Multiple workspaces | P | Create, rename, remove, switch; no containers or per-workspace cookie stores |
 | Expanded/collapsed sidebar | I | Visual inspection required across resizing and focus |
 | Compact mode | P | Edge reveal/hide; Zen's complete toolbar variants absent |
-| Split views | P | Rows/columns/grid up to four panes, actual keyboard/page focus, native dragging, live views and saved boundaries pass at `b5dea7d`; inspected three-pane comparisons retain blank desktop content. Contiguous regular split tabs join in a verified sidebar strip; persistent multiple groups, incremental layout preservation and directional drag composition remain absent |
+| Split views | P | Rows/columns/grid up to four panes, actual keyboard/page focus, native dragging, live views and saved boundaries pass at `b5dea7d`; inspected three-pane comparisons retain blank desktop content. Contiguous regular and pinned split tabs join in verified sidebar strips; persistent independent groups and group-wide pinning pass native/extension tests. Group-wide movement/closing, incremental layout preservation and directional drag composition remain absent |
 | Multiple windows / moving tabs | P | Normal live-tab transfer through menu and typed drop targets; isolated private transfer deliberately rejected |
 | Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; opt-in bounded HTTP(S) Back/Forward persistence implemented with build/version/privacy fallback, 24/24 five-launch history/privacy checks pass at `b5dea7d`; file/extension histories remain gaps; unloaded ordinary tabs now retain bounded state with verified restart behavior |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
@@ -237,7 +237,7 @@ cases; mixed-category/cross-folder presentation, group-wide movement/closing and
 menu AX action remain incomplete. [Inspected original group comparisons](evidence/2026-10-01/persistent-split-groups/README.md)
 preserve the prior equal-split reference states and disclose unmatched conditions.
 
-### Named tab accessibility actions (pending)
+### Named tab accessibility actions
 
 Tabs now expose Duplicate and Close actions, plus group Pin/Unpin and Exit Split View when
 they belong to a group, using Apple's public
@@ -248,3 +248,5 @@ native AX test enumerates public action names/descriptions and invokes Exit Spli
 an inactive group; it must preserve the selected group. The ordinary right-click/menu test
 remains independent. This is not a claim that VoiceOver, every locale or full accessibility
 has been verified.
+
+At `32e6a92`, the native AX test enumerates and successfully invokes the named Exit Split View action on an inactive group while preserving the active group and selection. Screenshot 81 was retrieved and inspected. Duplicate/Close/Pin action exposure does not yet prove every action's assistive-technology behavior. At `d8e534e`, the separate context-menu helper excludes the application menu bar and correctly fails instead of selecting the global View command; no inactive group was removed by that pointer path.
