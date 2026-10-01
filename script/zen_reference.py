@@ -26,7 +26,7 @@ def snap(name,code='',key=None):
         geometry=js('return {width:outerWidth,height:outerHeight,scale:devicePixelRatio,sidebar:document.getElementById("navigator-toolbox").getBoundingClientRect().toJSON(),tabs:[...gBrowser.tabs].map(t=>({label:t.label,pinned:t.pinned,multiselected:!!t.multiselected,selected:!!t.selected,essential:t.hasAttribute("zen-essential"),rect:t.getBoundingClientRect().toJSON()}))};')
         if name in ['16-three-pane-grid','17-four-pane-addition','18-four-pane-grid','24-split-rows-keyboard','25-split-columns-keyboard']:
             geometry['splitPanes']=js('return window.referenceGridTabs.filter(t=>t.splitView).map(t=>({label:t.label,rect:t.linkedBrowser.getBoundingClientRect().toJSON()}));')
-            expected=3 if name=='16-three-pane-grid' else 4
+            expected=3 if name in ['16-three-pane-grid','24-split-rows-keyboard','25-split-columns-keyboard'] else 4
             if len(geometry['splitPanes'])!=expected or any(p['rect']['width']<=0 or p['rect']['height']<=0 for p in geometry['splitPanes']): raise RuntimeError('Incorrect visible split pane count or geometry')
             panes=[p['rect'] for p in geometry['splitPanes']]
             if name=='24-split-rows-keyboard' and not all(abs(a['x']-b['x'])<2 and a['bottom']<b['top'] for a,b in zip(panes,panes[1:])): raise RuntimeError('Command-Option-H did not produce rows')
@@ -80,7 +80,7 @@ try:
     snap('16-three-pane-grid','gZenViewSplitter.splitTabs(window.referenceGridTabs.slice(0,3),"grid");')
     snap('17-four-pane-addition','gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
     snap('18-four-pane-grid','gZenViewSplitter.unsplitCurrentView();gZenViewSplitter.splitTabs(window.referenceGridTabs,"grid");')
-    snap('24-split-rows-keyboard',key='h')
+    snap('24-split-rows-keyboard','gZenViewSplitter.unsplitCurrentView();gZenViewSplitter.splitTabs(window.referenceGridTabs.slice(0,3),"grid");',key='h')
     snap('25-split-columns-keyboard',key='v')
     snap('19-glance','gZenViewSplitter.unsplitCurrentView();gBrowser.selectedTab=window.referenceGridTabs[0];gZenGlanceManager.openGlance({},window.referenceGridTabs[1]);')
     js('gZenGlanceManager.closeGlance({noAnimation:true});gZenWorkspaces.createAndSaveWorkspace("Folder reference");')

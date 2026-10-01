@@ -127,7 +127,13 @@ import SereinCore
             else {ordered=abs(frames[0].minX-frames[1].minX)<2 && frames[0].maxX<frames[2].minX && frames[0].minY>frames[1].minY}
             check("split-"+layout.rawValue+"-keyboard-and-native-geometry",key && session.state.resolvedSplitLayout==layout && session.state.splitTabIDs==ids && ordered,frames.map{NSStringFromRect($0)}.joined(separator:"; "))
             check("split-"+layout.rawValue+"-retains-live-documents",ids.compactMap{session.runtimes[$0]?.loadedWebView}.map(ObjectIdentifier.init)==views)
-            check("split-"+layout.rawValue+"-restores-content-focus",session.window?.firstResponder === session.current?.loadedWebView)
+            let activeView=session.current?.loadedWebView
+            _=try? await activeView?.evaluateJavaScript("window.__sereinSplitKey=0;addEventListener('keydown',e=>{if(e.key==='k')window.__sereinSplitKey++},{once:true})")
+            let keyDelivered=await layoutKey("split-page-key")
+            let received=(try? await activeView?.evaluateJavaScript("window.__sereinSplitKey")) as? Int
+            let responder=session.window?.firstResponder as? NSView
+            let focused=activeView.map{responder === $0 || responder?.isDescendant(of:$0)==true} ?? false
+            check("split-"+layout.rawValue+"-restores-content-focus",keyDelivered && received==1 && focused,"responder=\(String(describing:responder)) keys=\(String(describing:received)) request=\(String(describing:session.contentFocusRequest)) address=\(session.addressFocused)")
             await capture(layout == .rows ? "63-split-rows" : layout == .columns ? "64-split-columns" : "65-split-grid-restored")
             if layout == .rows,let split=findGrid(in:session.window?.contentView) {
                 let moved=await drag(split,to:0.3,name:"rows")
@@ -141,7 +147,7 @@ import SereinCore
                         guard view.subviews.count==4 else{return nil}
                         return Double(view.subviews[0].frame.height/(view.bounds.height-24))
                     }
-                    check("split-rows-restored-native-boundaries",native?.isVertical==false && fraction.map{abs($0-0.3)<0.02}==true)
+                    check("split-rows-restored-native-boundaries",native?.isVertical==false && fraction.map{abs($0-0.3)<0.02}==true,"layout=\(restored.state.resolvedSplitLayout) stored=\(restored.state.splitFractions ?? []) actual=\(String(describing:fraction)) frames=\(native?.subviews.map{NSStringFromRect($0.frame)} ?? [])")
                     restored.window?.close();session.window?.makeKeyAndOrderFront(nil)
                 } catch {check("split-rows-restored-native-boundaries",false,error.localizedDescription)}
             }
@@ -153,6 +159,15 @@ import SereinCore
         _=session.state.setSplitTabs(ids);session.state.setSplitLayout(.grid)
         session.close(ids[3],ask:false)
         check("closing-grid-pane-retains-other-three",session.state.splitTabIDs==Array(ids.prefix(3)))
+        for layout in [SplitLayout.rows,.columns] {
+            let key=await layoutKey("split-"+layout.rawValue)
+            let frames=ids.prefix(3).compactMap{session.runtimes[$0]?.loadedWebView}.map{$0.convert($0.bounds,to:nil)}
+            let ordered=frames.count==3 && zip(frames,frames.dropFirst()).allSatisfy {a,b in
+                layout == .rows ? a.minY>b.maxY && abs(a.minX-b.minX)<2 && abs(a.height-b.height)<2 : a.maxX<b.minX && abs(a.minY-b.minY)<2 && abs(a.width-b.width)<2
+            }
+            check("three-pane-"+layout.rawValue+"-native-geometry",key && ordered,frames.map{NSStringFromRect($0)}.joined(separator:"; "))
+            await capture(layout == .rows ? "66-three-split-rows" : "67-three-split-columns")
+        }
         return results
     }
 }

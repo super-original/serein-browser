@@ -98,6 +98,7 @@ on run arguments
 end run
 APPLESCRIPT
         ;;
+      split-page-key) osascript -e 'tell application "System Events" to tell process "Serein" to keystroke "k"' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
       split-rows|split-columns|split-grid|split-unsplit)
         SPLIT_KEY=h
         case "$KEYBOARD_NAME" in split-columns) SPLIT_KEY=v ;; split-grid) SPLIT_KEY=g ;; split-unsplit) SPLIT_KEY=u ;; esac

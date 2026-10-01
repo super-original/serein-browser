@@ -4,13 +4,15 @@
 
 ## Latest completed source
 
-`b236aa816fc143d1d7f3fe0796b7b88fed79c780`: [run 36832346137](https://github.com/super-original/serein-browser/actions/runs/36832346137) passes **140 Swift unit tests, three process-attribution tests and 696/726 browser checks**. Four new download-search checks pass, including actual native keyboard input and a verified one-result count. The retrieved filtered-download screenshot was inspected: search, status controls, matching paused download and its Resume/Cancel actions are legible.
+`7d7088ff2ff36bf0c21d717d35fbfc817b82db64`: [run 36833599222](https://github.com/super-original/serein-browser/actions/runs/36833599222) passes **143 Swift unit tests, three process-attribution tests and 708/742 browser checks**. Actual Command–Option row/column/grid and unsplit/pair creation work, native geometry and retained WKWebView identities pass, and the retrieved row/column/grid screenshots were inspected. Website content remains blank. Three arrangement focus checks and one restored-row-divider check fail; these are new recoverable defects, in addition to the 30 retained structural failures.
 
-All six persistent-download-ID checks pass, and the separate-process download suite passes **21/21**. Legacy migration, non-reuse after clearing, private exclusion, failed-write retry and preservation of unsupported ledgers pass. Production history remains **24/24**, favicons **32/32** and extension errors **7/7**. Both uBO origin modes pass **13/13** this time; options timeouts remain intermittent rather than resolved. Thirty structural browser failures and the actual desktop rendering gate remain failing.
+The follow-up preserves focus requests until the current split hierarchy attaches and verifies actual page keystroke delivery. Linear boundaries are applied together through public AppKit manual sizing instead of sequential divider movement against old neighbor frames. Restoration details and matching three-pane captures are added. These changes are pending verification.
 
-[Development app](https://github.com/super-original/serein-browser/actions/runs/36832346137/artifacts/11147758524) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36832346137/artifacts/11147319662). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36833599222/artifacts/11148796013) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36833599222/artifacts/11149085273). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
 
-The next change adds native rows/columns/grid arrangement commands, live-view/focus preservation and saved divider positions. Native keyboard/geometry/drag/restoration checks and fresh pinned-Zen shortcut captures are pending. Arbitrary directional split trees and full extension downloads support remain missing.
+The pinned Zen [reference run 36833595078](https://github.com/super-original/serein-browser/actions/runs/36833595078) retains 23 earlier captures but fails both new four-pane shortcut rearrangements: inspected screenshots show its pane-limit toast. Source confirms the limit check precedes layout changes. The follow-up uses three panes to test the actual shortcut mapping; Serein deliberately allows rearranging four existing panes. No failed reference check is labeled passing.
+
+At `b236aa8`, all four download-search checks, six persistent-ID checks, 21 cross-launch download checks, 24 history/privacy checks, 32 favicon checks and seven extension-error checks pass. Both uBO origin modes passed 13/13 then; earlier options timeouts remain intermittent. The filtered-download screenshot and exact native keyboard result count were inspected.
 
 ## Measured performance and active follow-up
 

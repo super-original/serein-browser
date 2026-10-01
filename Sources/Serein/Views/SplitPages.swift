@@ -20,10 +20,11 @@ struct SplitPages:NSViewRepresentable {
         root.subviews.forEach{$0.removeFromSuperview()}
         root.paneIDs=ids;root.arrangement=layout;root.isVertical=layout != .rows;root.needsInitialDivider=true
         root.dividerFractions=nil;root.onDividersResize=nil
+        let expectedIDs=ids,expectedLayout=layout
         func bind(_ view:BrowserGridSplitView,_ index:Int) {
             view.fraction=session.state.splitFraction(at:index)
             view.onUserResize={ [weak session] value in
-                guard let session,session.state.splitTabIDs==ids,session.state.resolvedSplitLayout==layout else{return}
+                guard let session,session.state.splitTabIDs==expectedIDs,session.state.resolvedSplitLayout==expectedLayout else{return}
                 session.state.setSplitFraction(value,at:index)
             }
         }
@@ -45,7 +46,7 @@ struct SplitPages:NSViewRepresentable {
         if layout != .grid {
             root.dividerFractions=(0..<(ids.count-1)).map{session.state.splitFraction(at:$0)}
             root.onDividersResize={ [weak session] values in
-                guard let session,session.state.splitTabIDs==ids,session.state.resolvedSplitLayout==layout else{return}
+                guard let session,session.state.splitTabIDs==expectedIDs,session.state.resolvedSplitLayout==expectedLayout else{return}
                 for (index,value) in values.enumerated(){session.state.setSplitFraction(value,at:index)}
             }
             for id in ids {root.addArrangedSubview(pane(id))}
@@ -104,18 +105,36 @@ final class BrowserGridSplitView:NSSplitView,NSSplitViewDelegate {
         guard available>0 else{return}
         let minimum=min(isVertical ? 120.0 : 100.0,available/CGFloat(subviews.count))
         applyingFraction=true
-        if let values=dividerFractions,values.count==subviews.count-1 {
-            var prior:CGFloat=0
-            for (index,value) in values.enumerated() {
-                let remaining=CGFloat(subviews.count-index-1)
-                let position=min(available-minimum*remaining,max(prior+minimum,available*value))
-                setPosition(position+CGFloat(index)*dividerThickness,ofDividerAt:index)
-                prior=position
-            }
-            applyingFraction=false;return
+        if dividerFractions != nil {
+            applyingFraction=false
+            applyLinearFractions()
+            return
         }
         setPosition(min(available-minimum,max(minimum,available*fraction)),ofDividerAt:0)
         applyingFraction=false
+    }
+    private func applyLinearFractions() {
+        guard let values=dividerFractions,values.count==subviews.count-1,!subviews.isEmpty else{return}
+        let length=isVertical ? bounds.width : bounds.height
+        let available=length-dividerThickness*CGFloat(subviews.count-1)
+        guard available>0 else{return}
+        let minimum=minimumPaneLength
+        applyingFraction=true;defer{applyingFraction=false}
+        var prior:CGFloat=0
+        for index in subviews.indices {
+            let end:CGFloat
+            if index==subviews.count-1 {end=available}
+            else {end=min(available-minimum*CGFloat(subviews.count-index-1),max(prior+minimum,available*values[index]))}
+            let origin=prior+CGFloat(index)*dividerThickness
+            subviews[index].frame=isVertical ? NSRect(x:origin,y:0,width:end-prior,height:bounds.height) : NSRect(x:0,y:origin,width:bounds.width,height:end-prior)
+            prior=end
+        }
+    }
+    func splitView(_ splitView:NSSplitView,resizeSubviewsWithOldSize oldSize:NSSize) {
+        // Public manual sizing keeps all boundaries consistent in one pass;
+        // sequential setPosition calls can clamp against stale adjacent frames.
+        if dividerFractions?.count==subviews.count-1 {applyLinearFractions()}
+        else {splitView.adjustSubviews()}
     }
     private var minimumPaneLength:CGFloat {
         let available=(isVertical ? bounds.width : bounds.height)-dividerThickness*CGFloat(max(0,subviews.count-1))

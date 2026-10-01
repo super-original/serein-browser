@@ -33,13 +33,13 @@ For a contributor who already has Xcode 27 on a separate development machine, th
 
 Choose DuckDuckGo, Google, or Bing in Settings → Search engine. DuckDuckGo is the default.
 
-Settings → Unload idle regular tabs is Off by default. Optional 15/30/60-minute unloading preserves in-memory navigation history and zoom, but other page state may be lost. Visible, private, pinned, edited and media pages are kept; active downloads pause unloading. This does not restore back/forward history across app launches.
+Settings → Unload idle regular tabs is Off by default. Optional 15/30/60-minute unloading preserves in-memory navigation history and zoom, but other page state may be lost. Visible, private, pinned, edited and media pages are kept; active downloads pause unloading. Settings → Remember Back and Forward history between launches is a separate opt-in choice. It saves additional page/form state for normal web tabs; private tabs and currently detected edits are excluded. After an OS or WebKit update, tabs reopen at their saved URL instead. See the verification document for tested limits.
 
 Tools → Save Page Screenshot… saves the selected page's visible area as PNG after you choose a destination. Private-window exports also persist on disk when saved. Full-page and region capture are not implemented. The image comes from WebKit's content snapshot API and is separate from desktop screenshot evidence.
 
 In the address field, Down/Up select local history or bookmark suggestions, Return opens the selection, and Escape dismisses suggestions while retaining the typed query.
 
-Downloads show progress and support pause/resume when WebKit supplies resume data. Normal download history and available pause/failure resume data survive relaunch. Active transfers without saved resume data become interrupted; server or partial-file changes can prevent resumption. Private download records belong to their originating private window and disappear when it closes; downloaded files remain on disk.
+Downloads can be searched by filename or source and filtered by status. Clear All Finished removes finished records regardless of the current search, while keeping saved files. Downloads show progress and support pause/resume when WebKit supplies resume data. Normal download history and available pause/failure resume data survive relaunch. Active transfers without saved resume data become interrupted; server or partial-file changes can prevent resumption. Private download records belong to their originating private window and disappear when it closes; downloaded files remain on disk.
 
 Camera, microphone and location choices are available under Browser Menu → Settings → Site Permissions. Choices are scoped to the exact requesting and top-level sites; private-window choices are discarded with that window. Settings changes apply to future requests; reload a page to end an existing grant.
 
