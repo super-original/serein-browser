@@ -3,6 +3,19 @@ import WebKit
 /// Read-only diagnostics in an unmodified real extension's options page.
 /// A responsive API or later response never replaces the original timeout failure.
 @MainActor enum RealExtensionReadinessProbe {
+    static func lateReply(_ view:WKWebView) async->String {
+        let result=try? await view.callAsyncJavaScript("""
+        const started=performance.now();
+        const reply=await Promise.race([
+          globalThis.__sereinOptionsReply,
+          new Promise(resolve=>setTimeout(()=>resolve({status:'timeout'}),20000))
+        ]);
+        return JSON.stringify({status:reply?.status,elapsed:performance.now()-started,
+          hasEasyList:Array.isArray(reply?.value?.enabledRulesets)&&reply.value.enabledRulesets.includes('easylist'),
+          optionsStillLoading:document.body.classList.contains('loading')});
+        """,arguments:[:],in:nil,contentWorld:.page)
+        return result as? String ?? "Late reply could not be evaluated."
+    }
     static func inspect(_ view:WKWebView) async->String {
         let result=try? await view.callAsyncJavaScript("""
         const measure=async(name,operation)=>{

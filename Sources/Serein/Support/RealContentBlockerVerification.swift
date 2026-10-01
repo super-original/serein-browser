@@ -70,15 +70,18 @@ import SereinCore
                 await wait{optionView.url==options && !optionView.isLoading}
                 let reply=try? await optionView.callAsyncJavaScript("""
                 try {
+                  globalThis.__sereinOptionsReply=browser.runtime.sendMessage({what:'getOptionsPageData'}).then(value=>({status:'response',value:value??null}),error=>({status:'rejected',error:String(error)}));
                   return await Promise.race([
-                    browser.runtime.sendMessage({what:'getOptionsPageData'}).then(value=>({status:'response',value:value??null})),
+                    globalThis.__sereinOptionsReply,
                     new Promise(resolve=>setTimeout(()=>resolve({status:'timeout'}),10000))
                   ]);
                 } catch(error){return {status:'rejected',error:String(error)};}
                 """,arguments:[:],in:nil,contentWorld:.page) as? [String:Any]
                 let data=reply?["value"] as? [String:Any]
                 let readiness=reply?["status"] as? String=="timeout" ? await RealExtensionReadinessProbe.inspect(optionView) : "Not needed; original request completed."
-                check("original-options-background-roundtrip",(data?["enabledRulesets"] as? [String])?.contains("easylist")==true,"reply=\(String(describing:reply)) contextErrors=\(context.errors.map(\.localizedDescription)) readiness=\(readiness)")
+                let late=reply?["status"] as? String=="timeout" ? await RealExtensionReadinessProbe.lateReply(optionView) : "Not needed."
+                _=try? await optionView.evaluateJavaScript("delete globalThis.__sereinOptionsReply")
+                check("original-options-background-roundtrip",(data?["enabledRulesets"] as? [String])?.contains("easylist")==true,"reply=\(String(describing:reply)) contextErrors=\(context.errors.map(\.localizedDescription)) readiness=\(readiness) late=\(late)")
                 let rules=try? await optionView.callAsyncJavaScript("return await browser.declarativeNetRequest.getEnabledRulesets();",arguments:[:],in:nil,contentWorld:.page) as? [String]
                 check("engine-enables-shipped-easylist",rules?.contains("easylist")==true,String(describing:rules))
                 let errors=context.errors.map(\.localizedDescription)

@@ -325,6 +325,8 @@ import SereinCore
         results += await IdleSuspensionVerification.run(root:root)
         checkpoint("PageSnapshotVerification")
         results += await PageSnapshotVerification.run(manager:manager,root:root)
+        checkpoint("PageIconVerification")
+        results += await PageIconVerification.run(manager:manager,root:root)
         checkpoint("WindowPlacementVerification")
         results += await WindowPlacementVerification.run(manager:manager,root:root)
         checkpoint("WindowConsentVerification")

@@ -15,6 +15,9 @@ import SereinCore
     private var provisionalURL: URL?
     private(set) var failedURL: URL?
     var hasUserEdits=false
+    var pageIcon:NSImage?
+    @ObservationIgnored private(set) var pageIconDocumentID:UUID?
+    @ObservationIgnored private var pageIconTask:Task<Void,Never>?
     @ObservationIgnored private(set) var lastActivity=ContinuousClock().now
     func noteActivity(at instant:ContinuousClock.Instant=ContinuousClock().now){lastActivity=instant}
     var crashed=false
@@ -201,6 +204,7 @@ import SereinCore
         dispose();isLoading=false;progress=0;hasUserEdits=false;viewRevision += 1
     }
     func dispose() {
+        pageIconTask?.cancel();pageIconTask=nil;pageIconDocumentID=nil
         documentID=UUID()
         extensionHistoryAfterPreload=nil
         observations=[];storedView?.stopLoading();storedView?.navigationDelegate=nil;storedView?.uiDelegate=nil
@@ -217,7 +221,7 @@ import SereinCore
     }
 }
 extension TabRuntime: WKNavigationDelegate {
-    func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {guard webView === storedView else{return};noteActivity();documentID=UUID();failedURL=nil;failure=nil;crashed=false;synchronize()}
+    func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {guard webView === storedView else{return};pageIconTask?.cancel();pageIconTask=nil;pageIcon=nil;pageIconDocumentID=nil;noteActivity();documentID=UUID();failedURL=nil;failure=nil;crashed=false;synchronize()}
     func webView(_ webView: WKWebView,didCommit navigation: WKNavigation!) {guard webView === storedView else{return};provisionalURL=nil;failedURL=nil;hasUserEdits=false;synchronize()}
     func webView(_ webView: WKWebView,didFinish navigation: WKNavigation!) {
         guard webView === storedView else{return}
@@ -230,6 +234,14 @@ extension TabRuntime: WKNavigationDelegate {
             return
         }
         synchronize()
+        let document=documentID
+        pageIconTask?.cancel()
+        pageIconTask=Task { [weak self,weak webView] in
+            guard !Task.isCancelled,let webView,self?.documentID==document else{return}
+            let image=await PageIcon.load(from:webView)
+            guard !Task.isCancelled,let self,self.documentID==document,self.storedView === webView else{return}
+            self.pageIcon=image;self.pageIconDocumentID=document;self.pageIconTask=nil
+        }
         if let session,let url=webView.url {session.manager?.library.visit(title:title,url:url.absoluteString,isPrivate:session.state.isPrivate)}
     }
     func webView(_ webView: WKWebView,didFailProvisionalNavigation navigation: WKNavigation!,withError error: Error) {if webView === storedView {failed(error)}}

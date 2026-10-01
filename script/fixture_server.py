@@ -7,6 +7,8 @@ import io
 import math
 import struct
 import wave
+import zlib
+import urllib.parse
 import re
 import time
 
@@ -22,6 +24,14 @@ def tone_wave():
     return output.getvalue()
 
 TONE = tone_wave()
+
+def icon_png(width=16, height=16):
+    def chunk(kind, data):
+        return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+    pixels = b''.join(b'\x00' + b''.join(bytes((255, 255, 255, 255)) if 6 <= x < 10 or 6 <= y < 10 else bytes((22, 133, 130, 255)) for x in range(width)) for y in range(height))
+    return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(pixels)) + chunk(b'IEND', b'')
+
+ICON = icon_png()
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def tone(self):
@@ -56,6 +66,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_GET(self):
+        path = urllib.parse.urlsplit(self.path).path
+        if path == '/icon-redirect':
+            self.send_response(302)
+            self.send_header('Location', '/icon-fixture.png')
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
+        if path in ['/icon-fixture.png', '/icon-cookie.png', '/icon-large', '/icon-stream-large', '/icon-wide.png', '/icon-slow']:
+            if path == '/icon-cookie.png':
+                expected = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get('value', [''])[0]
+                if not expected or ('sereinIcon=' + expected) not in self.headers.get('Cookie', '').split('; '):
+                    self.send_error(403)
+                    return
+            if path == '/icon-slow':
+                time.sleep(1.5)
+            payload = icon_png(1025, 16) if path == '/icon-wide.png' else ICON
+            if path in ['/icon-large', '/icon-stream-large']:
+                payload += b'\x00' * 262145
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/png')
+            self.send_header('Cache-Control', 'no-store')
+            if path != '/icon-stream-large':
+                self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            try:
+                self.wfile.write(payload)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            return
         if self.path.split('?', 1)[0] == '/redirect-download':
             self.send_response(302)
             self.send_header('Location', '/download.txt')

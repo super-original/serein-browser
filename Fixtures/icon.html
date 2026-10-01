@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>Serein Icon Fixture</title>
+<link id="icon" rel="icon" href="/icon-fixture.png">
+<h1>Original tab icon fixture</h1>
+<script>
+const query=new URLSearchParams(location.search);
+if(query.has('cookie'))document.cookie='sereinIcon='+query.get('cookie')+';path=/;SameSite=Lax';
+const icons={normal:'/icon-fixture.png',cookie:'/icon-cookie.png?value='+encodeURIComponent(query.get('value')||''),cross:'http://localhost:8765/icon-fixture.png',redirect:'/icon-redirect',large:'/icon-large',stream:'/icon-stream-large',wide:'/icon-wide.png',invalid:'/download.txt',slow:'/icon-slow',file:'file:///tmp/never-read.png'};
+document.querySelector('#icon').href=icons[query.get('kind')]||icons.normal;
+if(query.has('deny')){const policy=document.createElement('meta');policy.httpEquiv='Content-Security-Policy';policy.content="connect-src 'none'";document.head.append(policy);}
+// Native extraction uses its own isolated execution world.
+window.fetch=()=>Promise.reject(new Error('Page-world fetch override'));
+</script>

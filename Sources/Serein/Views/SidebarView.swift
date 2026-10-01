@@ -116,7 +116,8 @@ private struct TabRow: View {
         HStack(spacing:10) {
             Button {session.clickTab(tab.id,modifiers:NSApp.currentEvent?.modifierFlags ?? [])} label: {
                 HStack(spacing:10) {
-                    Image(systemName:tab.kind == .essential ? "star.fill" : "globe").font(.system(size:14)).frame(width:16,height:16)
+                    if let icon=session.runtimes[tab.id]?.pageIcon {Image(nsImage:icon).resizable().interpolation(.high).frame(width:16,height:16).accessibilityHidden(true)}
+                    else {Image(systemName:tab.kind == .essential ? "star.fill" : "globe").font(.system(size:14)).frame(width:16,height:16).accessibilityHidden(true)}
                     if !compact {Text(tab.title).font(.system(size:13,weight:session.state.sidebarSelectedTabID==tab.id ? .semibold : .regular)).lineLimit(1);Spacer(minLength:0)}
                 }.frame(maxWidth:.infinity,alignment:compact ? .center : .leading).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel(tab.title).accessibilityIdentifier("tab-\(tab.id)").accessibilityAddTraits(session.tabSelection.ids.contains(tab.id) || session.state.sidebarSelectedTabID==tab.id ? .isSelected : [])
