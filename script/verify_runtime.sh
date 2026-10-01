@@ -2,6 +2,13 @@
 set -euo pipefail
 ROOT="$PWD/evidence/runtime"
 mkdir -p "$ROOT"
+# AppleScript's event timeout does not bound an entire polling loop. Stop the
+# exact input child before the fixture can advance to a different document/sheet.
+osascript() {
+  local input_deadline=6.5
+  case "${KEYBOARD_NAME:-startup}" in glance-*-control) input_deadline=4 ;; esac
+  python3 script/run_osascript.py "$input_deadline" "$@"
+}
 # Compile embedded UI automation before launching the app. Shell syntax checks do
 # not detect AppleScript reserved words or grammar errors.
 python3 - <<'PYTHON'
@@ -93,12 +100,14 @@ on run arguments
  with timeout of 5 seconds
   tell application "System Events" to tell process "Serein"
    set frontmost to true
+   set identifiersSeen to ""
    repeat with targetWindow in windows
     repeat with uiElement in entire contents of targetWindow
      set controlIdentifier to ""
      try
       set controlIdentifier to value of attribute "AXIdentifier" of uiElement
      end try
+     set identifiersSeen to identifiersSeen & (controlIdentifier as text) & linefeed
      if controlIdentifier is item 1 of arguments then
       perform action "AXPress" of uiElement
       return "Pressed " & controlIdentifier
@@ -107,7 +116,7 @@ on run arguments
    end repeat
   end tell
  end timeout
- error "Native Glance action was not found"
+ error "Native Glance action was not found" & linefeed & identifiersSeen
 end run
 APPLESCRIPT
         ;;
@@ -163,7 +172,8 @@ on run arguments
     keystroke "a" using command down
     keystroke item 1 of arguments
     delay 0.4
-    repeat 30 times
+    set pickerDeadline to (current date) + 5
+    repeat while (current date) < pickerDeadline
       repeat with candidateWindow in windows
         if my openFileIfPresent(candidateWindow) then return
         repeat with childSheet in sheets of candidateWindow
@@ -184,22 +194,18 @@ on run arguments
   end timeout
 end run
 on resolveEnteredPath(expectedPath)
- tell application "System Events" to tell process "Serein"
-  repeat with targetWindow in windows
-   repeat with uiElement in entire contents of targetWindow
-    try
-     set elementRole to value of attribute "AXRole" of uiElement
-     if elementRole is "AXTextField" or elementRole is "AXComboBox" then
-      if (value of attribute "AXValue" of uiElement as text) is expectedPath then
-       set value of attribute "AXFocused" of uiElement to true
-       key code 36
-       return
-      end if
-     end if
-    end try
-   end repeat
-  end repeat
- end tell
+ try
+  tell application "System Events" to tell process "Serein"
+   set focusedControl to value of attribute "AXFocusedUIElement"
+   set elementRole to value of attribute "AXRole" of focusedControl
+   if elementRole is "AXTextField" or elementRole is "AXComboBox" then
+    if (value of attribute "AXValue" of focusedControl as text) is expectedPath then
+     key code 36
+     return
+    end if
+   end if
+  end tell
+ end try
 end resolveEnteredPath
 on openFileIfPresent(containerElement)
   try

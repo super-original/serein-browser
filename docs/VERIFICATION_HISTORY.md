@@ -345,3 +345,19 @@ The independent crash supervisor positively attributes WebContent PID 13349 to t
 `c2d819b83b9a0d368443bd6560218e93a3a26d83`: [run 36795922611](https://github.com/super-original/serein-browser/actions/runs/36795922611) builds/packages successfully; **114 unit, 463/479 browser, 43/44 native-host, 6/7 crash, 9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fullscreen** checks pass. The extra browser/native-host failure is MV3 file-picker allow input. [App](https://github.com/super-original/serein-browser/actions/runs/36795922611/artifacts/11133404220) · [evidence](https://github.com/super-original/serein-browser/actions/runs/36795922611/artifacts/11133144692).
 
 Retrieved/inspected recovery screenshot still shows the stopped page. Its actual AX dump proves the outer `page-UUID` identifier was propagated to the crash heading, description **and Reload button**, replacing `page-error-reload`. Follow-up removes that unused container identifier; the action retains its own identifier. This is a production accessibility fix, awaiting native input/recovery verification. Diagnostics now also record native descriptions when SwiftUI button names are absent.
+
+## First actual crash-recovery pass, October 1
+
+## Latest verified source
+
+`d365cfc4ecc9807a420baedff41b1d04af329059`: [run 36796697040](https://github.com/super-original/serein-browser/actions/runs/36796697040) passes **114 unit tests, 467/482 browser checks, all 44 native-host checks, all 7 real-process crash checks, 9 quit, 12 isolated bridge and 8/12 fresh fullscreen checks**. The new download-restart scenario times out before exit; it is not a pass. Environment: image **20260928.0222.1**, macOS 27.0 26A428, Xcode 27.1 27A9269, SDK/minimum 27.0, ARM64.
+
+[Download development app](https://github.com/super-original/serein-browser/actions/runs/36796697040/artifacts/11134068245) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36796697040/artifacts/11133854312). Ad-hoc signed/hardened; not Developer ID signed or notarized.
+
+Actual attributed WebContent termination, delegate delivery, document invalidation, native AX Reload and same-tab/view recovery all pass. Both screenshots were retrieved and inspected: the native error panel disappears, but recovered website pixels remain blank. The distinct Reload identifier is now visible in the AX dump after removing the inherited container identifier. This proves recovery behavior, not desktop WebKit rendering.
+
+Both native split-divider drags and restored proportions still pass. Three new download checks pass: shutdown dismisses a destination sheet, refuses completion on persistence failure, and succeeds after retry. The separate process test reaches all five preparation checks but calls asynchronous AppKit termination from its own Swift task and never exits; its live download later completes rather than pausing. Follow-up returns from the fixture task and has the independent supervisor send real Command-Q to that child PID. Pause-on-quit is **not yet verified**.
+
+The 15 retained browser failures are nine unprimed ordinary/Glance fullscreen checks, MV2/MV3 zoom events, populated-window about:blank URLs and disable-disconnect delivery. The native-host picker passes all four interactions on this run, but earlier intermittent failures remain under investigation. No full extension or visual parity claim is made.
+
+[Refreshed pinned Zen references](https://github.com/super-original/serein-browser/actions/runs/36794469990/artifacts/11133112384) contain 23 captures; all 26 indexed file hashes were verified. Light/dark expanded windows and expanded/collapsed folders were inspected. Active/inactive window state remains unmatched. [Committed comparisons](evidence/2026-09-30/folders-and-safari/README.md) retain deliberate native material/icon differences and the rendering limitation.

@@ -25,6 +25,8 @@ struct GlancePages:View {
                 .padding(12).frame(width:56,height:144,alignment:.top)
                 .position(x:(geometry.size.width+width)/2+28,y:15+72)
             }
+            .accessibilityElement(children:.contain)
+            .accessibilityLabel("Link Preview")
         }
         .onAppear {DispatchQueue.main.async {session.focusContent(ifSelected:preview)}}
         .onDisappear {

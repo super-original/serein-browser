@@ -20,6 +20,9 @@ import SereinCore
     @ObservationIgnored weak var manager: BrowserManager?
     @ObservationIgnored weak var window: NSWindow?
     @ObservationIgnored var runtimes: [UUID:TabRuntime] = [:]
+    // Replacing a runtime can retain the same persisted tab UUID. Notify native
+    // panes even when SwiftUI coalesces close/reopen or round-trip window moves.
+    var runtimeRevision=0
     @ObservationIgnored var extensionWindow: ExtensionWindow?
     @ObservationIgnored var extensionTabs: [UUID:ExtensionTab] = [:]
     @ObservationIgnored var actionAnchors:[UUID:WeakActionAnchor]=[:]
@@ -35,6 +38,7 @@ import SereinCore
     var current: TabRuntime? {state.selectedTabID.map {runtime($0)}}
     var extensions: ExtensionHost? {state.isPrivate ? nil : manager?.extensions}
     func runtime(_ id: UUID) -> TabRuntime {
+        _=runtimeRevision
         if let existing=runtimes[id] {return existing}
         let runtime=TabRuntime(id:id,session:self);runtimes[id]=runtime
         return runtime
@@ -133,6 +137,7 @@ import SereinCore
             extensions?.controller.didCloseTab(bridge(closed),windowIsClosing:false)
             runtimes[closed]?.dispose();runtimes[closed]=nil;extensionTabs[closed]=nil
         }
+        runtimeRevision &+= 1
         let before=Set(state.tabs.map(\.id));state.close(id)
         for added in state.tabs where !before.contains(added.id) {extensions?.controller.didOpenTab(bridge(added.id))}
         tabSelection.retain(Set(state.tabs.map(\.id)))

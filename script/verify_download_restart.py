@@ -57,7 +57,12 @@ with (root / 'server.log').open('w') as log:
                         text=True, capture_output=True, timeout=10)
                     (root / f'{stage}-quit-input.log').write_text(quit_input.stdout + quit_input.stderr)
                     assert quit_input.returncode == 0, quit_input.stderr
-                    code = process.wait(timeout=15)
+                    try:
+                        code = process.wait(timeout=15)
+                    except subprocess.TimeoutExpired:
+                        subprocess.run(['screencapture', '-x', str(root / f'{stage}-quit-timeout.png')], timeout=10)
+                        subprocess.run(['sample', str(process.pid), '3', '-file', str(root / f'{stage}-quit-timeout-stack.txt')], timeout=10)
+                        raise
                 finally:
                     stop(process)
             assert code == 0, f'{stage} app exited with {code}'

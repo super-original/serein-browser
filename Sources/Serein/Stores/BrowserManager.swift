@@ -79,6 +79,7 @@ import SereinCore
         for tab in moving {
             if let bridge=bridges[tab.id] {extensions.controller.didMoveTab(bridge,from:oldIndices[tab.id] ?? 0,in:source.extensionWindow)}
         }
+        source.runtimeRevision &+= 1;target.runtimeRevision &+= 1
         target.select(id);source.state.repair();if let next=source.state.selectedTabID {source.select(next)}
         scheduleSave()
     }

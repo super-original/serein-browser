@@ -54,22 +54,9 @@ for BROWSER in 'Safari' 'Safari Technology Preview'; do
   if [[ "$BROWSER" == 'Safari' ]]; then NAME=system-safari; else NAME=technology-preview; fi
   open -a "$BROWSER" http://127.0.0.1:8765/index.html
   sleep 3
-  osascript <<'APPLESCRIPT' > "$ROOT/$NAME-network-consent.txt" 2>&1 || true
-with timeout of 5 seconds
- tell application "System Events" to tell process "UserNotificationCenter"
-  repeat with candidateWindow in windows
-   repeat with probeElement in entire contents of candidateWindow
-    try
-     if name of probeElement contains "Python" then
-      click button "Don’t Allow" of candidateWindow
-      return "Denied fixture Python local-network discovery"
-     end if
-    end try
-   end repeat
-  end repeat
- end tell
-end timeout
-APPLESCRIPT
+  # This fresh runner has just launched our fixture Python. Deny its optional
+  # discovery dialog using the same native action as the verified visual baseline.
+  osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' > "$ROOT/$NAME-network-consent.txt" 2>&1 || true
   if osascript - "$BROWSER" <<'APPLESCRIPT' > "$ROOT/$NAME-automation.txt" 2>&1
 on run arguments
  with timeout of 15 seconds
@@ -103,6 +90,19 @@ APPLESCRIPT
     printf 'Native navigation failed for %s; retaining screenshot\n' "$BROWSER"
   fi
   sleep 2
+  osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' >> "$ROOT/$NAME-network-consent.txt" 2>&1 || true
+  sleep 0.5
+  osascript <<'APPLESCRIPT' > "$ROOT/$NAME-system-dialog.txt" 2>&1
+with timeout of 5 seconds
+ tell application "System Events"
+  if not (exists process "UserNotificationCenter") then return "clear"
+  tell process "UserNotificationCenter"
+   if (count of windows) is 0 then return "clear"
+   return "blocked"
+  end tell
+ end tell
+end timeout
+APPLESCRIPT
   screencapture -x "$ROOT/$NAME.png"
   xcrun swift script/VisualGate.swift "$ROOT/$NAME.png" "$ROOT/$NAME-glyphs.json" || true
   osascript - "$BROWSER" <<'APPLESCRIPT' || true
@@ -119,8 +119,9 @@ root=pathlib.Path(sys.argv[1]);results=[]
 for name in ['system-safari','technology-preview']:
  title=(root/(name+'-automation.txt')).read_text()
  gate=json.loads((root/(name+'-glyphs.json')).read_text())
- results.append({'browser':name,'loadedFixtureTitle':'Field Notes' in title,'desktopGlyphGate':gate['passed'] if 'Field Notes' in title else None,'scope':'Independent Apple browser diagnostic; never substitutes for the Serein rendering gate.'})
+ clear=(root/(name+'-system-dialog.txt')).read_text().strip()=='clear'
+ results.append({'browser':name,'loadedFixtureTitle':'Field Notes' in title,'systemDialogAbsent':clear,'desktopGlyphGate':gate['passed'] if 'Field Notes' in title and clear else None,'scope':'Independent Apple browser diagnostic; never substitutes for the Serein rendering gate.'})
 (root/'results.json').write_text(json.dumps(results,indent=2))
 print(json.dumps(results,indent=2))
-assert all(x['loadedFixtureTitle'] for x in results),'A browser did not expose the fixture title; inspect actual screenshots.'
+assert all(x['loadedFixtureTitle'] and x['systemDialogAbsent'] for x in results),'Fixture title or unobscured desktop was not established; inspect actual screenshots.'
 PY

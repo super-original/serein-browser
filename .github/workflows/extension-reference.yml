@@ -1,0 +1,29 @@
+name: Pinned Gecko extension semantics reference
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/extension-reference.yml', 'script/extension_reference.sh', 'script/extension_reference.py']
+permissions:
+  contents: read
+concurrency:
+  group: extension-semantics-reference
+  cancel-in-progress: true
+jobs:
+  reference:
+    runs-on: xcode-27
+    timeout-minutes: 10
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      MACOSX_DEPLOYMENT_TARGET: '27.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: bash script/extension_reference.sh
+      - name: Index reference evidence
+        if: always()
+        run: python3 script/emit_evidence.py evidence/extension-reference
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: zen-extension-port-reference
+          path: evidence/extension-reference
+          retention-days: 7

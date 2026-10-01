@@ -58,36 +58,39 @@ struct PagePane: View {
     let session: BrowserSession
     let id: UUID
     var body: some View {
-        let runtime=session.runtime(id)
-        ZStack {
-            WebContentView(runtime:runtime).id(runtime.viewRevision).id(ObjectIdentifier(runtime))
-            if session.state.tabs.first(where:{$0.id==id})?.url=="about:blank" {
-                VStack(spacing:12) {
-                    Image(systemName:session.state.isPrivate ? "hand.raised" : "sparkle").font(.system(size:32,weight:.light))
-                    Text(session.state.isPrivate ? "Private Browsing" : "New Tab").font(.title2)
-                    Text(session.state.isPrivate ? "History and tabs from this window won’t be saved." : "⌘L to search or enter an address").foregroundStyle(.secondary)
-                }.frame(maxWidth:.infinity,maxHeight:.infinity).background(Color(nsColor:.textBackgroundColor))
+        if session.state.tabs.contains(where:{$0.id==id}) {
+            let runtime=session.runtime(id)
+            ZStack {
+                WebContentView(runtime:runtime,session:session).id(runtime.viewRevision).id(ObjectIdentifier(runtime))
+                if session.state.tabs.first(where:{$0.id==id})?.url=="about:blank" {
+                    VStack(spacing:12) {
+                        Image(systemName:session.state.isPrivate ? "hand.raised" : "sparkle").font(.system(size:32,weight:.light))
+                        Text(session.state.isPrivate ? "Private Browsing" : "New Tab").font(.title2)
+                        Text(session.state.isPrivate ? "History and tabs from this window won’t be saved." : "⌘L to search or enter an address").foregroundStyle(.secondary)
+                    }.frame(maxWidth:.infinity,maxHeight:.infinity).background(Color(nsColor:.textBackgroundColor))
+                }
+                if let failure=runtime.failure {
+                    ContentUnavailableView {Label(runtime.crashed ? "Page stopped" : "Unable to load page",systemImage:"exclamationmark.triangle")} description:{Text(failure)} actions:{Button("Reload"){runtime.reload()}.buttonStyle(.glass).accessibilityIdentifier("page-error-reload")}
+                    .frame(maxWidth:.infinity,maxHeight:.infinity).background(Color(nsColor:.textBackgroundColor))
+                }
             }
-            if let failure=runtime.failure {
-                ContentUnavailableView {Label(runtime.crashed ? "Page stopped" : "Unable to load page",systemImage:"exclamationmark.triangle")} description:{Text(failure)} actions:{Button("Reload"){runtime.reload()}.buttonStyle(.glass).accessibilityIdentifier("page-error-reload")}
-                .frame(maxWidth:.infinity,maxHeight:.infinity).background(Color(nsColor:.textBackgroundColor))
-            }
+            .overlay(alignment:.top){if runtime.isLoading {ProgressView(value:runtime.progress).progressViewStyle(.linear).tint(.accentColor).frame(height:2)}}
+            .overlay(RoundedRectangle(cornerRadius:8).strokeBorder(
+                session.state.secondaryTabID != nil && session.state.selectedTabID == id ? Color.accentColor : Color.primary.opacity(0.08),
+                lineWidth:session.state.secondaryTabID != nil && session.state.selectedTabID == id ? 2 : 1
+            ).allowsHitTesting(false))
         }
-        .overlay(alignment:.top){if runtime.isLoading {ProgressView(value:runtime.progress).progressViewStyle(.linear).tint(.accentColor).frame(height:2)}}
-        .overlay(RoundedRectangle(cornerRadius:8).strokeBorder(
-            session.state.secondaryTabID != nil && session.state.selectedTabID == id ? Color.accentColor : Color.primary.opacity(0.08),
-            lineWidth:session.state.secondaryTabID != nil && session.state.selectedTabID == id ? 2 : 1
-        ).allowsHitTesting(false))
     }
 }
 struct WebContentView: NSViewRepresentable {
     let runtime: TabRuntime
+    let session: BrowserSession
     func makeNSView(context: Context) -> NSView {
+        let container=WebContentContainer(frame:NSRect(x:0,y:0,width:800,height:600))
+        guard runtime.session === session,session.runtimes[runtime.id] === runtime,session.state.tabs.contains(where:{$0.id==runtime.id}) else{return container}
+        container.runtime=runtime
         let view=runtime.webView
-        let gesture=NSClickGestureRecognizer(target:context.coordinator,action:#selector(Coordinator.focus))
-        gesture.delaysPrimaryMouseButtonEvents=false;gesture.delegate=context.coordinator
-        view.addGestureRecognizer(gesture);context.coordinator.gesture=gesture;context.coordinator.view=view
-        let container=WebContentContainer(frame:NSRect(x:0,y:0,width:800,height:600));container.runtime=runtime
+        context.coordinator.attach(to:view)
         view.frame=container.bounds;view.autoresizingMask=[.width,.height]
         container.addSubview(view)
         return container
@@ -99,10 +102,26 @@ struct WebContentView: NSViewRepresentable {
         weak var view:WKWebView?
         var gesture:NSClickGestureRecognizer?
         init(runtime:TabRuntime){self.runtime=runtime}
+        func attach(to view:WKWebView) {
+            guard self.view !== view else{return}
+            if let gesture {self.view?.removeGestureRecognizer(gesture)}
+            let gesture=NSClickGestureRecognizer(target:self,action:#selector(focus))
+            gesture.delaysPrimaryMouseButtonEvents=false;gesture.delegate=self
+            view.addGestureRecognizer(gesture);self.gesture=gesture;self.view=view
+        }
         @objc func focus(){if runtime.session?.state.secondaryTabID != nil,runtime.session?.state.selectedTabID != runtime.id{runtime.session?.select(runtime.id)}}
         func gestureRecognizer(_ gestureRecognizer:NSGestureRecognizer,shouldRecognizeSimultaneouslyWith other:NSGestureRecognizer)->Bool{true}
     }
-    func updateNSView(_ view: NSView,context: Context) {}
+    func updateNSView(_ view: NSView,context: Context) {
+        guard let container=view as? WebContentContainer,
+              runtime.session === session,session.runtimes[runtime.id] === runtime,session.state.tabs.contains(where:{$0.id==runtime.id}) else{return}
+        let page=runtime.webView
+        context.coordinator.attach(to:page)
+        if page.superview !== container {
+            page.frame=container.bounds;page.autoresizingMask=[.width,.height]
+            container.addSubview(page)
+        }
+    }
 }
 @MainActor private final class WebContentContainer:NSView {
     weak var runtime:TabRuntime?

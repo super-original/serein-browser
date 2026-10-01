@@ -65,7 +65,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Multiple windows / moving tabs | P | Normal live-tab transfer; isolated private transfer deliberately rejected |
 | Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; full navigation-history restoration across launches remains absent |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
-| Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume passed the separate-process integrity/privacy gate at `29dabbf`; active transfers without resume data remain interrupted |
+| Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume passed the separate-process integrity/privacy gate at `29dabbf`; live ordinary downloads now pause on real Command-Q and resume after relaunch with full byte integrity at `c1e2498`; a live private transfer stays out of recovery files |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |
 | File selection / JS dialogs | I | Native panels; broader UI automation pending |
 | Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |

@@ -92,6 +92,8 @@ import WebKit
             manager.moveTab(owner,from:destination,to:session)
             destination.window?.close()
             session.window?.makeKeyAndOrderFront(nil)
+            await wait{parent.loadedWebView?.window === window && nextView.window === window && nextView.bounds.width>0}
+            check("roundtrip-move-reattaches-live-panes",parent.loadedWebView?.window === window && nextView.window === window && nextView.bounds.width>0)
             let splitInput=await keyboard("glance-split-control")
             await wait{session.state.activeGlance==nil}
             check("native-split-control",splitInput && session.state.activeGlance==nil && session.state.splitTabIDs==[owner,next.id])
