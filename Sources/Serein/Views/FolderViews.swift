@@ -18,7 +18,13 @@ struct FolderRow:View {
         .accessibilityLabel(folder.name).accessibilityValue(folder.collapsed ? "Collapsed folder" : "Expanded folder")
         .accessibilityIdentifier("folder-\(folder.id)")
         .draggable(session.sidebarDrag(folder.id,kind:.folder))
-        .dropDestination(for:SidebarDragItem.self){items,_ in session.acceptSidebarDrop(items,at:.folder(folder.id))}
+        .dropDestination(for:SidebarDragItem.self){items,point in
+            let target:SidebarDropTarget
+            if items.first?.kind == .folder,point.y<=10 {target = .beforeFolder(folder.id)}
+            else if items.first?.kind == .folder,point.y>=26 {target = .afterFolder(folder.id)}
+            else {target = .folder(folder.id)}
+            return session.acceptSidebarDrop(items,at:target)
+        }
         .contextMenu {
             Button("Edit Folder…"){session.folderEditor = .init(editingID:folder.id,name:folder.name)}
             Button("New Tab in Folder"){session.newTab(inFolder:folder.id)}

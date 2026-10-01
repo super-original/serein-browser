@@ -142,11 +142,11 @@ SPLITINPUT
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
         /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" plain > "$ROOT/glance-external-pointer-input.log" 2>&1
         ;;
-      sidebar-cross-window-drag|sidebar-reorder-after|sidebar-selected-group-drag)
+      sidebar-cross-window-drag|sidebar-reorder-after|sidebar-selected-group-drag|sidebar-folder-before|sidebar-folder-after)
         SOURCE_IDENTIFIER=$(sed -n '1p' "$ROOT/sidebar-drag-identifiers")
         TARGET_IDENTIFIER=$(sed -n '2p' "$ROOT/sidebar-drag-identifiers")
         DROP_PLACEMENT=before
-        if test "$KEYBOARD_NAME" = sidebar-reorder-after; then DROP_PLACEMENT=after; fi
+        if test "$KEYBOARD_NAME" = sidebar-reorder-after || test "$KEYBOARD_NAME" = sidebar-folder-after; then DROP_PLACEMENT=after; fi
         native_input drag "$SOURCE_IDENTIFIER" "$TARGET_IDENTIFIER" "$DROP_PLACEMENT" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;
       folder-name)

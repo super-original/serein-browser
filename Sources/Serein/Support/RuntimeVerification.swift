@@ -356,6 +356,8 @@ import SereinCore
         results += await NativeHostVerification.run(manager:manager,root:root)
         checkpoint("FolderVerification")
         results += await FolderVerification.run(manager:manager,root:root)
+        checkpoint("FolderOrderVerification")
+        results += await FolderOrderVerification.run(manager:manager,root:root)
         checkpoint("SafariBundleVerification")
         results += await SafariBundleVerification.run(manager:manager,root:root)
         ExtensionSelectionTrace.save(to:root)

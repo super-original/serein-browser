@@ -182,6 +182,17 @@ extension BrowserWindowState {
         var order=pinnedItemIDs(in:destination,workspaceID:item.workspaceID);if !order.contains(id){order.append(id)};setPinnedOrder(order,in:destination,workspaceID:item.workspaceID)
         return true
     }
+    /// Move a complete folder tree beside a sibling, validating before mutation.
+    @discardableResult public mutating func placeFolder(_ id:UUID,beside target:UUID,after:Bool)->Bool {
+        guard id != target,let item=folder(id),let destination=folder(target),
+              item.workspaceID==destination.workspaceID,!folderDescendants(id).contains(target) else{return false}
+        var order=pinnedItemIDs(in:destination.parentID,workspaceID:destination.workspaceID)
+        order.removeAll{$0==id}
+        guard let index=order.firstIndex(of:target),moveFolder(id,into:destination.parentID) else{return false}
+        order.insert(id,at:index+(after ? 1 : 0))
+        setPinnedOrder(order,in:destination.parentID,workspaceID:destination.workspaceID)
+        return true
+    }
     /// Remove only the container, retaining its tabs and nested folders.
     public mutating func unpackFolder(_ id:UUID) {
         guard let item=folder(id) else{return}

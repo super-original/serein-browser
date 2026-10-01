@@ -159,3 +159,18 @@ Pending follow-up also measures idle age with ContinuousClock, so wall-clock adj
 ## Pending page screenshot command
 
 Tools → Save Page Screenshot uses the real selected WKWebView viewport and a native PNG destination sheet. Nothing is written on cancellation or after a changed document/selection; private-window exports require the same explicit destination choice with a disk-persistence warning. Runtime scenarios cover PNG encoding, stale capture identity, cancellation, duplicate-command refusal, native save destination/content and private cancellation. The pending image is an internal WebKit snapshot, explicitly not evidence that desktop content rendering is repaired.
+
+
+## Historical navigation/performance preparation notes (superseded by 69e6b04)
+
+## Pending production navigation persistence
+
+The next change moves same-build HTTP(S) Back/Forward restoration from a fixture into an opt-in setting. It stores bounded, checksummed state atomically with the normal session, excludes private and edited pages, checks initial and committed history URLs, and falls back to the current URL for invalid or mismatched state. Six unit tests cover legacy sessions, privacy/identity, credentials, corruption, malformed optional data and size limits. The supervised fixture now performs five independent launches through production save/restore, including disabled preference, changed engine and corrupt checksum cases. At d4ebe44 all six new unit tests and all 19 production restart/fallback checks pass. The next iteration additionally unloads the background history tab before saving and verifies that disabled preference removes the payload; both follow-ups pass at 8c76795.
+
+### Additional history privacy checks prepared
+
+The next fixture keeps a real private WKWebView with nonempty interaction state alive during a normal session save, then confirms its window/history are absent. It dispatches a real document input event through the existing isolated edit bridge, verifies opaque persistence is suppressed, reloads and checks that Back/Forward entries survive. These runtime additions are pending; model-level privacy/identity tests already pass.
+
+### Native tab-switch measurement prepared
+
+A controlled four-tab/24-switch fixture measures native WKWebView attachment followed by a document-identity JavaScript roundtrip, recording each sample and median/nearest-rank p95. It has bounded waits and verifies the selected document every time; no timing threshold is used as a pass/fail gate. Ten-millisecond polling, existing workload and the failed desktop compositor are explicit limitations. This is not visible-frame latency, startup, scrolling or energy evidence. Runtime results are pending.

@@ -15,7 +15,7 @@ struct SidebarDragItem:Codable,Transferable,Sendable {
     }
 }
 
-enum SidebarDropTarget {case beforeTab(UUID),afterTab(UUID),folder(UUID)}
+enum SidebarDropTarget {case beforeTab(UUID),afterTab(UUID),folder(UUID),beforeFolder(UUID),afterFolder(UUID)}
 extension BrowserSession {
     func sidebarDrag(_ id:UUID,kind:SidebarDragItem.Kind)->SidebarDragItem {
         let visibleOrder=state.sidebarTabIDs
@@ -32,10 +32,18 @@ extension BrowserSession {
         // view cannot cross that boundary, even between two private windows.
         guard source===self || (!source.state.isPrivate && !state.isPrivate) else{return false}
         if item.kind == .folder {
-            guard source===self,case .folder(let folder)=target,
-                  source.state.folder(item.item)?.workspaceID==source.state.activeWorkspaceID,
-                  state.folder(folder)?.workspaceID==state.activeWorkspaceID else{return false}
-            return state.moveFolder(item.item,into:folder)
+            guard source===self,state.folder(item.item)?.workspaceID==state.activeWorkspaceID else{return false}
+            switch target {
+            case .folder(let folder):
+                guard state.folder(folder)?.workspaceID==state.activeWorkspaceID else{return false}
+                return state.moveFolder(item.item,into:folder)
+            case .beforeFolder(let folder),.afterFolder(let folder):
+                guard state.folder(folder)?.workspaceID==state.activeWorkspaceID else{return false}
+                let after:Bool
+                if case .afterFolder=target {after=true} else{after=false}
+                return state.placeFolder(item.item,beside:folder,after:after)
+            case .beforeTab,.afterTab:return false
+            }
         }
         let ids=item.selectedTabs ?? [item.item],unique=Set(ids)
         // Validate the whole captured group before moving any live view. A stale
@@ -44,6 +52,7 @@ extension BrowserSession {
         let tabs=ids.compactMap{id in source.state.visibleTabs.first{$0.id==id}}
         guard tabs.count==ids.count else{return false}
         switch target {
+        case .beforeFolder,.afterFolder:return false
         case .beforeTab(let id),.afterTab(let id):
             guard !unique.contains(id),let destination=state.visibleTabs.first(where:{$0.id==id}),
                   tabs.allSatisfy({$0.kind==destination.kind}) else{return false}
@@ -55,6 +64,7 @@ extension BrowserSession {
             guard ids.allSatisfy({id in state.tabs.contains{$0.id==id}}) else{return false}
         }
         switch target {
+        case .beforeFolder,.afterFolder:return false
         case .beforeTab(let target):for id in ids {move(id,before:target)}
         case .afterTab(let target):for id in ids.reversed() {move(id,after:target)}
         case .folder(let target):for id in ids {guard moveTabIntoFolder(id,target) else{return false}}

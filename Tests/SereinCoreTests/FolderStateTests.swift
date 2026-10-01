@@ -149,4 +149,33 @@ final class FolderStateTests:XCTestCase {
         }
     }
 
+    func testFolderPlacementBeforeAfterLastAndNestedPersistence() throws {
+        var state=BrowserWindowState();let tab=state.selectedTabID!
+        let a=try XCTUnwrap(state.createFolder(name:"A",tabIDs:[tab])),b=try XCTUnwrap(state.createFolder(name:"B"))
+        let child=try XCTUnwrap(state.createFolder(name:"Child",parentID:a))
+        state.folders?[0].userIcon=FolderIcon.star.rawValue
+        XCTAssertTrue(state.placeFolder(a,beside:b,after:true));XCTAssertEqual(state.pinnedItemIDs(),[b,a])
+        XCTAssertTrue(state.placeFolder(a,beside:b,after:false));XCTAssertEqual(state.pinnedItemIDs(),[a,b])
+        XCTAssertTrue(state.placeFolder(child,beside:b,after:true));XCTAssertNil(state.folder(child)?.parentID)
+        XCTAssertEqual(state.pinnedItemIDs(),[a,b,child]);XCTAssertEqual(state.folderTabIDs(a),[tab])
+        XCTAssertEqual(try SavedSession.decode(SavedSession(windows:[state]).encoded()).windows[0],state)
+    }
+    func testInvalidFolderPlacementIsAtomic() throws {
+        var state=BrowserWindowState();let workspace=state.activeWorkspaceID
+        let root=try XCTUnwrap(state.createFolder(name:"Root")),child=try XCTUnwrap(state.createFolder(name:"Child",parentID:root))
+        let other=state.addWorkspace(name:"Other"),foreign=try XCTUnwrap(state.createFolder(name:"Foreign"))
+        state.switchWorkspace(workspace)
+        let before=state
+        XCTAssertFalse(state.placeFolder(root,beside:child,after:true))
+        XCTAssertFalse(state.placeFolder(root,beside:root,after:false))
+        XCTAssertFalse(state.placeFolder(root,beside:foreign,after:true))
+        XCTAssertFalse(state.placeFolder(root,beside:UUID(),after:true));XCTAssertEqual(state,before)
+        XCTAssertEqual(state.folder(foreign)?.workspaceID,other)
+        var deep=root
+        for level in 2...5 {deep=try XCTUnwrap(state.createFolder(name:"Level \(level)",parentID:deep))}
+        let sibling=try XCTUnwrap(state.createFolder(name:"Sibling"));_=state.createFolder(name:"Nested",parentID:sibling)
+        let beforeDepth=state
+        XCTAssertFalse(state.placeFolder(sibling,beside:deep,after:true));XCTAssertEqual(state,beforeDepth)
+    }
+
 }
