@@ -40,13 +40,13 @@ Early captures were invalid: a network-consent dialog obscured them, and initial
 | Content left edge | About 246 px including window origin | 230 pt sidebar + 6 pt separation |
 | Content inset | About 8 pt top/right/bottom | 8 pt |
 | Tab typography | About 13 pt, stronger selected state | System 13 pt, semibold selection |
-| Essential cells | Compact icon-only region above workspace | Shared across workspaces; original SF Symbol until favicon support |
+| Essential cells | Compact icon-only region above workspace | Shared across workspaces; same-origin favicons with native symbol fallback |
 | Navigation header | Traffic lights, sidebar button, back, forward, reload | Same order; native system traffic-light geometry retained |
 | Tab shape | Rounded selected tab | 8 pt selected-tab corner radius |
 | Compact transitions | Hover keep duration 150 ms, toolbar hide 1,000 ms in source | Sidebar hover hide 150 ms; toolbar-only/both variants not implemented |
 | Materials | Zen's default Gecko theme | Native macOS 27 Liquid Glass; different tint/contrast is intentional, not claimed as pixel matching |
 
-Same-origin raster favicon loading passed 16/17 checks at `7da3254` and its native screenshot was inspected; CSP enforcement is being corrected and awaits verification; unsupported/unloaded sites retain SF Symbol fallbacks. Cross-origin, SVG and live icon updates remain gaps. Native address field, sheets and menus deliberately follow macOS 27 treatment. Geometry discrepancies, missing Zen interactions and clipping are defects, not automatically justified as material adaptation.
+Same-origin PNG favicon loading passes all 19 checks at `cfb3661`, including CSP/private isolation, and its native screenshot was inspected; broader formats and SVG await verification; unsupported/unloaded sites retain SF Symbol fallbacks. Cross-origin and live icon updates remain gaps; SVG and additional raster formats are pending runtime checks. Native address field, sheets and menus deliberately follow macOS 27 treatment. Geometry discrepancies, missing Zen interactions and clipping are defects, not automatically justified as material adaptation.
 
 ## Parity checklist
 
@@ -90,7 +90,7 @@ This checklist is intentionally not a claim of complete Zen parity.
 
 [Run 36705707876](https://github.com/super-original/serein-browser/actions/runs/36705707876) reproduced all 14 captures with the same pinned Zen 1.22.2b binary and settings on macOS 27. All 14 screenshots were retrieved and visually inspected. Light/dark, essentials/pins, address focus, context menu, workspace labels, split panes, compact overlay/hide, collapsed toolbar, settings and restricted-port error states are visible. The context menu is taller than the available area and scrolls; it is not a full-menu inventory. Workspace captures retain the fixture page while changing workspace labels; they do not prove cookie/container isolation.
 
-The measured sidebar remains 230 points and regular tab layout boxes 224×40. Full-window light captures match 1000×677 outer bounds and 1× scale. Serein's content starts at the same x≈246, but its bordered native address field is visually shorter than Zen's address surface. Essentials lack favicons and have different cell sizing; split-group tab representation and compact toolbar variants remain gaps. Zen shows a 2-point accent outline on the focused split pane; the continuation adopts that focus indicator using the native accent color. Native system traffic lights/materials intentionally differ. Serein's blank WebKit area remains a rendering defect/blocker, never a deliberate glass adaptation.
+The measured sidebar remains 230 points and regular tab layout boxes 224×40. Full-window light captures match 1000×677 outer bounds and 1× scale. Serein's content starts at the same x≈246, but its bordered native address field is visually shorter than Zen's address surface. Essentials now show same-origin favicons but retain different cell sizing; split-group tab representation and compact toolbar variants remain gaps. Zen shows a 2-point accent outline on the focused split pane; the continuation adopts that focus indicator using the native accent color. Native system traffic lights/materials intentionally differ. Serein's blank WebKit area remains a rendering defect/blocker, never a deliberate glass adaptation.
 
 ### Additional grid baseline under capture
 

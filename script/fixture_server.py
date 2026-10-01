@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic local browser fixtures, including a resumable slow download."""
 import argparse
+import base64
+import hashlib
+import json
+import pathlib
 import functools
 import http.server
 import io
@@ -32,6 +36,7 @@ def icon_png(width=16, height=16):
     return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(pixels)) + chunk(b'IEND', b'')
 
 ICON = icon_png()
+ICON_EXTERNAL_REQUESTS = 0
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def tone(self):
@@ -72,6 +77,54 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = urllib.parse.urlsplit(self.path).path
+        if path == '/icon-svg-external':
+            global ICON_EXTERNAL_REQUESTS
+            ICON_EXTERNAL_REQUESTS += 1
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/png')
+            self.send_header('Content-Length', str(len(ICON)))
+            self.end_headers()
+            self.wfile.write(ICON)
+            return
+        if path == '/icon-svg-audit':
+            payload = json.dumps({'requests': ICON_EXTERNAL_REQUESTS}).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+        if path == '/icon-svg':
+            query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+            width = 1025 if 'wide' in query else 32 if 'rect' in query else 16
+            payload = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="16" viewBox="0 0 16 16">'
+                '<rect width="16" height="16" fill="#168582"/><path d="M6 0h4v16H6zM0 6h16v4H0z" fill="white"/>'
+                '<script>fetch("http://127.0.0.1:8765/icon-svg-external?script=1")</script>'
+                '<image href="http://127.0.0.1:8765/icon-svg-external?image=1" width="1" height="1"/>'
+                '</svg>').encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/svg+xml')
+            self.send_header('Content-Length', str(len(payload)))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+        if path.startswith('/icon-format/'):
+            name = path.rsplit('/', 1)[-1]
+            entries = json.loads((pathlib.Path(self.directory) / 'IconFormats.json').read_text())
+            if name not in entries:
+                self.send_error(404)
+                return
+            entry = entries[name]
+            payload = base64.b64decode(entry['base64'], validate=True)
+            assert hashlib.sha256(payload).hexdigest() == entry['sha256']
+            self.send_response(200)
+            self.send_header('Content-Type', entry['mime'])
+            self.send_header('Content-Length', str(len(payload)))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         if path == '/icon-redirect':
             self.send_response(302)
             self.send_header('Location', '/icon-fixture.png')

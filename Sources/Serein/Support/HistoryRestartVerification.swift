@@ -18,16 +18,20 @@ import SereinCore
         let second="http://127.0.0.1:8765/index.html?history=second"
         let third="http://127.0.0.1:8765/index.html?history=third"
         let file=root.appendingPathComponent("fixture-interaction-state.bin")
+        func snapshot()->String {
+            "url=\(view.url?.absoluteString ?? "nil") current=\(view.backForwardList.currentItem?.url.absoluteString ?? "nil") back=\(view.backForwardList.backList.map{$0.url.absoluteString}) forward=\(view.backForwardList.forwardList.map{$0.url.absoluteString}) loading=\(view.isLoading)"
+        }
         if prepare {
             var loaded=true
+            var steps:[String]=[]
             for url in [first,second,third] {
                 session.navigate(url)
-                let ready=await wait{view.url?.absoluteString==url && !runtime.isLoading && view.backForwardList.currentItem?.url.absoluteString==url}
-                loaded=loaded && ready
+                let ready=await wait{view.url?.absoluteString==url && !view.isLoading && view.backForwardList.currentItem?.url.absoluteString==url}
+                loaded=loaded && ready;steps.append("ready=\(ready) \(snapshot())")
             }
             runtime.goBack()
-            let middle=await wait{view.url?.absoluteString==second && !runtime.isLoading}
-            check("prepare-three-entry-history",loaded && middle && view.backForwardList.backItem?.url.absoluteString==first && view.backForwardList.forwardItem?.url.absoluteString==third)
+            let middle=await wait{view.url?.absoluteString==second && !view.isLoading && view.backForwardList.currentItem?.url.absoluteString==second && view.backForwardList.backItem?.url.absoluteString==first && view.backForwardList.forwardItem?.url.absoluteString==third}
+            check("prepare-three-entry-history",loaded && middle,steps.joined(separator:"; ")+"; final="+snapshot())
             if let data=view.interactionState as? Data,!data.isEmpty,data.count<=2*1024*1024 {
                 do {try PrivateFileStore.write(data,to:file);check("public-state-is-bounded-data",true,"\(data.count) bytes; opaque fixture state only")}
                 catch {check("public-state-is-bounded-data",false,error.localizedDescription)}
@@ -37,19 +41,19 @@ import SereinCore
                 let data=try Data(contentsOf:file)
                 check("serialized-state-available",!data.isEmpty && data.count<=2*1024*1024)
                 // Finish the ordinary URL-only startup before replacing its state.
-                _=await wait{view.backForwardList.currentItem?.url.absoluteString==second && !runtime.isLoading}
+                _=await wait{view.backForwardList.currentItem?.url.absoluteString==second && !view.isLoading}
                 view.interactionState=data
-                let middle=await wait{view.url?.absoluteString==second && !runtime.isLoading}
-                check("restored-current-and-both-directions",middle && view.backForwardList.backItem?.url.absoluteString==first && view.backForwardList.forwardItem?.url.absoluteString==third)
+                let middle=await wait{view.url?.absoluteString==second && !view.isLoading && view.backForwardList.currentItem?.url.absoluteString==second && view.backForwardList.backItem?.url.absoluteString==first && view.backForwardList.forwardItem?.url.absoluteString==third}
+                check("restored-current-and-both-directions",middle,snapshot())
                 runtime.goBack()
-                let back=await wait{view.url?.absoluteString==first && !runtime.isLoading}
-                check("back-after-new-process",back)
+                let back=await wait{view.url?.absoluteString==first && !view.isLoading}
+                check("back-after-new-process",back,snapshot())
                 runtime.goForward()
-                let forward=await wait{view.url?.absoluteString==second && !runtime.isLoading}
+                let forward=await wait{view.url?.absoluteString==second && !view.isLoading}
                 runtime.goForward()
-                let end=await wait{view.url?.absoluteString==third && !runtime.isLoading}
-                check("forward-after-new-process",forward && end)
-                let text=try? await view.evaluateJavaScript("document.body.innerText.includes('Field Notes')")
+                let end=await wait{view.url?.absoluteString==third && !view.isLoading}
+                check("forward-after-new-process",forward && end,snapshot())
+                let text=try? await view.evaluateJavaScript("document.title==='Field Notes' && document.body.innerText.includes('A little room to think.')")
                 check("restored-document-executes",text as? Bool==true)
             } catch {check("read-state",false,error.localizedDescription)}
         }

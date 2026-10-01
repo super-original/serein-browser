@@ -73,9 +73,10 @@ with (root / 'server.log').open('w') as log:
             results.append({'name': f'{stage}-private-storage-permissions', 'passed': protected, 'detail': str(modes)})
             (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
             print(json.dumps(stage_results, indent=2), flush=True)
-            assert len(stage_results) == expected and all(item['passed'] for item in stage_results), stage_results
+            assert len(stage_results) == expected, stage_results
             assert protected, modes
-        results.append({'name':'history-restored-after-process-exit','passed':True,'detail':'Two independent launches exited with status 0; public opaque state restored Back/Forward navigation.'})
+        results.append({'name':'history-independent-process-exits','passed':True,'detail':'Two independent launches exited with status 0; history semantics are reported separately.'})
         (root.parent / 'results.json').write_text(json.dumps(results, indent=2))
+        assert all(item['passed'] for item in results), 'History restoration failures retained'
     finally:
         stop(server)
