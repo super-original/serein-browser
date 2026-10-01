@@ -36,7 +36,7 @@ import ImageIO
           return btoa(binary);
         } catch{return null;}
         finally{clearTimeout(timer);controller.abort();if(reader)try{await reader.cancel();}catch{}}
-        """,arguments:[:],in:nil,contentWorld:.world(name:"SereinPageIcon")) {result in
+        """,arguments:[:],in:nil,in:.world(name:"SereinPageIcon")) {result in
             switch result {case .success(let value):reply.finish(value as? String);case .failure:reply.finish(nil)}
         }
         }
