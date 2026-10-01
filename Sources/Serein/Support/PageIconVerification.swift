@@ -24,7 +24,12 @@ import WebKit
             let ready=await load("kind="+format,in:session)
             let bitmap=runtime.pageIcon?.tiffRepresentation.flatMap{NSBitmapImageRep(data:$0)}
             let color=bitmap?.colorAt(x:0,y:0)?.usingColorSpace(.deviceRGB)
-            if format=="svg" {svgRendered=ready && runtime.pageIcon != nil}
+            if format=="svg" {
+                svgRendered=ready && runtime.pageIcon != nil
+                try? "61-svg-tab-favicon".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                let captured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("61-svg-tab-favicon.capture-finished").path)}
+                check("svg-sidebar-capture",svgRendered && captured && FileManager.default.fileExists(atPath:root.appendingPathComponent("61-svg-tab-favicon.png").path))
+            }
             check(format+"-raster-load",ready && runtime.pageIcon?.size==NSSize(width:16,height:16) && (color?.greenComponent ?? 0)>0.4 && (color?.redComponent ?? 1)<0.2)
         }
         for kind in ["cross","file","redirect","large","stream","wide","invalid","svgwide"] {

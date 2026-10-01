@@ -12,8 +12,10 @@ import SereinCore
         do {
             let source=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/ExtensionRuntimeFailure")
             try host.prepare(source,at:host.root.appendingPathComponent(id.uuidString))
-            let record=InstalledExtension(id:id,name:"Background failure fixture",version:"1.0",enabled:true,permissions:[],hosts:[])
-            host.records.append(record);try await host.load(record)
+            let record=InstalledExtension(id:id,name:"Background failure fixture",version:"1.0",enabled:false,permissions:[],hosts:[])
+            host.records.append(record)
+            await host.setEnabled(id,true)
+            check("enable-clears-previous-operation-error",host.error==nil)
             guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("Missing error fixture context")}
             check("no-placeholder-action",!host.hasAction(id) && !host.actionEnabled(id,in:session))
             let failure=await ExtensionBackgroundProbe.failure(for:context)

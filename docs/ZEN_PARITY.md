@@ -63,7 +63,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Compact mode | P | Edge reveal/hide; Zen's complete toolbar variants absent |
 | Split views | P | Explicit selected-tab grids up to four panes verified at `d4c80d1`; balanced native dividers and minimum-window bounds verified at `e32960d`; split-group tabs, incremental layout preservation and drag composition remain absent |
 | Multiple windows / moving tabs | P | Normal live-tab transfer through menu and typed drop targets; isolated private transfer deliberately rejected |
-| Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; opt-in bounded HTTP(S) Back/Forward persistence implemented with build/version/privacy fallback, 19/19 five-launch verification passes at d4ebe44; file/extension histories remain gaps; unloaded ordinary tabs now have bounded pending verification |
+| Persistent sessions | P | Tab/workspace/sidebar and ordinary frame restoration; opt-in bounded HTTP(S) Back/Forward persistence implemented with build/version/privacy fallback, 21/21 five-launch verification passes at 8c76795; file/extension histories remain gaps; unloaded ordinary tabs now retain bounded state with verified restart behavior |
 | Bookmarks / history / find | I | Basic library, search, clear, find navigation |
 | Downloads | P | Native save/cancel/reveal, durable normal history, progress and in-memory pause/resume; cross-launch resume passed the separate-process integrity/privacy gate at `29dabbf`; live ordinary downloads now pause on real Command-Q and resume after relaunch with full byte integrity at `c1e2498`; a live private transfer stays out of recovery files |
 | Private browsing | I | Nonpersistent store per window; no saved private tabs/history; extensions excluded |
@@ -79,7 +79,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | Containers / profiles / per-site isolation | U | Not implemented |
 | Zen Mods / themes / gradient editor | U | Not implemented; native glass adaptation is separate |
 | Sync / account / import wizard | U | Not implemented |
-| Tab unloading | P | Manual with warning and document/selection revalidation; old-view release and in-memory back/current/forward/zoom restoration verified at `3209fee`, including extension resources. Opt-in automatic idle unloading passes 20 policy and six real-audio checks at `fdd5ae2`. Opt-in cross-launch HTTP(S) history now implemented, including unloaded background state; loaded-tab production path 19/19 passes at d4ebe44; unloaded-tab follow-up pending |
+| Tab unloading | P | Manual with warning and document/selection revalidation; old-view release and in-memory back/current/forward/zoom restoration verified at `3209fee`, including extension resources. Opt-in automatic idle unloading passes 20 policy and six real-audio checks at `fdd5ae2`. Opt-in cross-launch HTTP(S) history now implemented, including unloaded background state; 21/21 production-path checks pass at 8c76795 including unloaded background tabs |
 | Keyboard customization | U | Fixed native shortcuts only |
 | Picture-in-picture / screenshot tools | P | Viewport PNG save command passes 14 runtime checks at `fdd5ae2`; native sheet and exported content image retrieved/inspected; full-page/region selection and picture-in-picture commands absent |
 | Full extension compatibility | U | See detailed matrix; target remains unmet |

@@ -38,6 +38,24 @@ import SereinCore
             let saved=manager.saveNow()
             let disk=try? SavedSession.decode(Data(contentsOf:root.appendingPathComponent("session.json")))
             check("public-state-is-bounded-data",saved && disk?.navigationHistory?.count==1,"Production opt-in session contains one bounded history record")
+            let privateSession=manager.newWindow(isPrivate:true)
+            let privateURL=first+"&private-history=1"
+            privateSession.navigate(privateURL,ask:false)
+            let privateView=privateSession.current!.webView
+            let privateReady=await wait{privateView.url?.absoluteString==privateURL && !privateView.isLoading && privateView.interactionState is Data}
+            let privateSaved=manager.saveNow()
+            let privateDisk=try? SavedSession.decode(Data(contentsOf:root.appendingPathComponent("session.json")))
+            check("live-private-history-excluded",privateReady && privateSaved && privateDisk?.windows.count==1 && privateDisk?.navigationHistory?.count==1 && privateDisk?.navigationHistory?.first?.windowID==session.state.id)
+            privateSession.window?.close()
+            session.window?.makeKeyAndOrderFront(nil)
+            _=try? await view.evaluateJavaScript("const input=document.querySelector('input');input.value='owned history fixture edit';input.dispatchEvent(new Event('input',{bubbles:true}));")
+            let edited=await wait{runtime.hasUserEdits}
+            let editedSaved=manager.saveNow()
+            let editedDisk=try? SavedSession.decode(Data(contentsOf:root.appendingPathComponent("session.json")))
+            check("detected-page-edits-exclude-opaque-state",edited && editedSaved && editedDisk != nil && editedDisk?.navigationHistory==nil)
+            runtime.reload()
+            let reloaded=await wait{!runtime.hasUserEdits && !view.isLoading && view.url?.absoluteString==second && view.backForwardList.backItem?.url.absoluteString==first && view.backForwardList.forwardItem?.url.absoluteString==third}
+            check("reload-after-edit-retains-navigation",reloaded,snapshot())
             _=session.newTab()
             runtime.suspend()
             let savedUnloaded=manager.saveNow()
