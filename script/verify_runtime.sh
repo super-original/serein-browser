@@ -55,8 +55,10 @@ cleanup() {
 }
 trap cleanup EXIT
 python3 script/fetch_extension_fixtures.py /tmp/serein-extension-audit
+FORMATTER_ROOT=$(mktemp -d /tmp/serein-formatter.XXXXXX)
+python3 script/build_json_formatter_fixture.py "$FORMATTER_ROOT/build" "$ROOT/json-formatter-build.json" || true
 ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-baseline.txt"
-open -n dist/Serein.app --stdout "$ROOT/application.log" --stderr "$ROOT/application-error.log" --args --test-root "$ROOT" --integration-test --real-extension-catalog /tmp/serein-extension-audit/catalog.json
+open -n dist/Serein.app --stdout "$ROOT/application.log" --stderr "$ROOT/application-error.log" --args --test-root "$ROOT" --integration-test --real-extension-catalog /tmp/serein-extension-audit/catalog.json --real-formatter "$FORMATTER_ROOT/build/extension"
 sleep 2
 for attempt in $(seq 1 50); do
   if test -s "$ROOT/app-pid"; then break; fi

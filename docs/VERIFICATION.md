@@ -4,9 +4,11 @@
 
 ## Latest completed source
 
-`fc53c18ee37cf64c0f1219813a99c84042e8e84b`: [run 36844658622](https://github.com/super-original/serein-browser/actions/runs/36844658622) passes **152 Swift unit tests, three process-attribution tests and 741/771 browser checks**. All five capability-ledger/access-review checks pass, including actual native sheet opening and dismissal. The retrieved `71-extension-requested-access.png` was inspected: required and optional declarations are readable and unclipped, with grants/private-access limitations explicit. Both separate uBO origin scenarios pass their narrow checks on this run; earlier intermittent options timeouts remain recorded.
+`c366ef271b459b3d00edde896c8a299c9e81ae84`: [run 36846677554](https://github.com/super-original/serein-browser/actions/runs/36846677554) passes **152 Swift unit tests, three process-attribution tests and 754/784 browser checks**. All 13 new bookmark checks pass: actual Command-D, draft/Save/Cancel, nested library editing, stable identity/persistence, live-page preservation and atomic validation/write failures. Retrieved `72-bookmark-create.png` and `73-bookmark-updated.png` were inspected: labels, fields, controls and updated row are readable and unclipped. Website content remains blank behind them.
 
-[Development app](https://github.com/super-original/serein-browser/actions/runs/36844658622/artifacts/11153376769) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36844658622/artifacts/11153640866). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36846677554/artifacts/11153439874) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36846677554/artifacts/11153634200). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum. Evidence ZIP SHA-256: `403042d309b5cb1e123969fdef08814606fb5513d09e866617cd4399506c5649`.
+
+All five capability-ledger/access-review checks passed at `fc53c18`; the actual native sheet was retrieved and inspected. The refined Gecko downloads reference passes 15/16 checks in each generation, proving physical removal while retaining the failed metadata-freshness expectation. A pinned source-built JSON Formatter scenario is prepared next; no result is claimed yet.
 
 The 30 retained structural failures and desktop-rendering gate still fail. At `9d8d8c1`, native save-entry repair passes exact name/directory, destination and PNG checks; both save panels and the exported PNG were inspected. Internal snapshot text is visible, while desktop website content stays blank. All three joined split-sidebar checks pass; inspected four-pane labels are heavily truncated at the pinned width.
 

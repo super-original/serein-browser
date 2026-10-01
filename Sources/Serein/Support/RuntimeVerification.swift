@@ -364,6 +364,8 @@ import SereinCore
         ExtensionSelectionTrace.save(to:root)
         checkpoint("RealExtensionAudit")
         await RealExtensionAudit.run(manager:manager,root:root)
+        checkpoint("RealFormatterVerification")
+        results += await RealFormatterVerification.run(root:root)
         checkpoint("RealContentBlockerVerification")
         results += await RealContentBlockerVerification.run()
         await pause(100)
