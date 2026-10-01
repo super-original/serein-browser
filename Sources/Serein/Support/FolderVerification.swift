@@ -43,7 +43,7 @@ import SereinCore
         check("sheet-keeps-owning-window-active",manager.active===session,"keyIsSheet=\(NSApp.keyWindow===session.window?.attachedSheet) lastIsOther=\(manager.windows.last?.session===other)")
         let created=await keyboard("folder-name")
         await wait{session.folderEditor==nil}
-        guard let folder=session.state.folders?.first(where:{$0.name=="Research notes"}) else {check("native-editor-creates-folder",false,"Actual name entry did not create folder");return results}
+        guard let folder=session.state.folders?.first(where:{$0.name=="Research notes"}) else {check("native-editor-creates-folder",false,"Actual name entry did not create folder");await capture("folder-editor-input-failure");return results}
         check("native-editor-creates-folder",created && session.state.folderTabIDs(folder.id)==[a,b] && session.state.tabs.filter{[a,b].contains($0.id)}.allSatisfy{$0.kind == .pinned})
         try? ("folder-"+folder.id.uuidString).write(to:root.appendingPathComponent("folder-control-identifier"),atomically:true,encoding:.utf8)
         check("grouping-retains-live-webviews",session.runtime(a)===first && session.runtime(b)===second)

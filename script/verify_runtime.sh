@@ -9,6 +9,18 @@ osascript() {
   case "${KEYBOARD_NAME:-startup}" in glance-*-control) input_deadline=4 ;; esac
   python3 script/run_osascript.py "$input_deadline" "$@"
 }
+native_input() {
+  python3 - "$APP_PID" "$@" <<'PYINPUT'
+import subprocess, sys
+try:
+    deadline = 4 if sys.argv[2] == 'press' else 6.5
+    result = subprocess.run(['/tmp/serein-accessibility-input', *sys.argv[1:]], timeout=deadline)
+    raise SystemExit(result.returncode)
+except subprocess.TimeoutExpired:
+    print(f'Owned Accessibility input helper exceeded {deadline} seconds and was stopped.', file=sys.stderr)
+    raise SystemExit(124)
+PYINPUT
+}
 # Compile embedded UI automation before launching the app. Shell syntax checks do
 # not detect AppleScript reserved words or grammar errors.
 python3 - <<'PYTHON'
@@ -26,6 +38,7 @@ print(f"Compiled {len(blocks)} embedded AppleScript input scenarios")
 PYTHON
 xcrun swiftc -parse-as-library -target arm64-apple-macos27.0 script/ScreenCapture.swift -o /tmp/serein-capture
 xcrun swiftc -target arm64-apple-macos27.0 script/PointerInput.swift -o /tmp/serein-pointer
+xcrun swiftc -target arm64-apple-macos27.0 script/AccessibilityInput.swift -o /tmp/serein-accessibility-input
 system_profiler SPDisplaysDataType > "$ROOT/display.txt"
 python3 script/fixture_server.py --directory Fixtures > "$ROOT/server.log" 2>&1 &
 SERVER_PID=$!
@@ -91,34 +104,10 @@ APPLESCRIPT
         /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" plain > "$ROOT/glance-external-pointer-input.log" 2>&1
         ;;
       folder-name)
-        osascript -e 'tell application "System Events" to tell process "Serein"' -e 'delay 0.3' -e 'keystroke "a" using command down' -e 'keystroke "Research notes"' -e 'key code 36' -e 'end tell'
+        native_input fill folder-name "Research notes" > "$ROOT/folder-name-input.log" 2>&1 || touch "$ROOT/folder-name.keyboard-failed"
         ;;
       glance-expand-control|glance-split-control|glance-close-control)
-        CONTROL_ID=${KEYBOARD_NAME%-control}
-        osascript - "$CONTROL_ID" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 <<'APPLESCRIPT' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
-on run arguments
- with timeout of 5 seconds
-  tell application "System Events" to tell process "Serein"
-   set frontmost to true
-   set identifiersSeen to ""
-   repeat with targetWindow in windows
-    repeat with uiElement in entire contents of targetWindow
-     set controlIdentifier to ""
-     try
-      set controlIdentifier to value of attribute "AXIdentifier" of uiElement
-     end try
-     set identifiersSeen to identifiersSeen & (controlIdentifier as text) & linefeed
-     if controlIdentifier is item 1 of arguments then
-      perform action "AXPress" of uiElement
-      return "Pressed " & controlIdentifier
-     end if
-    end repeat
-   end repeat
-  end tell
- end timeout
- error "Native Glance action was not found" & linefeed & identifiersSeen
-end run
-APPLESCRIPT
+        native_input press "${KEYBOARD_NAME%-control}" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;
       folder-toggle|folder-context)
         FOLDER_IDENTIFIER=$(cat "$ROOT/folder-control-identifier")
@@ -162,66 +151,7 @@ APPLESCRIPT
       native-host-registration-file)
         NATIVE_PICKER_ATTEMPT=$(( ${NATIVE_PICKER_ATTEMPT:-0} + 1 ))
         NATIVE_MANIFEST=$(cat "$ROOT/native-host-manifest-path")
-        osascript - "$NATIVE_MANIFEST" > "$ROOT/native-host-picker-input.log" 2>&1 <<'APPLESCRIPT' || touch "$ROOT/native-host-registration-file.keyboard-failed"
-on run arguments
-  with timeout of 5 seconds
-  tell application "System Events" to tell process "Serein"
-    delay 0.4
-    keystroke "g" using {command down, shift down}
-    delay 0.4
-    keystroke "a" using command down
-    keystroke item 1 of arguments
-    delay 0.4
-    set pickerDeadline to (current date) + 5
-    repeat while (current date) < pickerDeadline
-      repeat with candidateWindow in windows
-        if my openFileIfPresent(candidateWindow) then return
-        repeat with childSheet in sheets of candidateWindow
-          if my openFileIfPresent(childSheet) then return
-          repeat with nestedSheet in sheets of childSheet
-            if my openFileIfPresent(nestedSheet) then return
-          end repeat
-        end repeat
-      end repeat
-      -- Return resolves the entered path while the Go to Folder sheet is
-      -- present. Check for native consent before each key, so it is never
-      -- accepted by this file-selection helper.
-      my resolveEnteredPath(item 1 of arguments)
-      delay 0.3
-    end repeat
-    error "Native Open button or consent was not found"
-  end tell
-  end timeout
-end run
-on resolveEnteredPath(expectedPath)
- try
-  tell application "System Events" to tell process "Serein"
-   set focusedControl to value of attribute "AXFocusedUIElement"
-   set elementRole to value of attribute "AXRole" of focusedControl
-   if elementRole is "AXTextField" or elementRole is "AXComboBox" then
-    if (value of attribute "AXValue" of focusedControl as text) is expectedPath then
-     key code 36
-     return
-    end if
-   end if
-  end tell
- end try
-end resolveEnteredPath
-on openFileIfPresent(containerElement)
-  try
-  tell application "System Events"
-    if exists button "Open" of containerElement then
-      if enabled of button "Open" of containerElement then
-        perform action "AXPress" of button "Open" of containerElement
-        return true
-      end if
-    end if
-    if exists button "Allow" of containerElement then return true
-  end tell
-  end try
-  return false
-end openFileIfPresent
-APPLESCRIPT
+        native_input pick-file "$NATIVE_MANIFEST" > "$ROOT/native-host-picker-input.log" 2>&1 || touch "$ROOT/native-host-registration-file.keyboard-failed"
         cp "$ROOT/native-host-picker-input.log" "$ROOT/native-host-picker-$NATIVE_PICKER_ATTEMPT.log"
         ;;
       fullscreen-enter)

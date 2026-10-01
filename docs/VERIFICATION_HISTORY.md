@@ -361,3 +361,22 @@ Both native split-divider drags and restored proportions still pass. Three new d
 The 15 retained browser failures are nine unprimed ordinary/Glance fullscreen checks, MV2/MV3 zoom events, populated-window about:blank URLs and disable-disconnect delivery. The native-host picker passes all four interactions on this run, but earlier intermittent failures remain under investigation. No full extension or visual parity claim is made.
 
 [Refreshed pinned Zen references](https://github.com/super-original/serein-browser/actions/runs/36794469990/artifacts/11133112384) contain 23 captures; all 26 indexed file hashes were verified. Light/dark expanded windows and expanded/collapsed folders were inspected. Active/inactive window state remains unmatched. [Committed comparisons](evidence/2026-09-30/folders-and-safari/README.md) retain deliberate native material/icon differences and the rendering limitation.
+
+
+## Before native view reconciliation
+
+## Latest verified source
+
+`c1e2498a02b1870a3717aea973dc9b3e1cde8fb3`: [run 36797659444](https://github.com/super-original/serein-browser/actions/runs/36797659444) passes **114 unit tests, 439/465 recorded browser checks, 40/44 native-host checks, 7/7 real-process crash checks, 17/17 download-restart checks, 9/9 quit, 12/12 isolated bridge and 8/12 fresh fullscreen checks**. Browser coverage is incomplete on this run: failed native input causes later fixture branches to skip checks. The lower denominator is not improved coverage. Image 20260928.0222.1, macOS 27.0 26A428, Xcode 27.1 27A9269, SDK/minimum 27.0, ARM64.
+
+[Download development app](https://github.com/super-original/serein-browser/actions/runs/36797659444/artifacts/11135290249) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36797659444/artifacts/11134159892). Ad-hoc signed/hardened; not Developer ID signed or notarized.
+
+The independent supervisor sends actual Command-Q after the fixture task returns. Live ordinary downloads pause before exit; a fresh process restores and resumes both manually paused and quit-paused downloads, each with full 8 MiB byte integrity. A live private download is excluded from saved history and resume files. All 17 checks pass. This resolves the previous fixture's reentrant asynchronous-termination hang.
+
+Actual attributed WebContent termination, native AX Reload and same-tab/view recovery remain 7/7. Inspected before/after captures at `d365cfc` show the error panel disappearing, while recovered website pixels remain blank. Both split-divider gestures and restored proportions continue to pass.
+
+New Glance action checks fail to find all three native identifiers. A rapid move/reopen leaves the owner view detached (zero frame), which blocks the subsequent external-link check. The inspected Glance screenshot shows its three visible controls. A file-picker input helper also outlives its scenario; all four picker inputs and later folder/Safari capture setup fail. Follow-up bounds the exact osascript child, records Glance identifiers, groups accessible preview children, notifies panes when runtime identities change and reconciles native view attachment only for the owning session. These corrections await CI.
+
+The 15 earlier fullscreen/zoom/about:blank/unload-port failures remain. [Prior complete fixture coverage](VERIFICATION_HISTORY.md) includes `d365cfc` at 467/482 with all 44 native-host checks. No current visual or full-extension compatibility pass is claimed.
+
+[23 refreshed pinned Zen captures](https://github.com/super-original/serein-browser/actions/runs/36794469990/artifacts/11133112384) retain verified file hashes and inspected light/dark/folder states. [Committed comparisons](evidence/2026-09-30/folders-and-safari/README.md) document the blank WebKit content and deliberate native material differences.

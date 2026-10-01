@@ -115,12 +115,14 @@ struct WebContentView: NSViewRepresentable {
     func updateNSView(_ view: NSView,context: Context) {
         guard let container=view as? WebContentContainer,
               runtime.session === session,session.runtimes[runtime.id] === runtime,session.state.tabs.contains(where:{$0.id==runtime.id}) else{return}
+        container.runtime=runtime
         let page=runtime.webView
         context.coordinator.attach(to:page)
         if page.superview !== container {
             page.frame=container.bounds;page.autoresizingMask=[.width,.height]
             container.addSubview(page)
         }
+        DispatchQueue.main.async {session.completeContentFocusRequest()}
     }
 }
 @MainActor private final class WebContentContainer:NSView {
@@ -128,6 +130,7 @@ struct WebContentView: NSViewRepresentable {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         runtime?.restoreFocusIfNeeded(in:window)
+        runtime?.session?.completeContentFocusRequest()
     }
 }
 private struct FindBar: View {

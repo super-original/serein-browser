@@ -123,6 +123,7 @@ import SereinCore
     func close(_ id:UUID,ask:Bool=true,completion:(@MainActor (Bool)->Void)?=nil) {
         guard state.tabs.contains(where:{$0.id==id}) else{completion?(false);return}
         let group=state.closingTabIDs(id)
+        let returnsFromPreview=state.activeGlance?.id==id
         if ask,group.contains(where:{runtimes[$0]?.hasUserEdits==true}) {
             let documents=group.map{(id:$0,document:runtimes[$0]?.documentID)}
             confirm("Close this tab?",detail:"This tab or its preview has edits. Unsaved changes may be lost.",yes:"Close Tab"){[weak self] allowed in
@@ -143,6 +144,7 @@ import SereinCore
         tabSelection.retain(Set(state.tabs.map(\.id)))
         if previous==id || tabSelection.ids.isEmpty {tabSelection.selectOnly(state.selectedTabID)}
         publishSelection(previousActive:previous,previousHighlighted:highlighted,refreshActive:previous != state.selectedTabID)
+        if returnsFromPreview {contentFocusRequest=state.selectedTabID}
         completion?(true)
     }
     func reopen() {
