@@ -8,7 +8,7 @@
 |---|---|---|
 | Chrome Manifest V2 | Partial | ZIP/unpacked loading; controlled persistent-background fixture passes limited semantics. CRX3 verification tested; CRX2/store installation absent. |
 | Firefox Manifest V2 | Partial | XPI/unpacked loading; Firefox-specific semantics and APIs not implemented universally. |
-| Chrome Manifest V3 | Partial | Controlled service-worker fixture passes limited semantics. Lifetime, wakeup, DNR, offscreen and full Chrome API conformance not established. |
+| Chrome Manifest V3 | Partial | Controlled service-worker fixture passes limited semantics; unmodified source-built JSON Formatter 0.8.0 passes 14/15 at `6c156fa` (original MAIN global fails). Lifetime, wakeup, DNR, offscreen and full Chrome API conformance not established. |
 | Firefox Manifest V3 | Partial | Unmodified uBO Lite 2026.930.1227 passes 13/13 narrow blocking/options/disable checks in both tested origin modes at `f8e857d`. At `cfb3661`, default origin is 13/13 and experimental Firefox origin 12/13; the latter replies 162 ms after its original ten-second options timeout, which remains failed; full Firefox API/lifecycle compatibility is not established. |
 | Safari Web Extensions | Partial | Shared manifest resources load through public WebKit; intact Safari Web Extension `.appex` installation passes controlled runtime checks. App Store acquisition and Safari native handlers remain unsupported. |
 | Native Safari App Extensions | Blocked / unsupported | No documented third-party hosting entry point found for arbitrary SafariServices native extension handlers. |
@@ -26,7 +26,7 @@
 | Tabs / windows | Partial | Native bridges, navigation, creation, focus, closure, pinning, duplication and window state; per-tab highlighted update/query/events tested; batch `tabs.highlight` absent; exhaustive ordering/concurrency unverified |
 | Tab zoom | Partial / unsupported event | Native setter and public notification hook implemented; `tabs.onZoomChange` is absent in both tested backgrounds. Set/get/reset verified at `f3757e9`; modes/scopes and per-site persistence unimplemented |
 | Navigation events | Partial / untested semantics | WebKit engine events plus host tab changes; no exhaustive ordering/redirect/frame suite |
-| Content scripts / isolated worlds | Partially verified | Controlled DOM injection succeeds after grant; page cannot see extension-global variable |
+| Content scripts / isolated worlds | Partially verified | Controlled DOM injection succeeds after grant; page cannot see isolated extension globals. Three explicit MAIN-world/global/end-before-idle checks pass at `6c156fa`; real Formatter global visibility still fails. |
 | Frames / dynamic scripting | Partially verified | `53d93bc` passes same-origin injection, unrequested-origin exclusion and isolated globals in HTTP iframes for both generations; nested-frame origin inheritance and executeScript conformance remain untested |
 | MV2 persistent backgrounds | Partially verified | Message → storage → tabs query → response exercised |
 | MV3 service workers | Partially verified | Same controlled path; suspension, restart and queued-event semantics not established |
@@ -363,7 +363,7 @@ The next reference isolates invocation to its exact navigation (temporary instal
 
 The refined downloads reference at `c366ef2`, [run 36846671421](https://github.com/super-original/serein-browser/actions/runs/36846671421), passes 15/16 checks in both MV2 and MV3. Independent filesystem inspection confirms `removeFile` physically removed the owned file; only the four-second `search().exists` freshness expectation fails. Invocation now creates exactly three downloads per generation. This distinguishes a metadata/lifecycle discrepancy from a deletion failure without weakening the original assertion. Exact-boundary inclusion and unfinished end-time filtering remain observed.
 
-### Real JSON Formatter source-build scenario (pending)
+### Real JSON Formatter source-build scenario
 
 [JSON Formatter 0.8.0](https://github.com/callumlocke/json-formatter/releases/tag/v0.8.0), source commit `27aa9955e54757ca9919f2a3a5f9cfe8f1888272`, supplies an independent real page-modification scenario. This is explicitly a source build, not the signed Chrome Web Store package. The original manifest is byte-preserved, including storage and all host declarations; only loopback host access is granted for testing. The BSD-3-Clause license remains in the temporary build. Third-party source, compiler and extension files are not uploaded.
 
@@ -378,3 +378,5 @@ The follow-up waits for the original options script to initialize its selected r
 At `656146e`, both controlled MAIN-world checks pass, while real Formatter passes **13/15**. Its original global and immediate storage readback remain failed; document-bound disable and re-enable now pass, as does forced-dark CSS without the system-media-query branch. The production untitled-page label passes and was inspected. The next reference adds end-before-idle cross-world ordering; options readback waits up to five seconds because the original change listener does not await its storage write. Errors/timeouts are recorded explicitly. This does not alter the extension or count earlier failures as passes.
 
 At `6c156fa`, all three controlled MAIN-world checks pass, including end-before-idle cross-world ordering, and original options storage readback passes. Real Formatter is **14/15**; its original global is still absent. The ordering hypothesis is therefore unproven for the real package. The next run records bounded, fixture-only raw-pre text lengths, JSON parse outcome and global type without modifying the original extension. The known missing APIs and seven required-permission rejections above remain open.
+
+At `dcbcb09`, Formatter remains 14/15. Its original raw element is present; both innerText and textContent are 103 characters and the raw innerText parses as the expected fixture object, while the MAIN global remains undefined. These later observations do not establish what the original idle script saw at injection time. The pinned Gecko comparison is the next independent reference.

@@ -50,6 +50,15 @@ import SereinCore
             store.bookmark(title:"https://name:secret@example.test/last",url:"https://name:secret@example.test/last")
             check("bookmark-title-url-remains-redacted",store.bookmarks.last?.title=="https://example.test/last" && store.bookmarks.last?.url=="https://example.test/last")
 
+            let historyFile=directory.appendingPathComponent("history.json"),savedHistory=try Data(contentsOf:historyFile),visibleHistory=store.history
+            try FileManager.default.removeItem(at:historyFile)
+            try FileManager.default.createDirectory(at:historyFile,withIntermediateDirectories:false)
+            store.clearHistory()
+            check("history-failed-clear-keeps-visible-records",!visibleHistory.isEmpty && store.history==visibleHistory && store.error?.contains("Could not clear browsing history")==true)
+            try FileManager.default.removeItem(at:historyFile);try savedHistory.write(to:historyFile,options:.atomic)
+            store.clearHistory()
+            check("history-clear-commits-before-publishing",store.history.isEmpty && store.error==nil && LibraryStore(root:directory).history.isEmpty)
+
         } catch { check("library-persistence-probe", false, error.localizedDescription) }
         return results
     }

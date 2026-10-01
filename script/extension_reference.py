@@ -9,6 +9,7 @@ import urllib.error
 import urllib.request
 import zipfile
 from download_reference import run_download_reference
+from formatter_reference import run_formatter_reference
 
 out = pathlib.Path('evidence/extension-reference')
 results = []
@@ -120,9 +121,11 @@ try:
                     entry['cleanupError'] = str(error)
                 (out / 'results.json').write_text(json.dumps(results, indent=2))
         download_results=[run_download_reference(request,script,prefix,out,temporary,version,download_directory.name) for version in [2,3]]
+        formatter_result=run_formatter_reference(request,script,prefix,out,temporary)
     assert all(item['scenarioExecuted'] for item in results), results
     assert all(item['scenarioExecuted'] for item in download_results), download_results
     assert all(item['result'].get('checks') and all(item['result']['checks'].values()) for item in download_results), download_results
+    assert formatter_result['scenarioExecuted'] and all(formatter_result['checks'].values()), formatter_result
 finally:
     try:
         if prefix:

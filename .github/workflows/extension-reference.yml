@@ -2,7 +2,7 @@ name: Pinned Gecko extension semantics reference
 on:
   workflow_dispatch:
   push:
-    paths: ['.github/workflows/extension-reference.yml', 'script/extension_reference.sh', 'script/extension_reference.py', 'script/download_reference.py', 'Fixtures/DownloadAPI/**']
+    paths: ['.github/workflows/extension-reference.yml', 'script/extension_reference.sh', 'script/extension_reference.py', 'script/download_reference.py', 'script/formatter_reference.py', 'script/build_json_formatter_fixture.py', 'Fixtures/formatter.json', 'Fixtures/DownloadAPI/**']
 permissions:
   contents: read
 concurrency:

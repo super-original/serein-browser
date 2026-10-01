@@ -1,0 +1,128 @@
+{
+  "architecture": "arm64",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "commit": "f033af4e160d907bde978a62839150d68fa9945b",
+  "note": "Direct executable launches, five fresh application profiles and five one-tab URL-only session restores, interleaved. Untimed seed launch first. OS and WebKit caches remain warm; no installed extensions. Parent timer includes process spawn and readiness-file publication/polling (10 ms); app timer starts at Swift main entry and ends at native readiness plus restored-document identity. Neither measures pixels, LaunchServices, cold boot, energy, or a physical Mac.",
+  "samples": [
+    {
+      "passed": true,
+      "entryToReadinessMilliseconds": 420.47970833391446,
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "mode": "fresh",
+      "os": "Version 27.0 (Build 26A428)",
+      "ordinal": 0,
+      "spawnToObservedReadinessMilliseconds": 443.649584
+    },
+    {
+      "passed": true,
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "mode": "restore",
+      "entryToReadinessMilliseconds": 1333.893916666966,
+      "os": "Version 27.0 (Build 26A428)",
+      "ordinal": 0,
+      "spawnToObservedReadinessMilliseconds": 1357.170209
+    },
+    {
+      "mode": "fresh",
+      "passed": true,
+      "entryToReadinessMilliseconds": 568.7512916674677,
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "os": "Version 27.0 (Build 26A428)",
+      "ordinal": 1,
+      "spawnToObservedReadinessMilliseconds": 657.226333
+    },
+    {
+      "os": "Version 27.0 (Build 26A428)",
+      "mode": "restore",
+      "passed": true,
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "entryToReadinessMilliseconds": 1357.3865416665285,
+      "ordinal": 1,
+      "spawnToObservedReadinessMilliseconds": 1428.129125
+    },
+    {
+      "entryToReadinessMilliseconds": 411.54550000010204,
+      "os": "Version 27.0 (Build 26A428)",
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "mode": "fresh",
+      "passed": true,
+      "ordinal": 2,
+      "spawnToObservedReadinessMilliseconds": 470.157042
+    },
+    {
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "os": "Version 27.0 (Build 26A428)",
+      "passed": true,
+      "mode": "restore",
+      "entryToReadinessMilliseconds": 1285.4208750004545,
+      "ordinal": 2,
+      "spawnToObservedReadinessMilliseconds": 1345.116
+    },
+    {
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "passed": true,
+      "entryToReadinessMilliseconds": 427.18183333272464,
+      "os": "Version 27.0 (Build 26A428)",
+      "mode": "fresh",
+      "ordinal": 3,
+      "spawnToObservedReadinessMilliseconds": 490.213
+    },
+    {
+      "entryToReadinessMilliseconds": 1302.5267083330618,
+      "mode": "restore",
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "os": "Version 27.0 (Build 26A428)",
+      "passed": true,
+      "ordinal": 3,
+      "spawnToObservedReadinessMilliseconds": 1363.280042
+    },
+    {
+      "passed": true,
+      "mode": "fresh",
+      "os": "Version 27.0 (Build 26A428)",
+      "entryToReadinessMilliseconds": 473.16158333342173,
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "ordinal": 4,
+      "spawnToObservedReadinessMilliseconds": 539.901334
+    },
+    {
+      "detail": "Fresh: one visible native window with its default blank tab. Restore: production-restored local page attached and matching a bounded JavaScript identity check. Ten-millisecond polling; no visible-frame, cold OS-cache, LaunchServices, or physical-Mac claim.",
+      "mode": "restore",
+      "passed": true,
+      "os": "Version 27.0 (Build 26A428)",
+      "entryToReadinessMilliseconds": 1395.7567083334652,
+      "ordinal": 4,
+      "spawnToObservedReadinessMilliseconds": 1454.22275
+    }
+  ],
+  "summary": {
+    "fresh": {
+      "entryToReadinessMilliseconds": {
+        "count": 5,
+        "minimum": 411.54550000010204,
+        "median": 427.18183333272464,
+        "maximum": 568.7512916674677
+      },
+      "spawnToObservedReadinessMilliseconds": {
+        "count": 5,
+        "minimum": 443.649584,
+        "median": 490.213,
+        "maximum": 657.226333
+      }
+    },
+    "restore": {
+      "entryToReadinessMilliseconds": {
+        "count": 5,
+        "minimum": 1285.4208750004545,
+        "median": 1333.893916666966,
+        "maximum": 1395.7567083334652
+      },
+      "spawnToObservedReadinessMilliseconds": {
+        "count": 5,
+        "minimum": 1345.116,
+        "median": 1363.280042,
+        "maximum": 1454.22275
+      }
+    }
+  }
+}

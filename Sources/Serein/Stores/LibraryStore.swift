@@ -86,7 +86,12 @@ enum BookmarkEditError:LocalizedError {
         do {try PrivateFileStore.write(JSONEncoder().encode(proposed),to:root.appendingPathComponent("bookmarks.json"));bookmarks=proposed}
         catch {self.error="Could not remove bookmark: \(error.localizedDescription)"}
     }
-    func clearHistory() {history=[];write(history,name:"history.json")}
+    func clearHistory() {
+        do {
+            try PrivateFileStore.write(JSONEncoder().encode([PageRecord]()),to:root.appendingPathComponent("history.json"))
+            history=[];error=nil
+        } catch {self.error="Could not clear browsing history: \(error.localizedDescription)"}
+    }
     func suggestions(_ query: String) -> [PageRecord] {
         guard !query.isEmpty else{return Array(bookmarks.prefix(8))}
         var seen=Set<String>()
