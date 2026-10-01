@@ -24,12 +24,13 @@ import WebKit
             check("navigation-invalidates-capture",!capture.isCurrent(in:session))
             session.navigate("http://127.0.0.1:8765/index.html?snapshot=3")
             _=await wait{session.current?.title=="Field Notes" && PageSnapshot.available(in:session)}
-            let cancelled=Task{try await PageSnapshot.save(in:session)}
+            try "open-page-screenshot".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
             let cancelPresented=await wait{session.window?.attachedSheet is NSSavePanel}
+            check("native-menu-command",cancelPresented && session.savingPageSnapshot)
             check("cancel-sheet-and-duplicate-refusal",cancelPresented && !PageSnapshot.available(in:session))
             (session.window?.attachedSheet as? NSSavePanel)?.cancel(nil)
-            let cancelledURL=try await cancelled.value
-            check("cancel-without-output",cancelledURL==nil && !session.savingPageSnapshot)
+            _=await wait{!session.savingPageSnapshot}
+            check("cancel-without-output",session.error==nil && !session.savingPageSnapshot && !FileManager.default.fileExists(atPath:root.appendingPathComponent("native-page-screenshot.png").path))
             let saved=Task{try await PageSnapshot.save(in:session)}
             let presented=await wait{session.window?.attachedSheet is NSSavePanel}
             check("save-sheet",presented)

@@ -15,7 +15,7 @@ import UniformTypeIdentifiers
             }
         }
     }
-    struct Capture {
+    @MainActor struct Capture {
         let png:Data
         let document:UUID
         let runtime:TabRuntime
@@ -36,7 +36,7 @@ import UniformTypeIdentifiers
               view.bounds.width>0,view.bounds.height>0 else{return false}
         return true
     }
-    private final class Reply {
+    @MainActor private final class Reply {
         var continuation:CheckedContinuation<NSImage,any Error>?
         var deadline:Task<Void,Never>?
         init(_ continuation:CheckedContinuation<NSImage,any Error>){self.continuation=continuation}

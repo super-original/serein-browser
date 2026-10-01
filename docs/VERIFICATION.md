@@ -14,7 +14,9 @@ uBO Lite is **13/13 at the production default origin and 12/13 at the experiment
 
 The next audio assertion queries public playback state after the view leaves the visible window, explicitly separating continued background playback from retention alone.
 
-Pending local work adds Tools → Save Page Screenshot, using the selected WKWebView viewport and native PNG destination sheet. The image stays in memory until explicit save; document/view/selection identity is checked after capture and after consent. Cancellation writes nothing. Private windows disclose disk persistence. Runtime scenarios cover PNG encoding, stale identity, cancellation, duplicate-command refusal, native destination/content and private cancellation. Exported content images will be inspected separately from the independently captured native save sheet. Full-page/region capture and picture-in-picture remain missing.
+`7474675` [run 36816771290](https://github.com/super-original/serein-browser/actions/runs/36816771290) failed compilation because the nested capture-validity helper lacked explicit main-actor isolation. The follow-up annotates the helper and includes actual Tools-menu input in the runtime test. No screenshot-feature runtime result is claimed yet.
+
+The implementation adds Tools → Save Page Screenshot, using the selected WKWebView viewport and native PNG destination sheet. The image stays in memory until explicit save; document/view/selection identity is checked after capture and after consent. Cancellation writes nothing. Private windows disclose disk persistence. Runtime scenarios cover PNG encoding, stale identity, cancellation, duplicate-command refusal, native destination/content and private cancellation. Exported content images will be inspected separately from the independently captured native save sheet. Full-page/region capture and picture-in-picture remain missing.
 
 ## Retained failures
 

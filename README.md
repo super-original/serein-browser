@@ -23,7 +23,7 @@ Artifacts expire after 14 days. Evidence artifacts expire after 7 days. The work
 
 ## Build without installing tools on your Mac
 
-Use the Actions workflow. Its clean checkout runs `script/build.sh` and `script/verify_runtime.sh`, and uploads the application and diagnostic evidence. Public-repository standard GitHub-hosted runners are used, with read-only repository token permissions and no paid services. No engine is compiled and no build cache is retained.
+Use the Actions workflow. Its clean checkout runs `script/build.sh` and `script/verify_runtime.sh`, and uploads the application and diagnostic evidence. Public-repository standard GitHub-hosted runners are used, with read-only repository token permissions and no paid services. No engine is compiled. A bounded compiler cache stays within the repository's free GitHub cache allowance; no cache is installed on your Mac.
 
 For a contributor who already has Xcode 27 on a separate development machine, the same scripts are the build contract. `Package.swift`, `Info.plist`, compiler environment, and Mach-O assertions all require macOS 27.0. This is not a request to install those tools on the user's Mac.
 
@@ -32,6 +32,10 @@ For a contributor who already has Xcode 27 on a separate development machine, th
 ⌘L addresses/searches; ⌘T creates a tab; ⌘W closes it; ⇧⌘T reopens it; ⌘N opens a window; ⇧⌘N opens a private window; ⌘F finds text. ⇧⌘S toggles the expanded sidebar; ⌥⌘C toggles compact mode; ⌥⌘S splits with another tab. Tabs have native context menus for pinning, essentials, duplication, movement, unloading, and closing. Workspace controls are at the sidebar's bottom. Command-click toggles tab selection; Shift-click selects a range. The tab context menu can pin, unpin, move to a workspace, or close selected tabs.
 
 Choose DuckDuckGo, Google, or Bing in Settings → Search engine. DuckDuckGo is the default.
+
+Settings → Unload idle regular tabs is Off by default. Optional 15/30/60-minute unloading preserves in-memory navigation history and zoom, but other page state may be lost. Visible, private, pinned, edited and media pages are kept; active downloads pause unloading. This does not restore back/forward history across app launches.
+
+Tools → Save Page Screenshot… saves the selected page's visible area as PNG after you choose a destination. Private-window exports also persist on disk when saved. Full-page and region capture are not implemented. The image comes from WebKit's content snapshot API and is separate from desktop screenshot evidence.
 
 In the address field, Down/Up select local history or bookmark suggestions, Return opens the selection, and Escape dismisses suggestions while retaining the typed query.
 

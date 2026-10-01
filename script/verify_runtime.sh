@@ -74,6 +74,9 @@ for i in $(seq 1 2400); do
     KEYBOARD_NAME=$(cat "$ROOT/keyboard-request")
     rm "$ROOT/keyboard-request"
     case "$KEYBOARD_NAME" in
+      open-page-screenshot)
+        osascript -e 'tell application "System Events" to tell process "Serein"' -e 'click menu bar item "Tools" of menu bar 1' -e 'click menu item "Save Page Screenshot…" of menu 1 of menu bar item "Tools" of menu bar 1' -e 'end tell'
+        ;;
       prepare-save-download|prepare-save-snapshot)
         SAVE_NAME="native-save-result.txt"
         if test "$KEYBOARD_NAME" = prepare-save-snapshot; then SAVE_NAME="native-page-screenshot.png"; fi
