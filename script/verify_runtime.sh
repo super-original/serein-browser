@@ -97,6 +97,13 @@ on run arguments
 end run
 SPLITINPUT
         ;;
+      remove-download-record)
+        if native_input fill downloads-search redirected-download.txt; then
+          native_input press "download-remove-$(cat "$ROOT/remove-download-id")" || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        else
+          touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        fi
+        ;;
       search-downloads)
         if native_input fill downloads-search resumed-download.bin; then
           native_input expect-text downloads-result-count "1 shown" || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"

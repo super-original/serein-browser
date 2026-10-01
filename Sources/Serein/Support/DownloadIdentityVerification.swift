@@ -49,6 +49,23 @@ import SereinCore
             let cleared=try DownloadHistory.decode(Data(contentsOf:failureStore.file)).history
             check("clear-durable-without-deleting-file",failureStore.items.isEmpty && cleared.records.isEmpty && cleared.nextIdentifier==2 && DownloadStore(root:failureDirectory).items.isEmpty && FileManager.default.fileExists(atPath:savedFile.path))
 
+            let selectiveDirectory=directory.appendingPathComponent("selective-removal")
+            try PrivateFileStore.prepareDirectory(selectiveDirectory)
+            let selective=DownloadStore(root:selectiveDirectory)
+            let kept=DownloadItem(record:DownloadRecord(name:"Keep",phase:.complete),store:selective)
+            let erased=DownloadItem(record:DownloadRecord(name:"Remove",destination:savedFile,phase:.complete),store:selective)
+            let active=DownloadItem(record:DownloadRecord(name:"Active",phase:.downloading),store:selective)
+            let foreign=DownloadItem(record:DownloadRecord(name:"Private",phase:.complete,privateWindowID:UUID()),store:selective)
+            selective.items=[kept,erased,active,foreign]
+            guard selective.save() else{throw CocoaError(.fileWriteUnknown)}
+            let before=try Data(contentsOf:selective.file)
+            check("mixed-private-removal-rejected-atomically",!selective.removeFinished([erased.id,foreign.id],in:session) && selective.items.count==4 && (try? Data(contentsOf:selective.file))==before)
+            check("active-removal-rejected-atomically",!selective.removeFinished([erased.id,active.id],in:session) && selective.items.count==4 && active.isActive && (try? Data(contentsOf:selective.file))==before)
+            let removed=selective.removeFinished([erased.id],in:session)
+            let remaining=try DownloadHistory.decode(Data(contentsOf:selective.file)).history
+            check("selective-removal-durable-and-scoped",removed && selective.items.count==3 && selective.items.contains{$0===kept} && selective.items.contains{$0===foreign} && Set(remaining.records.map(\.id))==[kept.id,active.id] && remaining.nextIdentifier==4 && FileManager.default.fileExists(atPath:savedFile.path))
+            check("unknown-removal-does-not-clear",!selective.removeFinished([UUID()],in:session) && selective.items.count==3)
+
             let damagedDirectory=directory.appendingPathComponent("unsupported-history")
             try PrivateFileStore.prepareDirectory(damagedDirectory)
             let damaged=Data("{\"version\":99,\"nextIdentifier\":1,\"records\":[]}".utf8)

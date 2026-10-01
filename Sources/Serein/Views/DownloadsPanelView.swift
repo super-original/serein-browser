@@ -31,6 +31,11 @@ struct DownloadsPanelView:View {
                     if let destination=item.destination,item.finished {
                         Button("Show in Finder"){item.reveal()}.disabled(!FileManager.default.fileExists(atPath:destination.path))
                     }
+                    if item.finished {
+                        Button("Remove from History"){store.removeFinished([item.id],in:session)}
+                            .help("Remove this record without deleting the downloaded file")
+                            .accessibilityIdentifier("download-remove-\(item.id)")
+                    }
                 }
             }.overlay {if visible.isEmpty {ContentUnavailableView(query.isEmpty ? "No downloads" : "No matching downloads",systemImage:"arrow.down.circle")}}
             HStack {

@@ -76,10 +76,12 @@ if mode=="press" {
     let identifier=arguments[3]
     let allowed=["glance-close":"Close Preview","glance-expand":"Expand Preview","glance-split":"Split Preview","folder-icon-star.fill":"Star","folder-icon-default":"Default Folder"]
     let extensionAccess=identifier.hasPrefix("extension-access-") && UUID(uuidString:String(identifier.dropFirst("extension-access-".count))) != nil
+    let downloadRemove=identifier.hasPrefix("download-remove-") && UUID(uuidString:String(identifier.dropFirst("download-remove-".count))) != nil
     let bookmarkEdit=identifier.hasPrefix("bookmark-edit-") && UUID(uuidString:String(identifier.dropFirst("bookmark-edit-".count))) != nil
-    guard let label=allowed[identifier] ?? (extensionAccess ? "Requested Access…" : bookmarkEdit ? "Edit…" : nil) else{fail("Unknown fixture action")}
-    let items=controls(includeLists:extensionAccess || bookmarkEdit)
+    guard let label=allowed[identifier] ?? (extensionAccess ? "Requested Access…" : bookmarkEdit ? "Edit…" : downloadRemove ? "Remove from History" : nil) else{fail("Unknown fixture action")}
+    let items=controls(includeLists:extensionAccess || bookmarkEdit || downloadRemove)
     let exact=items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && text($0,kAXIdentifierAttribute)==identifier}
+    if downloadRemove && exact.count != 1 {fail("Expected the exact download removal identifier")}
     let matching=exact.isEmpty ? items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && [text($0,kAXTitleAttribute),text($0,kAXDescriptionAttribute)].contains(label)} : exact
     guard matching.count==1 else{fail("Expected exactly one \(identifier) control\n"+describe(items))}
     guard AXUIElementPerformAction(matching[0],kAXPressAction as CFString) == .success else{fail("AXPress failed")}
@@ -114,9 +116,12 @@ if mode=="press" {
         let item=queue.removeFirst()
         guard seen.insert(CFHash(item)).inserted else{continue}
         if text(item,kAXRoleAttribute)==kAXMenuItemRole,text(item,kAXTitleAttribute)=="Exit Split View" {menus.append(item)}
-        if !["AXWebArea","AXBrowser","AXTable"].contains(text(item,kAXRoleAttribute)) {queue += elements(item,kAXChildrenAttribute)}
+        // The application menu bar also has View > Exit Split View, which
+        // operates on the active group. Never mistake it for the clicked tab's
+        // contextual action: exclude the entire menu-bar subtree.
+        if !["AXWebArea","AXBrowser","AXTable",kAXMenuBarRole].contains(text(item,kAXRoleAttribute)) {queue += elements(item,kAXChildrenAttribute)}
     }
-    guard menus.count==1,AXUIElementPerformAction(menus[0],kAXPressAction as CFString) == .success else{key(53);fail("Expected one actionable Exit Split View menu item")}
+    guard menus.count==1,AXUIElementPerformAction(menus[0],kAXPressAction as CFString) == .success else{key(53);fail("Expected one contextual Exit Split View item outside the application menu bar; found \(menus.count)")}
     print("Chose Exit Split View through the native tab context menu")
 } else if mode=="accessible-unsplit" {
     let identifier=arguments[3]

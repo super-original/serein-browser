@@ -201,18 +201,25 @@ import SereinCore
             .filter{filter.includes($0.record) && $0.record.matchesSearch(query)}
     }
     func clearFinished(in session:BrowserSession) {
-        let removed=visible(in:session).filter(\.finished),ids=Set(removed.map(\.id))
-        guard !ids.isEmpty else{return}
+        _=removeFinished(Set(visible(in:session).filter(\.finished).map(\.id)),in:session)
+    }
+    /// All requested identities must be finished and visible in this window.
+    /// Never reinterpret a foreign or active identity as permission to clear all.
+    @discardableResult func removeFinished(_ ids:Set<UUID>,in session:BrowserSession)->Bool {
+        guard !ids.isEmpty else{return true}
+        let removed=visible(in:session).filter{ids.contains($0.id) && $0.finished}
+        guard Set(removed.map(\.id))==ids else{return false}
         let proposed=items.filter{!ids.contains($0.id)}
         // Failed writes retain visible records and their recovery data. Private
         // removal is memory-only and cannot touch another window's records.
-        guard session.state.isPrivate || persist(proposed) else{return}
+        guard session.state.isPrivate || persist(proposed) else{return false}
         items=proposed
         for item in removed {item.retire()}
         if !session.state.isPrivate {
             do {for id in ids {try discardResume(id)}}
             catch {self.error="Download history was cleared, but some recovery data could not be removed: \(error.localizedDescription)"}
         }
+        return true
     }
     func closePrivateWindow(_ id:UUID) {
         for item in items where item.record.privateWindowID==id {item.retire()}

@@ -80,7 +80,7 @@ import SereinCore
             if FileManager.default.fileExists(atPath:root.appendingPathComponent("split-inactive-unsplit.keyboard-finished").path){break}
             try? await Task.sleep(for:.milliseconds(100))
         }
-        check("split-groups-native-context-unsplit-inactive",FileManager.default.fileExists(atPath:root.appendingPathComponent("split-inactive-unsplit.keyboard-finished").path) && !FileManager.default.fileExists(atPath:root.appendingPathComponent("split-inactive-unsplit.keyboard-failed").path) && session.state.selectedTabID==ids[0] && session.state.splitTabIDs==Array(ids.prefix(2)) && session.state.splitGroups.count==1)
+        check("split-groups-native-context-unsplit-inactive",FileManager.default.fileExists(atPath:root.appendingPathComponent("split-inactive-unsplit.keyboard-finished").path) && !FileManager.default.fileExists(atPath:root.appendingPathComponent("split-inactive-unsplit.keyboard-failed").path) && session.state.selectedTabID==ids[0] && session.state.splitTabIDs==Array(ids.prefix(2)) && session.state.splitGroups.count==1,"selected=\(String(describing:session.state.selectedTabID)) expected=\(ids[0]) active=\(session.state.splitTabIDs) groups=\(session.state.splitGroups.map(\.tabIDs))")
         await capture("79-inactive-split-removed")
         // Recreate the second group for the independent active-unsplit assertion.
         session.select(ids[2]);session.state.setSplitTabs(Array(ids.suffix(2)));session.select(ids[0])

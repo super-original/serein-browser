@@ -97,6 +97,14 @@ import SereinCore
         try? searchCapture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         let searchCaptured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(searchCapture+".capture-finished").path)}
         check("download-search-capture",searchCaptured && FileManager.default.fileExists(atPath:root.appendingPathComponent(searchCapture+".png").path))
+        try? redirected.id.uuidString.write(to:root.appendingPathComponent("remove-download-id"),atomically:true,encoding:.utf8)
+        try? "remove-download-record".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+        let removalFinished=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("remove-download-record.keyboard-finished").path)}
+        check("download-remove-native-control",removalFinished && !FileManager.default.fileExists(atPath:root.appendingPathComponent("remove-download-record.keyboard-failed").path) && !manager.downloads.items.contains{$0.id==redirected.id} && manager.downloads.items.contains{$0.id==resumable.id} && !DownloadStore(root:root).items.contains{$0.id==redirected.id} && redirected.destination.flatMap{try? String(contentsOf:$0,encoding:.utf8)}=="Serein deterministic download fixture v1.\n")
+        let removalCapture="82-download-record-removed"
+        try? removalCapture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+        let removalCaptured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent(removalCapture+".capture-finished").path)}
+        check("download-remove-capture",removalCaptured && FileManager.default.fileExists(atPath:root.appendingPathComponent(removalCapture+".png").path))
         session.libraryPanel=nil
         try? await Task.sleep(for:.milliseconds(500))
         resumable.resume(in:privateB)
