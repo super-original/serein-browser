@@ -27,7 +27,7 @@ extension BrowserWindowState {
         guard let owner=visibleTabs.first(where:{$0.id==parent}),glance(for:parent)==nil else{return nil}
         var preview=BrowserTab(workspaceID:owner.workspaceID,url:url)
         preview.glanceParentID=parent;preview.openerTabID=parent
-        tabs.append(preview);clearSplit();selectedTabID=preview.id
+        tabs.append(preview);parkSplit();selectedTabID=preview.id
         return preview.id
     }
     public mutating func expandGlance(_ id:UUID) {

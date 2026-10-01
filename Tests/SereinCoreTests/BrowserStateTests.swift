@@ -27,12 +27,12 @@ final class BrowserStateTests: XCTestCase {
         s.select(a);s.split(with:b);s.select(b);s.close(unrelated)
         XCTAssertEqual(s.primarySplitTabID,a);XCTAssertEqual(s.secondaryTabID,b);XCTAssertEqual(s.selectedTabID,b)
     }
-    func testSwitchWorkspaceClearsBothSplitPanes() {
+    func testSwitchWorkspaceParksAndRestoresSplitPanes() {
         var s=BrowserWindowState();let original=s.activeWorkspaceID;let other=s.addWorkspace(name:"Other")
         s.switchWorkspace(original);let a=s.selectedTabID!;let b=s.newTab();s.split(with:a)
         XCTAssertEqual(s.primarySplitTabID,b)
         s.switchWorkspace(other);XCTAssertNil(s.primarySplitTabID);XCTAssertNil(s.secondaryTabID)
-        s.switchWorkspace(original);XCTAssertNil(s.primarySplitTabID);XCTAssertNil(s.secondaryTabID)
+        s.switchWorkspace(original);XCTAssertEqual(s.primarySplitTabID,b);XCTAssertEqual(s.secondaryTabID,a)
     }
     func testRestoreRejectsSplitThatDoesNotContainSelection() throws {
         var s=BrowserWindowState();let a=s.selectedTabID!;let b=s.newTab();let c=s.newTab()

@@ -15,14 +15,20 @@ extension BrowserWindowState {
     }
 
     /// Preserve tab/API order. Mixed-category or separated split members remain
-    /// individual rows until persistent general-purpose groups are implemented.
+    /// individual rows. Inactive groups remain joined and can be selected again.
     public var regularSidebarRows:[SidebarTabRow] {
         let regular=visibleTabs.filter{$0.kind == .regular}.map(\.id)
-        let split=Set(splitTabIDs),indices=regular.indices.filter{split.contains(regular[$0])}
-        guard sidebar != .collapsed,split.count>=2,indices.count==split.count,
-              let first=indices.first,let last=indices.last,last-first+1==indices.count else{return regular.map{SidebarTabRow([$0])}}
-        return regular[..<first].map{SidebarTabRow([$0])}
-            + [SidebarTabRow(Array(regular[first...last]))]
-            + regular[(last+1)...].map{SidebarTabRow([$0])}
+        guard sidebar != .collapsed else{return regular.map{SidebarTabRow([$0])}}
+        var starts:[Int:Int]=[:]
+        for group in splitGroups where group.workspaceID==activeWorkspaceID {
+            let split=Set(group.tabIDs),indices=regular.indices.filter{split.contains(regular[$0])}
+            if split.count>=2,indices.count==split.count,let first=indices.first,let last=indices.last,last-first+1==indices.count {starts[first]=last}
+        }
+        var rows:[SidebarTabRow]=[],index=0
+        while index<regular.count {
+            let end=starts[index] ?? index
+            rows.append(SidebarTabRow(Array(regular[index...end])));index=end+1
+        }
+        return rows
     }
 }

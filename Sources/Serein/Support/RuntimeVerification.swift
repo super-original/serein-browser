@@ -318,6 +318,8 @@ import SereinCore
         try? Data().write(to:root.appendingPathComponent("idle-end"))
         checkpoint("SplitGridVerification")
         results += await SplitGridVerification.run(manager:manager,root:root)
+        checkpoint("SplitGroupVerification")
+        results += await SplitGroupVerification.run(manager:manager,root:root)
         checkpoint("GlanceVerification")
         results += await GlanceVerification.run(manager:manager,root:root)
         checkpoint("SidebarDropVerification")
