@@ -177,7 +177,7 @@ struct InstalledExtension: Identifiable, Codable {
             if source.pathExtension.lowercased() == "crx" {
                 let package = try CRXPackage.verify(input)
                 archive = package.archive; identity = package.identity
-            } else { try ExtensionArchive.validate(input); archive = input }
+            } else { archive = input }
             // Read from the same in-memory bytes we verified. Never give another
             // archive parser an opportunity to reinterpret names or filesystem metadata.
             try ExtensionArchive.extract(archive, to: destination)

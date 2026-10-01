@@ -20,10 +20,13 @@ import SereinCore
             for candidate in candidates {
                 guard let path=candidate.path else{results.append(.init(candidate:candidate,status:"source-unavailable",detail:candidate.fetchError ?? "No file"));continue}
                 let host=manager.extensions,id=UUID(),target=temporary.appendingPathComponent(id.uuidString)
+                AppMemoryProbe.record("audit-before-prepare:"+candidate.name)
                 do {
                     try host.prepare(URL(fileURLWithPath:path),at:target)
+                    AppMemoryProbe.record("audit-after-prepare:"+candidate.name)
                     let manifest=try ExtensionManifest(data:Data(contentsOf:target.appendingPathComponent("manifest.json")))
                     let ext=try await WKWebExtension(resourceBaseURL:target)
+                    AppMemoryProbe.record("audit-after-webkit-load:"+candidate.name)
                     let errors=ext.errors.map(\.localizedDescription)
                     if !errors.isEmpty {results.append(.init(candidate:candidate,status:"webkit-validation-rejected",detail:errors.joined(separator:"\n")))}
                     else {
@@ -39,6 +42,8 @@ import SereinCore
                     }
                 } catch {results.append(.init(candidate:candidate,status:"installation-rejected",detail:error.localizedDescription))}
                 try? FileManager.default.removeItem(at:target)
+                try? await Task.sleep(for:.milliseconds(50))
+                AppMemoryProbe.record("audit-after-release:"+candidate.name)
             }
             try JSONEncoder().encode(results).write(to:root.appendingPathComponent("real-extension-results.json"),options:.atomic)
             for result in results {print("REAL_EXTENSION \(result.candidate.name): \(result.status) \(result.detail)")}

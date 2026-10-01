@@ -1,0 +1,13 @@
+{
+  "commit": "cfb3661928773c93f3fd18a73b7bf82fd9468430",
+  "samples": 121,
+  "confirmed_median_rss_mib": 426.6875,
+  "unresolved_peak_rss_mib": 69.796875,
+  "idle_interval": {
+    "elapsed_seconds": 10.173350499999742,
+    "common_process_count": 6,
+    "cpu_interval_percent": 0.09829603334712629
+  },
+  "idle_confirmed_median_rss_mib": 341.3125,
+  "idle_unresolved_peak_rss_mib": 0.0
+}

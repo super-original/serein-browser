@@ -47,6 +47,7 @@ import SereinCore
             } catch {print(error)}
             return false
         }
+        check("app-memory-diagnostic-available",AppMemoryProbe.record("runtime-start"))
         guard let session=manager.active else{return}
         session.window?.setFrame(NSRect(x:10,y:61,width:1000,height:677),display:true)
         let fixture="http://127.0.0.1:8765/index.html"
@@ -359,6 +360,8 @@ import SereinCore
         await RealExtensionAudit.run(manager:manager,root:root)
         checkpoint("RealContentBlockerVerification")
         results += await RealContentBlockerVerification.run()
+        await pause(100)
+        AppMemoryProbe.record("real-blocker-after-return")
         do {try JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)} catch {print(error)}
         manager.saveNow()
         print("VERIFICATION_COMPLETE \(results.filter{!$0.passed}.count) failures")

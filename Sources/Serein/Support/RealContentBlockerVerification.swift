@@ -48,10 +48,13 @@ import SereinCore
             let blockingPath="/ads/!rotator/probe.js"
             check("baseline-resource-loads",loaded(await probe(view,blockingPath)))
             let target=host.root.appendingPathComponent(id.uuidString)
+            AppMemoryProbe.record("real-blocker-before-prepare")
             try host.prepare(source,at:target)
+            AppMemoryProbe.record("real-blocker-after-prepare")
             let ext=try await ExtensionPackageLoader.load(target)
             let record=InstalledExtension(id:id,name:"uBO Lite real-package scenario",version:"2026.930.1227",enabled:true,permissions:ext.requestedPermissions.map(\.rawValue),hosts:[],resourceBaseURL:firefoxOrigin ? ExtensionResourceOrigin.initialURL(sourceExtension:"xpi",id:id) : nil)
             host.records.append(record);try await host.load(record)
+            AppMemoryProbe.record("real-blocker-after-host-load")
             guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("No live real-package context")}
             check("resource-origin",context.baseURL.scheme==(firefoxOrigin ? "moz-extension" : "webkit-extension") && context.uniqueIdentifier==id.uuidString,"Generated resource UUID; no publisher/native identity claim")
             let loopback=try WKWebExtension.MatchPattern(string:"http://127.0.0.1/*")
@@ -62,6 +65,7 @@ import SereinCore
             let initialRuleStart=Date()
             var enabled:[String:Any]?
             while Date().timeIntervalSince(initialRuleStart)<30 {enabled=await probe(view,blockingPath);if blocked(enabled){break};try? await Task.sleep(for:.milliseconds(500))}
+            AppMemoryProbe.record("real-blocker-after-initial-rule")
             check("shipped-rule-blocks-script",blocked(enabled),"elapsed=\(Date().timeIntervalSince(initialRuleStart)) result=\(String(describing:enabled))")
             check("unmatched-script-still-loads",loaded(await probe(view,"/serein-clean-probe.js")))
             check("private-window-excluded",loaded(await probe(privateView,blockingPath)) && privateView.configuration.webExtensionController==nil)
@@ -99,6 +103,7 @@ import SereinCore
             check("reenable-restores-blocking",host.contexts[id] != nil && blocked(restored),"elapsed=\(Date().timeIntervalSince(restoredRuleStart)) result=\(String(describing:restored))")
         } catch {check("setup-or-load",false,error.localizedDescription)}
         await host.remove(id)
+        AppMemoryProbe.record("real-blocker-after-remove")
         return results
     }
 }

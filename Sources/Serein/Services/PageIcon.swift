@@ -44,16 +44,16 @@ import ImageIO
               controller.signal.addEventListener('abort',abort,{once:true});image.src=objectURL;
             });
             const width=image.naturalWidth,height=image.naturalHeight;
-            if(!width||!height||width>1024||height>1024)return null;
+            if(!width||!height||width>1024||height>1024)return 'serein-icon-error:invalid-svg-dimensions:'+width+'x'+height;
             const canvas=document.createElement('canvas'),scale=32/Math.max(width,height);
             canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
-            const context=canvas.getContext('2d');if(!context)return null;
+            const context=canvas.getContext('2d');if(!context)return 'serein-icon-error:canvas-unavailable';
             context.drawImage(image,0,0,canvas.width,canvas.height);
-            const png=canvas.toDataURL('image/png');return png.startsWith('data:image/png;base64,')?png.substring(22):null;
+            const png=canvas.toDataURL('image/png');return png.startsWith('data:image/png;base64,')?png.substring(22):'serein-icon-error:invalid-canvas-output';
           }
           let binary='';for(const chunk of chunks){for(const byte of chunk)binary+=String.fromCharCode(byte);}
           return btoa(binary);
-        } catch{return null;}
+        } catch(error){return "serein-icon-error:"+String(error);}
         finally{clearTimeout(timer);controller.abort();if(objectURL)URL.revokeObjectURL(objectURL);if(reader)try{await reader.cancel();}catch{}}
         },writable:false,configurable:false,enumerable:false});
         })();
@@ -68,6 +68,9 @@ import ImageIO
         view.callAsyncJavaScript("return await globalThis[key]?.();",arguments:["key":key],in:nil,in:.page) {result in
             switch result {case .success(let value):reply.finish(value as? String);case .failure:reply.finish(nil)}
         }
+        }
+        if ProcessInfo.processInfo.arguments.contains("--integration-test"),let encoded,encoded.hasPrefix("serein-icon-error:") {
+            print("PAGE_ICON_DEBUG \(view.url?.absoluteString ?? "no-url") \(encoded.prefix(256))")
         }
         guard !Task.isCancelled,let encoded,encoded.utf8.count<=349_528,let data=Data(base64Encoded:encoded),data.count<=262_144,
               let source=CGImageSourceCreateWithData(data as CFData,nil),

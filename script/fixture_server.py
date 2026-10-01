@@ -99,9 +99,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             width = 1025 if 'wide' in query else 32 if 'rect' in query else 16
             payload = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="16" viewBox="0 0 16 16">'
                 '<rect width="16" height="16" fill="#168582"/><path d="M6 0h4v16H6zM0 6h16v4H0z" fill="white"/>'
-                '<script>fetch("http://127.0.0.1:8765/icon-svg-external?script=1")</script>'
-                '<image href="http://127.0.0.1:8765/icon-svg-external?image=1" width="1" height="1"/>'
-                '</svg>').encode()
+                + ('<script>fetch("http://127.0.0.1:8765/icon-svg-external?script=1")</script>'
+                   '<image href="http://127.0.0.1:8765/icon-svg-external?image=1" width="1" height="1"/>' if 'unsafe' in query else '')
+                + '</svg>').encode()
             self.send_response(200)
             self.send_header('Content-Type', 'image/svg+xml')
             self.send_header('Content-Length', str(len(payload)))

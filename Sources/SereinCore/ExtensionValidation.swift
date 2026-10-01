@@ -54,11 +54,12 @@ public enum ExtensionArchive {
         let checksum: UInt32
         let payload: Range<Int>
     }
-    public static func validate(_ data: Data) throws { _ = try checkedEntries(data) }
+    public static func validate(_ data: Data) throws { _ = try checkedEntries(Array(data)) }
     /// Restore file bytes only. ZIP filesystem attributes, alternate-name extras,
     /// ownership, resource forks and symlinks never reach another extractor.
     public static func extract(_ data: Data, to destination: URL) throws {
-        let entries = try checkedEntries(data), bytes = Array(data)
+        let bytes = Array(data)
+        let entries = try checkedEntries(bytes)
         let manager = FileManager.default
         guard mkdir(destination.path, 0o700) == 0 else { throw ExtensionValidationError.invalid("Extension destination must be a new private directory.") }
         do {
@@ -74,15 +75,28 @@ public enum ExtensionArchive {
                 let file = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
                 do {
                     try ArchivePayload.validate(bytes[entry.payload], method: entry.method, size: entry.size, checksum: entry.checksum) {
-                        try file.write(contentsOf: Data(buffer: $0))
+                        try writePayload($0,to:descriptor)
                     }
                     try file.close()
                 } catch { try? file.close(); throw error }
             }
         } catch { try? manager.removeItem(at: destination); throw error }
     }
-    private static func checkedEntries(_ data: Data) throws -> [Entry] {
-        let b=[UInt8](data)
+    private static func writePayload(_ buffer:UnsafeBufferPointer<UInt8>,to descriptor:Int32) throws {
+        guard !buffer.isEmpty else{return}
+        guard let address=buffer.baseAddress else{throw NSError(domain:NSPOSIXErrorDomain,code:Int(EFAULT))}
+        var offset=0
+        while offset<buffer.count {
+            let written=Darwin.write(descriptor,address.advanced(by:offset),buffer.count-offset)
+            if written<0 {
+                if errno==EINTR {continue}
+                throw NSError(domain:NSPOSIXErrorDomain,code:Int(errno))
+            }
+            guard written>0 else{throw NSError(domain:NSPOSIXErrorDomain,code:Int(EIO))}
+            offset+=written
+        }
+    }
+    private static func checkedEntries(_ b: [UInt8]) throws -> [Entry] {
         var entries: [Entry] = []
         func u16(_ i: Int) throws -> Int {guard i>=0,i+2<=b.count else{throw ExtensionValidationError.invalid("Truncated archive.")};return Int(b[i]) | Int(b[i+1])<<8}
         func u32(_ i: Int) throws -> Int {try u16(i) | u16(i+2)<<16}

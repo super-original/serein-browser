@@ -8,17 +8,26 @@ enum ArchivePayload {
         func invalid() -> ExtensionValidationError { .invalid("Archive payload checksum, size, or compression is invalid.") }
         if method == 0 {
             guard bytes.count == size else { throw invalid() }
-            let actual = Array(bytes).withUnsafeBufferPointer { crc32(0, $0.baseAddress, uInt($0.count)) }
-            guard UInt32(actual) == checksum else { throw invalid() }
-            try Array(bytes).withUnsafeBufferPointer { try consume?($0) }
+            try bytes.withUnsafeBufferPointer { source in
+                guard UInt32(crc32(0, source.baseAddress, uInt(source.count))) == checksum else { throw invalid() }
+                // Stored entries can be large too. Borrow their backing storage
+                // and bound each sink write instead of making full-entry copies.
+                if let consume {
+                    for offset in stride(from:0,to:source.count,by:32*1024) {
+                        try consume(UnsafeBufferPointer(rebasing:source[offset..<min(source.count,offset+32*1024)]))
+                    }
+                }
+            }
             return
         }
         var stream = z_stream()
         guard inflateInit2_(&stream, -MAX_WBITS, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else { throw invalid() }
         defer { inflateEnd(&stream) }
-        var input = Array(bytes), output = [UInt8](repeating: 0, count: 32 * 1024)
-        try input.withUnsafeMutableBufferPointer { source in
-            stream.next_in = source.baseAddress; stream.avail_in = uInt(source.count)
+        var output = [UInt8](repeating: 0, count: 32 * 1024)
+        try bytes.withUnsafeBufferPointer { source in
+            // zlib advances next_in without modifying the input bytes. Its legacy
+            // C pointer type is mutable; the borrowed buffer stays alive here.
+            stream.next_in = UnsafeMutablePointer(mutating:source.baseAddress); stream.avail_in = uInt(source.count)
             var decoded = 0, checksumValue: uLong = 0
             while true {
                 let before = stream.avail_in

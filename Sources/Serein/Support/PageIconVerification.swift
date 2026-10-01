@@ -19,22 +19,25 @@ import WebKit
         let image=runtime.pageIcon,bitmap=image?.tiffRepresentation.flatMap{NSBitmapImageRep(data:$0)}
         let corner=bitmap?.colorAt(x:0,y:0)?.usingColorSpace(.deviceRGB)
         check("original-fetch-raster-load",loaded && image?.size==NSSize(width:16,height:16) && (corner?.greenComponent ?? 0)>0.4 && (corner?.redComponent ?? 1)<0.2,"Page-world fetch is overridden after bootstrap; captured original fetch returns the original PNG")
+        var svgRendered=false
         for format in ["jpeg","gif","tiff","webp","ico","svg"] {
             let ready=await load("kind="+format,in:session)
             let bitmap=runtime.pageIcon?.tiffRepresentation.flatMap{NSBitmapImageRep(data:$0)}
             let color=bitmap?.colorAt(x:0,y:0)?.usingColorSpace(.deviceRGB)
+            if format=="svg" {svgRendered=ready && runtime.pageIcon != nil}
             check(format+"-raster-load",ready && runtime.pageIcon?.size==NSSize(width:16,height:16) && (color?.greenComponent ?? 0)>0.4 && (color?.redComponent ?? 1)<0.2)
         }
         for kind in ["cross","file","redirect","large","stream","wide","invalid","svgwide"] {
             let finished=await load("kind="+kind,in:session)
-            check(kind+"-fallback",finished && runtime.pageIcon==nil)
+            check(kind+"-fallback",finished && runtime.pageIcon==nil && (kind != "svgwide" || svgRendered))
         }
         let rectangle=await load("kind=svgrect",in:session)
         check("svg-aspect-preserved",rectangle && runtime.pageIcon?.size==NSSize(width:16,height:8))
+        let untrusted=await load("kind=svgunsafe",in:session)
         let svgDenied=await load("kind=svg&imgdeny=1",in:session)
-        check("svg-image-csp-kept",svgDenied && runtime.pageIcon==nil)
+        check("svg-image-csp-kept",svgRendered && svgDenied && runtime.pageIcon==nil)
         let external=try? await runtime.webView.callAsyncJavaScript("const r=await fetch('/icon-svg-audit');return (await r.json()).requests;",arguments:[:],in:nil,contentWorld:.world(name:"SereinIconAudit"))
-        check("svg-no-script-or-external-fetch",external as? Int==0)
+        check("svg-no-script-or-external-fetch",svgRendered && untrusted && external as? Int==0)
         let policy=await load("kind=normal&deny=1",in:session)
         check("csp-connect-policy-kept",policy && runtime.pageIcon==nil)
         let removedPolicy=await load("kind=normal&deny=1&remove=1",in:session)
@@ -75,10 +78,18 @@ import WebKit
         try? "59-tab-favicons".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         let captured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("59-tab-favicons.capture-finished").path)}
         check("sidebar-capture",captured && FileManager.default.fileExists(atPath:root.appendingPathComponent("59-tab-favicons.png").path))
-        session.window?.appearance=NSAppearance(named:.darkAqua)
+        let previousAppearance=UserDefaults.standard.object(forKey:"appearance")
+        defer {
+            if let previousAppearance {UserDefaults.standard.set(previousAppearance,forKey:"appearance")}
+            else {UserDefaults.standard.removeObject(forKey:"appearance")}
+        }
+        UserDefaults.standard.set("dark",forKey:"appearance")
+        let darkApplied=await wait{session.window?.contentView?.effectiveAppearance.bestMatch(from:[.aqua,.darkAqua]) == .darkAqua}
+        check("dark-appearance-applied",darkApplied)
+        try? await Task.sleep(for:.milliseconds(500))
         try? "60-tab-favicons-dark".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
         let darkCaptured=await wait{FileManager.default.fileExists(atPath:root.appendingPathComponent("60-tab-favicons-dark.capture-finished").path)}
-        check("dark-sidebar-capture",darkCaptured && FileManager.default.fileExists(atPath:root.appendingPathComponent("60-tab-favicons-dark.png").path))
+        check("dark-sidebar-capture",darkApplied && darkCaptured && FileManager.default.fileExists(atPath:root.appendingPathComponent("60-tab-favicons-dark.png").path))
         return results
     }
 }
