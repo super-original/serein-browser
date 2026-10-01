@@ -70,7 +70,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 | File selection / JS dialogs | I | Native panels; broader UI automation pending |
 | Site permissions / media | P | Exact-origin camera/microphone/location policies, Ask/Allow/Deny and reset; private policies are memory-only; physical media delivery and subframe cancellation coverage incomplete |
 | Fullscreen | P | Native window/fullscreen WebKit preference; media runtime coverage incomplete |
-| Loading / errors / process recovery | P | Actual attributed WebContent termination and native crash screen verified at `32b17e3`; native Reload recovery remains under test |
+| Loading / errors / process recovery | P | Actual attributed WebContent termination, native crash screen and AX Reload recovery pass at `d365cfc`; desktop website rendering remains blocked |
 | Settings | P | Appearance, sidebar, search engine, external essential previews and website data clearing; advanced policies absent |
 | Glance / link preview | P | Native Option-click overlay and parent/child lifecycle implemented; geometry, minimum bounds, actual Option-click/Escape/focus, live movement/split, consent, private isolation and reopened relationships pass at `7ef2e5f`; cycling/expansion now pass at `4449c7a`. Configurable external-host popup routing, restored-owner attachment, independent message-controller ownership and parent edit tracking pass at `c136b59`; its actual essential-preview screenshot was inspected. Nested previews and animation parity remain gaps. |
 | Folders / live folders | P / U | Native nested pinned folders implemented; all 19 creation/persistence/unpack/deletion/conversion checks verified at `32b17e3`; live providers, sharing and icon selection remain absent |

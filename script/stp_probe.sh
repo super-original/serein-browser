@@ -3,6 +3,16 @@ set -euo pipefail
 ROOT="$PWD/evidence/stp"
 mkdir -p "$ROOT"
 exec > >(tee "$ROOT/probe.log") 2>&1
+python3 - <<'PYTHON'
+import pathlib,re,subprocess,tempfile
+source=pathlib.Path('script/stp_probe.sh').read_text()
+blocks=re.findall(r"^[ \t]*(?:if )?osascript[^\n]*<<'APPLESCRIPT'[^\n]*\n(.*?)^APPLESCRIPT$",source,re.M|re.S)
+assert len(blocks)==3, f'Unexpected automation block count: {len(blocks)}'
+with tempfile.TemporaryDirectory(prefix='serein-stp-input-') as temporary:
+ for index,block in enumerate(blocks):
+  script=pathlib.Path(temporary)/f'{index}.applescript';script.write_text(block)
+  subprocess.run(['osacompile','-o',str(script.with_suffix('.scpt')),str(script)],check=True)
+PYTHON
 sw_vers
 uname -m
 xcodebuild -version
@@ -44,12 +54,34 @@ for BROWSER in 'Safari' 'Safari Technology Preview'; do
   if [[ "$BROWSER" == 'Safari' ]]; then NAME=system-safari; else NAME=technology-preview; fi
   open -a "$BROWSER" http://127.0.0.1:8765/index.html
   sleep 3
-  osascript - "$BROWSER" <<'APPLESCRIPT' > "$ROOT/$NAME-automation.txt" 2>&1
+  osascript <<'APPLESCRIPT' > "$ROOT/$NAME-network-consent.txt" 2>&1 || true
+with timeout of 5 seconds
+ tell application "System Events" to tell process "UserNotificationCenter"
+  repeat with candidateWindow in windows
+   repeat with probeElement in entire contents of candidateWindow
+    try
+     if name of probeElement contains "Python" then
+      click button "Don’t Allow" of candidateWindow
+      return "Denied fixture Python local-network discovery"
+     end if
+    end try
+   end repeat
+  end repeat
+ end tell
+end timeout
+APPLESCRIPT
+  if osascript - "$BROWSER" <<'APPLESCRIPT' > "$ROOT/$NAME-automation.txt" 2>&1
 on run arguments
  with timeout of 15 seconds
   tell application "System Events"
    tell process (item 1 of arguments)
     set frontmost to true
+    if (count of windows) is 0 then keystroke "n" using command down
+    repeat 40 times
+     if (count of windows) > 0 then exit repeat
+     delay 0.25
+    end repeat
+    if (count of windows) is 0 then error "Browser did not create a native window"
     keystroke "l" using command down
     keystroke "http://127.0.0.1:8765/index.html"
     key code 36
@@ -65,10 +97,15 @@ on run arguments
  end timeout
 end run
 APPLESCRIPT
+  then
+    printf 'Native navigation completed for %s\n' "$BROWSER"
+  else
+    printf 'Native navigation failed for %s; retaining screenshot\n' "$BROWSER"
+  fi
   sleep 2
   screencapture -x "$ROOT/$NAME.png"
   xcrun swift script/VisualGate.swift "$ROOT/$NAME.png" "$ROOT/$NAME-glyphs.json" || true
-  osascript - "$BROWSER" <<'APPLESCRIPT'
+  osascript - "$BROWSER" <<'APPLESCRIPT' || true
 on run arguments
  tell application "System Events" to tell process (item 1 of arguments) to keystroke "q" using command down
 end run
@@ -82,7 +119,7 @@ root=pathlib.Path(sys.argv[1]);results=[]
 for name in ['system-safari','technology-preview']:
  title=(root/(name+'-automation.txt')).read_text()
  gate=json.loads((root/(name+'-glyphs.json')).read_text())
- results.append({'browser':name,'loadedFixtureTitle':'Field Notes' in title,'desktopGlyphGate':gate['passed'],'scope':'Independent Apple browser diagnostic; never substitutes for the Serein rendering gate.'})
+ results.append({'browser':name,'loadedFixtureTitle':'Field Notes' in title,'desktopGlyphGate':gate['passed'] if 'Field Notes' in title else None,'scope':'Independent Apple browser diagnostic; never substitutes for the Serein rendering gate.'})
 (root/'results.json').write_text(json.dumps(results,indent=2))
 print(json.dumps(results,indent=2))
 assert all(x['loadedFixtureTitle'] for x in results),'A browser did not expose the fixture title; inspect actual screenshots.'

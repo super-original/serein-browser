@@ -322,3 +322,26 @@ The 16 browser failures comprise 13 retained fullscreen/extension failures, one 
 ### Divider verification failures before f8800b0
 
 `db4aa2e` ([run 36791874134](https://github.com/super-original/serein-browser/actions/runs/36791874134)) fails compilation because the split verification helper collides with a local Boolean name. The following revision renames the helper. `b844659` ([run 36792234519](https://github.com/super-original/serein-browser/actions/runs/36792234519)) passes 114 unit tests and compilation, but the runtime shell exits at its first divider coordinate read because the file lacks a trailing newline. No final browser result is claimed. Independent quit/download/bridge checks pass 9/9, 12/12 and 12/12; fresh fullscreen remains 8/12. The following revision writes a newline and retains input-helper errors as failed checks rather than aborting the supervisor. The macOS 27 typed split resize API compiles; actual pointer-drag/runtime semantics remain pending.
+
+
+## October 1 divider and crash diagnostics
+
+## Latest verified source
+
+`32b17e3fce2998b30b8807dbd56a5aa95bde904c`: [run 36794473731](https://github.com/super-original/serein-browser/actions/runs/36794473731) passes **114 unit tests, 464/479 browser checks, 44/44 native-host checks, 9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fresh fullscreen checks**. Independent real-process crash recovery passes **6/7**. Environment remains macOS 27.0 26A428, Xcode 27.1 27A9269, SDK/minimum 27.0, ARM64.
+
+[Download development app](https://github.com/super-original/serein-browser/actions/runs/36794473731/artifacts/11133680561) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36794473731/artifacts/11133605843). Ad-hoc signed/hardened; not Developer ID signed or notarized.
+
+Both actual divider drags pass, including window resizing and recreated-window persistence (horizontal fraction 0.3503, left vertical fraction 0.6493). The actual resized-grid screenshot was retrieved and inspected: both proportions are visible, while WebKit page bodies remain blank. Find/address focus, all 14 opener/creation, 19 folder, 11 Safari bundle and 44 native-host checks pass.
+
+The 15 browser failures comprise the 13 retained fullscreen/extension failures plus both MV2/MV3 disable-disconnect checks. Document-bound readiness now proves the intended page was tested. After unload, the page probe runs, posting reports no error, and no new echo or disconnect event arrives. This remains a semantic failure, not an accepted compatibility result.
+
+The independent crash supervisor positively attributes WebContent PID 13349 to test app PID 13344 before terminating it. The real delegate fires and invalidates document identity. Both retrieved screenshots show the native “Page stopped” screen and Reload button; the AX lookup failed, so document recovery is **not proven**. Follow-up searches all windows, preserves control diagnostics and permits a unique native Reload action only alongside the crash heading. It never substitutes a programmatic reload for UI input.
+
+[Refreshed pinned Zen references](https://github.com/super-original/serein-browser/actions/runs/36794469990/artifacts/11133112384) contain 23 captures, with all 26 indexed file hashes verified. Light/dark expanded windows and expanded/collapsed folders were inspected. Active/inactive key-window state remains unmatched. [Earlier inspected folder/Safari comparisons](evidence/2026-09-30/folders-and-safari/README.md) retain the blank WebKit limitation.
+
+## Latest diagnostic follow-up
+
+`c2d819b83b9a0d368443bd6560218e93a3a26d83`: [run 36795922611](https://github.com/super-original/serein-browser/actions/runs/36795922611) builds/packages successfully; **114 unit, 463/479 browser, 43/44 native-host, 6/7 crash, 9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fullscreen** checks pass. The extra browser/native-host failure is MV3 file-picker allow input. [App](https://github.com/super-original/serein-browser/actions/runs/36795922611/artifacts/11133404220) · [evidence](https://github.com/super-original/serein-browser/actions/runs/36795922611/artifacts/11133144692).
+
+Retrieved/inspected recovery screenshot still shows the stopped page. Its actual AX dump proves the outer `page-UUID` identifier was propagated to the crash heading, description **and Reload button**, replacing `page-error-reload`. Follow-up removes that unused container identifier; the action retains its own identifier. This is a production accessibility fix, awaiting native input/recovery verification. Diagnostics now also record native descriptions when SwiftUI button names are absent.

@@ -75,7 +75,10 @@ import WebKit
         check("changed-preview-loads",view.url==changedTarget && !view.isLoading)
         runtime.hasUserEdits=false
         _=try? await view.evaluateJavaScript("window.sereinGlanceSentinel='retained'")
-        session.expandGlance()
+        let expandInput=await keyboard("glance-expand-control")
+        await wait{session.state.activeGlance==nil}
+        check("native-expand-control",expandInput && session.state.activeGlance==nil)
+        if session.state.activeGlance != nil {session.expandGlance()}
         try? await Task.sleep(for:.milliseconds(150))
         let retained=try? await view.evaluateJavaScript("window.sereinGlanceSentinel") as? String
         check("expand-preserves-live-view",session.state.activeGlance==nil && session.state.visibleTabs.count==2 && session.current?.loadedWebView === view && retained=="retained","activeGlance=\(String(describing:session.state.activeGlance?.id)) visible=\(session.state.visibleTabs.count) sameView=\(session.current?.loadedWebView === view) sentinel=\(String(describing:retained))")
@@ -89,7 +92,10 @@ import WebKit
             manager.moveTab(owner,from:destination,to:session)
             destination.window?.close()
             session.window?.makeKeyAndOrderFront(nil)
-            session.splitGlance()
+            let splitInput=await keyboard("glance-split-control")
+            await wait{session.state.activeGlance==nil}
+            check("native-split-control",splitInput && session.state.activeGlance==nil && session.state.splitTabIDs==[owner,next.id])
+            if session.state.activeGlance != nil {session.splitGlance()}
             check("split-retains-live-preview",session.state.splitTabIDs==[owner,next.id] && session.state.activeGlance==nil && session.runtime(next.id).loadedWebView === nextView)
             session.close(next.id,ask:false)
         }
@@ -103,6 +109,14 @@ import WebKit
             let typed=await keyboard("find-page-key")
             let delivered=try? await parent.webView.evaluateJavaScript("document.documentElement.dataset.glanceKey || ''") as? String
             check("close-returns-parent-keyboard",typed && delivered=="received",String(describing:delivered))
+        }
+        session.select(owner);session.openGlance(target,from:owner)
+        if let closing=session.state.activeGlance {
+            try? await Task.sleep(for:.milliseconds(200))
+            let closeInput=await keyboard("glance-close-control")
+            await wait{session.state.activeGlance==nil}
+            check("native-close-control",closeInput && session.state.activeGlance==nil && !session.state.tabs.contains{$0.id==closing.id})
+            if session.state.activeGlance != nil {session.close(closing.id,ask:false)}
         }
         let privateSession=manager.newWindow(isPrivate:true)
         if let privateOwner=privateSession.state.selectedTabID {

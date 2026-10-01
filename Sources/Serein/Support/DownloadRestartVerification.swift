@@ -25,8 +25,8 @@ import SereinCore
             let normal=await start(in:session,name:"restart-download.bin")
             check("restart-prepare-normal-paused",normal.canResume && normal.record.phase == .paused,normal.status)
             let privateSession=manager.newWindow(isPrivate:true)
-            let privateItem=await start(in:privateSession,name:"private-restart.bin")
-            check("restart-prepare-private-paused",privateItem.canResume && privateItem.record.phase == .paused,privateItem.status)
+            let privateItem=await start(in:privateSession,name:"private-restart.bin",pause:false)
+            check("restart-prepare-private-active",privateItem.isActive && privateItem.fraction>0 && privateItem.fraction<1,privateItem.status)
             let files=(try? FileManager.default.contentsOfDirectory(atPath:manager.downloads.resumeDirectory.path)) ?? []
             check("restart-private-resume-not-written",files==[normal.id.uuidString+".resume"],files.joined(separator:","))
             let mode=(try? FileManager.default.attributesOfItem(atPath:manager.downloads.resumeDirectory.path)[.posixPermissions]) as? NSNumber
@@ -49,6 +49,8 @@ import SereinCore
             check("restart-completion-discards-resume-data",files.isEmpty)
         }
         try? JSONEncoder().encode(results).write(to:root.appendingPathComponent(prepare ? "prepare-results.json" : "resume-results.json"),options:.atomic)
-        NSApp.terminate(nil)
+        // Return from this Swift task before the supervisor sends real Command-Q.
+        // Calling terminateLater from the task being awaited can trap the fixture
+        // inside AppKit's modal termination loop and prevent shutdown work running.
     }
 }

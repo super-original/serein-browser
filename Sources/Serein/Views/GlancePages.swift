@@ -26,7 +26,6 @@ struct GlancePages:View {
                 .position(x:(geometry.size.width+width)/2+28,y:15+72)
             }
         }
-        .accessibilityIdentifier("glance-overlay")
         .onAppear {DispatchQueue.main.async {session.focusContent(ifSelected:preview)}}
         .onDisappear {
             let selected=session.state.selectedTabID

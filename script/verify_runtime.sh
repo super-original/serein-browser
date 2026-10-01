@@ -86,6 +86,31 @@ APPLESCRIPT
       folder-name)
         osascript -e 'tell application "System Events" to tell process "Serein"' -e 'delay 0.3' -e 'keystroke "a" using command down' -e 'keystroke "Research notes"' -e 'key code 36' -e 'end tell'
         ;;
+      glance-expand-control|glance-split-control|glance-close-control)
+        CONTROL_ID=${KEYBOARD_NAME%-control}
+        osascript - "$CONTROL_ID" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 <<'APPLESCRIPT' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+on run arguments
+ with timeout of 5 seconds
+  tell application "System Events" to tell process "Serein"
+   set frontmost to true
+   repeat with targetWindow in windows
+    repeat with uiElement in entire contents of targetWindow
+     set controlIdentifier to ""
+     try
+      set controlIdentifier to value of attribute "AXIdentifier" of uiElement
+     end try
+     if controlIdentifier is item 1 of arguments then
+      perform action "AXPress" of uiElement
+      return "Pressed " & controlIdentifier
+     end if
+    end repeat
+   end repeat
+  end tell
+ end timeout
+ error "Native Glance action was not found"
+end run
+APPLESCRIPT
+        ;;
       folder-toggle|folder-context)
         FOLDER_IDENTIFIER=$(cat "$ROOT/folder-control-identifier")
         if osascript - "$KEYBOARD_NAME" "$FOLDER_IDENTIFIER" > "$ROOT/$KEYBOARD_NAME-point" 2> "$ROOT/$KEYBOARD_NAME-input.log" <<'APPLESCRIPT'
@@ -137,11 +162,8 @@ on run arguments
     delay 0.4
     keystroke "a" using command down
     keystroke item 1 of arguments
-    delay 1.2
-    key code 36
-    delay 1.2
-    key code 36
-    repeat 8 times
+    delay 0.4
+    repeat 30 times
       repeat with candidateWindow in windows
         if my openFileIfPresent(candidateWindow) then return
         repeat with childSheet in sheets of candidateWindow
@@ -151,12 +173,34 @@ on run arguments
           end repeat
         end repeat
       end repeat
-      delay 0.2
+      -- Return resolves the entered path while the Go to Folder sheet is
+      -- present. Check for native consent before each key, so it is never
+      -- accepted by this file-selection helper.
+      my resolveEnteredPath(item 1 of arguments)
+      delay 0.3
     end repeat
     error "Native Open button or consent was not found"
   end tell
   end timeout
 end run
+on resolveEnteredPath(expectedPath)
+ tell application "System Events" to tell process "Serein"
+  repeat with targetWindow in windows
+   repeat with uiElement in entire contents of targetWindow
+    try
+     set elementRole to value of attribute "AXRole" of uiElement
+     if elementRole is "AXTextField" or elementRole is "AXComboBox" then
+      if (value of attribute "AXValue" of uiElement as text) is expectedPath then
+       set value of attribute "AXFocused" of uiElement to true
+       key code 36
+       return
+      end if
+     end if
+    end try
+   end repeat
+  end repeat
+ end tell
+end resolveEnteredPath
 on openFileIfPresent(containerElement)
   try
   tell application "System Events"

@@ -143,7 +143,8 @@ import SereinCore
     /// memory-only, including when a later consent check cancels termination.
     func prepareForTermination() async -> Bool {
         for item in items where item.isActive {item.cancel(pause:true)}
-        for _ in 0..<100 {
+        let clock=ContinuousClock(),deadline=clock.now.advanced(by:.seconds(5))
+        while clock.now<deadline {
             if !items.contains(where: \.isActive) {
                 error=nil;save()
                 return error==nil

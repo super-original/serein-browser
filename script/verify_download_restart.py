@@ -40,7 +40,24 @@ with (root / 'server.log').open('w') as log:
             with (root / f'{stage}.log').open('w') as stdout, (root / f'{stage}-error.log').open('w') as stderr:
                 process = subprocess.Popen([str(app), '--test-root', str(root), f'--download-restart-{stage}'], stdout=stdout, stderr=stderr)
                 try:
-                    code = process.wait(timeout=80)
+                    ready = root / f'{stage}-results.json'
+                    deadline = time.monotonic() + 70
+                    while not ready.exists() and time.monotonic() < deadline:
+                        assert process.poll() is None, f'{stage} exited before publishing readiness'
+                        time.sleep(0.1)
+                    assert ready.exists(), f'{stage} did not reach quit readiness'
+                    # User-facing quit runs outside the fixture's Swift task, as
+                    # it does from the application menu. Target only our child PID.
+                    quit_input = subprocess.run(['osascript', '-e', 'on run arguments',
+                        '-e', 'tell application "System Events"',
+                        '-e', 'set targetProcess to first application process whose unix id is (item 1 of arguments as integer)',
+                        '-e', 'tell targetProcess', '-e', 'set frontmost to true',
+                        '-e', 'keystroke "q" using command down', '-e', 'end tell',
+                        '-e', 'end tell', '-e', 'end run', str(process.pid)],
+                        text=True, capture_output=True, timeout=10)
+                    (root / f'{stage}-quit-input.log').write_text(quit_input.stdout + quit_input.stderr)
+                    assert quit_input.returncode == 0, quit_input.stderr
+                    code = process.wait(timeout=15)
                 finally:
                     stop(process)
             assert code == 0, f'{stage} app exited with {code}'
