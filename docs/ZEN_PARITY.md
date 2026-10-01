@@ -206,3 +206,21 @@ The follow-up makes Exit Split View available on inactive joined groups too. The
 At `28e1a30`, all seven new model tests and twelve split-group runtime checks pass. Original screenshots 76/77/78 were inspected. The returned native divider preserves the saved 0.37 fraction and live document markers survive. Desktop pages remain blank, with a stale-looking vertical rendering artifact after restoration; this is not visual parity. The next checks measure all four sidebar controls through native Accessibility, wait for active page titles before capture, and give unloaded URL tabs a safe filename/host fallback instead of New Tab. These follow-ups remain pending.
 
 At `d8cce57`, native Accessibility confirms all four controls in two horizontal rows; the updated group screenshot and unloaded filename labels were inspected. Fifteen of sixteen group checks pass. The context-menu scenario fails because AXShowMenu is unavailable on the tab button. Its menu currently belongs to the surrounding stack; the follow-up attaches that same menu to the accessible button and retains the original assertion, with no model-action fallback. Desktop content remains blank.
+
+### Group pinning follow-up (verification pending)
+
+The pinned [Zen 1.22.2b split-group test](https://github.com/zen-browser/desktop/blob/1.22.2b/src/zen/tests/split_view/browser_split_groups.js)
+requires pin/unpin on one member to affect the entire group without dissolving it.
+Serein now routes native pin actions and the extension tab pin bridge through the same
+group operation. Changed members retain workspace, selection, layout and divider state;
+repeating pin does not overwrite the original home URL or emit duplicate changed events.
+The extension event path emits once per changed member; actual listener delivery is not
+established by the core tests alone.
+
+Complete contiguous pinned groups now share a joined sidebar row, including within a
+single visible folder. Collapsed folders keep their selected-child behavior. Mixed-category,
+separated and cross-folder members remain individually reachable rather than being hidden.
+Four new core cases cover active/inactive groups, home URLs, hidden workspaces and folder
+visibility. Native runtime checks and screenshot 80 cover actual pinned panes and unpin
+restoration. These additions await macOS CI; group-wide movement/closing and exact Zen
+placement still remain open.

@@ -25,12 +25,16 @@ api.runtime.onMessage.addListener((message, sender, reply) => {
         }
       }
       const own = items => items.filter(item => ids.includes(item.id));
-      const all = own(await api.downloads.search({orderBy:['id']}));
+      // Chrome rejects id sorting although Gecko accepts it. Keep that exact
+      // observation, then exercise portable ordering without aborting the suite.
+      try {observations.idOrder = own(await api.downloads.search({orderBy:['id']})).map(item=>item.id);}
+      catch (error) {observations.idOrderError = String(error);}
+      const all = own(await api.downloads.search({orderBy:['startTime']}));
       checks.completed = all.length === 3 && all.every(item => item.state === 'complete');
       checks.distinctNumericIDs = new Set(ids).size === 3 && ids.every(Number.isSafeInteger);
       checks.positiveAndNegative = JSON.stringify(own(await api.downloads.search({query:['alpha','-two']})).map(item => item.id)) === JSON.stringify([ids[0]]);
       checks.caseInsensitiveTerms = own(await api.downloads.search({query:['ALPHA']})).length === 2;
-      checks.descendingOrder = JSON.stringify(own(await api.downloads.search({orderBy:['-id']})).map(item => item.id)) === JSON.stringify([...ids].reverse());
+      checks.descendingOrder = JSON.stringify(own(await api.downloads.search({orderBy:['-startTime']})).map(item => item.id)) === JSON.stringify([...ids].reverse());
       checks.limitOne = (await api.downloads.search({query:['reference='],limit:1})).length === 1;
       checks.limitZero = own(await api.downloads.search({limit:0})).length === 3;
       checks.missingID = (await api.downloads.search({id:2147483647})).length === 0;

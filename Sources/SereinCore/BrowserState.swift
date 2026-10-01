@@ -120,10 +120,13 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         tabs.append(new);select(new.id);return new.id
     }
     public mutating func setKind(_ id: UUID, _ kind: TabKind) {
+        changeKind(id,kind,in:activeWorkspaceID)
+    }
+    mutating func changeKind(_ id:UUID,_ kind:TabKind,in workspace:UUID) {
         guard let i=tabs.firstIndex(where:{$0.id==id}) else{return}
-        if kind != .pinned || tabs[i].folderID.flatMap({folder($0)?.workspaceID}).map({$0 != activeWorkspaceID})==true {forgetPinnedPosition(id);tabs[i].folderID=nil}
-        tabs[i].glanceParentID=nil;tabs[i].kind=kind;tabs[i].workspaceID=activeWorkspaceID
-        for child in tabs.indices where tabs[child].glanceParentID==id {tabs[child].workspaceID=activeWorkspaceID}
+        if kind != .pinned || tabs[i].folderID.flatMap({folder($0)?.workspaceID}).map({$0 != workspace})==true {forgetPinnedPosition(id);tabs[i].folderID=nil}
+        tabs[i].glanceParentID=nil;tabs[i].kind=kind;tabs[i].workspaceID=workspace
+        for child in tabs.indices where tabs[child].glanceParentID==id {tabs[child].workspaceID=workspace}
         tabs[i].homeURL=kind == .regular ? nil : tabs[i].url
         repairInactiveSplits()
     }

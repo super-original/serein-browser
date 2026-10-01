@@ -72,7 +72,7 @@ import SereinCore
         ExtensionSelectionTrace.record("set",id:id,value:selected,count:session?.tabSelection.ids.count ?? 0)
         if session?.setHighlighted(id,selected)==true {completionHandler(nil)} else {completionHandler(ExtensionValidationError.invalid("The tab no longer exists."))}
     }
-    func setPinned(_ pinned: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.setKind(id,pinned ? .pinned : .regular);completionHandler(nil)}
+    func setPinned(_ pinned: Bool,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {session?.setPinned(id,pinned);completionHandler(nil)}
     func loadURL(_ url: URL,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {
         guard session?.extensions?.canOpen(url,for:context) == true else {completionHandler(ExtensionValidationError.invalid("This URL scheme is not permitted."));return}
         session?.runtime(id).load(url);completionHandler(nil)

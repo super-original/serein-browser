@@ -123,6 +123,12 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
                             'rawInnerTextParses': value.get('parsed') is True,
                             'mainWorldGlobal': value.get('project') == 'Serein' and value.get('items') == 4}
         report['scenarioExecuted'] = True
+        # This fresh runner's fixture server needs only loopback. Deny the
+        # optional local-network request; do not grant or edit privacy databases.
+        consent = subprocess.run(['osascript', '-e', 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1'], capture_output=True, text=True, timeout=8)
+        (OUT / 'local-network-denial.txt').write_text(str(consent.returncode) + '\n' + consent.stdout + consent.stderr)
+        subprocess.run(['osascript', '-e', 'tell application "Google Chrome for Testing" to activate'], check=True, timeout=8)
+        time.sleep(0.5)
         subprocess.run(['screencapture', '-x', str(OUT / 'formatter-reference.png')], check=True, timeout=10)
         report['downloads'] = run_download_reference(request, script, prefix, OUT, download_directory)
     except Exception as error:

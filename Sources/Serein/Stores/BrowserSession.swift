@@ -188,7 +188,16 @@ import SereinCore
         address=url.absoluteString;addressFocused=false;runtime.load(url)
     }
     func setKind(_ id: UUID, _ kind: TabKind) {
-        state.setKind(id,kind);extensions?.controller.didChangeTabProperties(.pinned,for:bridge(id))
+        if kind == .pinned || (kind == .regular && state.tabs.first(where:{$0.id==id})?.kind == .pinned) {
+            setPinned(id,kind == .pinned)
+        } else {
+            guard state.tabs.first(where:{$0.id==id})?.kind != kind else{return}
+            state.setKind(id,kind);extensions?.controller.didChangeTabProperties(.pinned,for:bridge(id))
+        }
+    }
+    func setPinned(_ id:UUID,_ pinned:Bool) {
+        let changed=state.setPinned(id,pinned)
+        for member in changed {extensions?.controller.didChangeTabProperties(.pinned,for:bridge(member))}
     }
     func setHighlightedKind(_ kind:TabKind) {
         let targets=state.visibleTabs.filter{tabSelection.ids.contains($0.id) && $0.kind != kind}.map(\.id)

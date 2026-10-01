@@ -2,6 +2,19 @@ import XCTest
 @testable import SereinCore
 
 final class SidebarTabRowsTests:XCTestCase {
+    func testPinnedJoinedGroupsRespectFolderVisibilityAndCollapsedSidebar() throws {
+        var s=BrowserWindowState();let a=s.selectedTabID!,b=s.newTab(),c=s.newTab()
+        let folder=try XCTUnwrap(s.createFolder(name:"Pair",tabIDs:[a,b]))
+        s.setSplitTabs([a,b]);s.select(a)
+        XCTAssertEqual(s.pinnedSidebarDisplayRows.map(\.tabIDs),[[],[a,b]])
+        XCTAssertEqual(s.pinnedSidebarDisplayRows.last?.depth,1)
+        s.toggleFolder(folder)
+        XCTAssertEqual(s.pinnedSidebarDisplayRows.map(\.tabIDs),[[],[a]])
+        s.toggleFolder(folder);s.sidebar = .collapsed
+        XCTAssertEqual(s.pinnedSidebarDisplayRows.map(\.tabIDs),[[],[a],[b]])
+        s.sidebar = .expanded;s.select(c)
+        XCTAssertEqual(s.pinnedSidebarDisplayRows.map(\.tabIDs),[[],[a,b]])
+    }
     func testJoinedSplitKeepsEveryTabAndItsOriginalIndexOrder() throws {
         var state=BrowserWindowState();let a=state.selectedTabID!,b=state.newTab(select:false),c=state.newTab(select:false),d=state.newTab(select:false)
         XCTAssertTrue(state.setSplitTabs([c,b]))

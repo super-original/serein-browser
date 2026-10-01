@@ -15,6 +15,17 @@ struct SidebarView: View {
         let capacity=collapsed ? 1 : max(1,Int((session.state.sidebarWidth-10)/42))
         return Array(repeating:GridItem(.flexible(minimum:36),spacing:6),count:max(1,min(count,capacity)))
     }
+    private func joinedTabs(_ ids:[UUID])->some View {
+        HStack(spacing:4) {
+            ForEach(ids,id:\.self) { id in
+                if let tab=session.state.tabs.first(where:{$0.id==id}) {tabRow(tab,joined:true)}
+            }
+        }.padding(4)
+            .background(Color.primary.opacity(0.045),in:.rect(cornerRadius:10))
+            .accessibilityElement(children:.contain)
+            .accessibilityLabel("Split View, \(ids.count) tabs")
+            .accessibilityIdentifier("split-tab-group")
+    }
     var body: some View {
         VStack(spacing:6) {
             if !collapsed {
@@ -41,9 +52,10 @@ struct SidebarView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing:4) {
-                        ForEach(session.state.pinnedSidebarRows){row in
+                        ForEach(session.state.pinnedSidebarDisplayRows){row in
                             Group {
                                 if row.isFolder,let folder=session.state.folder(row.id) {FolderRow(session:session,folder:folder,compact:collapsed)}
+                                else if row.tabIDs.count>1 {joinedTabs(row.tabIDs)}
                                 else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
                             }.padding(.leading,collapsed ? 0 : CGFloat(row.depth)*14)
                         }
@@ -52,15 +64,7 @@ struct SidebarView: View {
                             .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityIdentifier("new-tab")
                         ForEach(session.state.regularSidebarRows) { row in
                             if row.tabIDs.count>1 {
-                                HStack(spacing:4) {
-                                    ForEach(row.tabIDs,id:\.self) { id in
-                                        if let tab=session.state.tabs.first(where:{$0.id==id}) {tabRow(tab,joined:true)}
-                                    }
-                                }.padding(4)
-                                    .background(Color.primary.opacity(0.045),in:.rect(cornerRadius:10))
-                                    .accessibilityElement(children:.contain)
-                                    .accessibilityLabel("Split View, \(row.tabIDs.count) tabs")
-                                    .accessibilityIdentifier("split-tab-group")
+                                joinedTabs(row.tabIDs)
                             } else if let tab=session.state.tabs.first(where:{$0.id==row.id}) {tabRow(tab)}
                         }
                     }
@@ -202,7 +206,8 @@ private struct TabRow: View {
                 Divider()
             }
             Button("Duplicate Tab"){session.duplicate(tab.id)}
-            Button(tab.kind == .pinned ? "Unpin Tab" : "Pin Tab"){session.setKind(tab.id,tab.kind == .pinned ? .regular : .pinned)}
+            let grouped=session.state.splitGroups.contains{$0.tabIDs.contains(tab.id)}
+            Button(tab.kind == .pinned ? (grouped ? "Unpin Split Group" : "Unpin Tab") : (grouped ? "Pin Split Group" : "Pin Tab")){session.setPinned(tab.id,tab.kind != .pinned)}
             Button(tab.kind == .essential ? "Remove from Essentials" : "Add to Essentials"){session.setKind(tab.id,tab.kind == .essential ? .regular : .essential)}
             if let home=tab.homeURL {Button("Reset Pinned Tab"){if let url=URL(string:home){session.runtime(tab.id).load(url)}}}
             Menu("Move to Workspace") {ForEach(session.state.workspaces){space in Button(space.name){session.moveTabToWorkspace(tab.id,space.id)}}}

@@ -2,6 +2,40 @@ import XCTest
 @testable import SereinCore
 
 final class SavedSplitGroupTests:XCTestCase {
+    func testPinAndUnpinRetainActiveGroupAndDoNotResetExistingHome() {
+        var s=BrowserWindowState();let a=s.selectedTabID!,b=s.newTab(),c=s.newTab()
+        s.setSplitTabs([a,b]);s.setSplitLayout(.rows);s.setSplitFraction(0.39,at:0)
+        let homes=s.tabs.filter{[a,b].contains($0.id)}.map(\.url)
+        XCTAssertEqual(s.setPinned(b,true),[a,b])
+        XCTAssertEqual(s.pinnedSidebarDisplayRows.map(\.tabIDs),[[a,b]])
+        XCTAssertEqual(s.tabs.filter{[a,b].contains($0.id)}.map(\.homeURL),homes.map(Optional.some))
+        s.tabs[s.tabs.firstIndex{$0.id==a}!].url="https://example.com/changed"
+        XCTAssertTrue(s.setPinned(a,true).isEmpty)
+        XCTAssertEqual(s.tabs.first{$0.id==a}?.homeURL,homes[0])
+        XCTAssertEqual(s.setPinned(a,false),[a,b])
+        XCTAssertEqual(s.splitTabIDs,[a,b]);XCTAssertEqual(s.resolvedSplitLayout,.rows)
+        XCTAssertEqual(s.splitFraction(at:0),0.39);XCTAssertEqual(s.selectedTabID,a)
+        XCTAssertTrue(s.tabs.allSatisfy{$0.kind == .regular && $0.homeURL==nil})
+        XCTAssertEqual(s.regularSidebarRows.map(\.tabIDs),[[a,b],[c]])
+    }
+    func testInactiveGroupPinDoesNotSelectOrAlterOtherGroupAndRoundTrips() throws {
+        var s=BrowserWindowState();let a=s.selectedTabID!,b=s.newTab(),c=s.newTab(),d=s.newTab()
+        s.setSplitTabs([a,b]);s.select(c);s.setSplitTabs([c,d]);s.setSplitFraction(0.63,at:0)
+        XCTAssertEqual(s.setPinned(b,true),[a,b]);XCTAssertEqual(s.selectedTabID,c)
+        XCTAssertEqual(s.splitTabIDs,[c,d]);XCTAssertEqual(s.splitFraction(at:0),0.63)
+        var restored=try SavedSession.decode(SavedSession(windows:[s]).encoded()).windows[0]
+        XCTAssertEqual(restored.splitGroups.count,2);restored.select(b)
+        XCTAssertEqual(restored.splitTabIDs,[a,b]);XCTAssertEqual(restored.selectedTabID,b)
+        XCTAssertEqual(restored.setPinned(a,false),[a,b]);XCTAssertTrue(restored.setPinned(UUID(),true).isEmpty)
+    }
+    func testPinHiddenWorkspaceGroupPreservesWorkspaceAndRestoration() {
+        var s=BrowserWindowState();let workspace=s.activeWorkspaceID,a=s.selectedTabID!,b=s.newTab()
+        s.setSplitTabs([a,b]);let other=s.addWorkspace(name:"Other"),selected=s.selectedTabID
+        XCTAssertEqual(s.setPinned(a,true),[a,b])
+        XCTAssertEqual(s.activeWorkspaceID,other);XCTAssertEqual(s.selectedTabID,selected)
+        XCTAssertTrue(s.tabs.filter{[a,b].contains($0.id)}.allSatisfy{$0.workspaceID==workspace && $0.kind == .pinned})
+        s.switchWorkspace(workspace);s.select(b);XCTAssertEqual(s.splitTabIDs,[a,b])
+    }
     func testContextUnsplitDoesNotActivateInactiveGroupOrDisturbCurrentLayout() {
         var s=BrowserWindowState();let a=s.selectedTabID!,b=s.newTab(),c=s.newTab(),d=s.newTab()
         s.setSplitTabs([a,b]);s.select(c);s.setSplitTabs([c,d]);s.setSplitLayout(.rows);s.setSplitFraction(0.61,at:0)

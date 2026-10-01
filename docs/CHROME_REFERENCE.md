@@ -19,3 +19,26 @@ The follow-up verifies the complete official archive (191,429,663 bytes, SHA-256
 This is an unmodified upstream **testing** build, not a signed/notarized production-browser claim. Google's [scope guidance](https://developer.chrome.com/docs/automation-and-testing/chrome-for-testing) limits it to trustworthy test content. The reference uses owned loopback fixtures. No files are re-signed, quarantine attributes removed, platform checks bypassed, or security settings changed. If ordinary browser launch fails, that failure is retained. The downloaded archive is deleted after comparison; browser binaries are not redistributed.
 
 The comparison implementation passes six local tests covering an exact tree and changed bytes, extra/missing files, redirected links and executable-mode changes. It also verified a freshly extracted copy of the real official archive in the cloud: 340 regular application files and five symlinks. That disposable copy was removed immediately. This validates the comparison code, not the installed macOS runner copy or browser execution; those remain pending.
+
+## First executed Chrome reference (41707ef, October 1)
+
+[Run 36864204084](https://github.com/super-original/serein-browser/actions/runs/36864204084)
+verified the complete installed distribution (340 files, five symlinks) against the pinned
+upstream archive and launched Chrome normally. All three original Formatter document
+checks passed: formatted DOM, parseable raw JSON, and the MAIN-world `window.json`
+object. This is narrow execution evidence, not universal compatibility or visible rendering.
+
+Both retrieved desktop images were inspected. They show the fixture Python local-network
+permission dialog over the desktop, not a visible Chrome window. A follow-up denies that
+optional access using the normal system dialog and activates the test browser before
+capture; no privacy database, signature, quarantine or sandbox policy is changed.
+
+The download fixture created three real files and received created/filename/completion
+events, then aborted with `Invalid orderBy field` for `orderBy: ['id']`. No download
+assertions completed. Gecko had accepted that field. The follow-up retains this exact
+field-support observation and uses documented `startTime` sorting to continue independent
+checks ([Chrome downloads reference](https://developer.chrome.com/docs/extensions/reference/api/downloads)).
+The four-second existence-refresh observation remains unchanged and is not a documented
+Chrome deadline. Original failed results remain in
+[artifact 11163312075](https://github.com/super-original/serein-browser/actions/runs/36864204084/artifacts/11163312075),
+ZIP SHA-256 `c7b0bba114828e5855cd71020f50c7b4612ac9fe20c3c6519c4933755a029e78`.

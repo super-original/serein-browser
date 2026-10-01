@@ -9,6 +9,19 @@ public struct SavedSplitGroup:Codable,Equatable,Sendable {
 }
 
 extension BrowserWindowState {
+    /// Zen treats pinning either pane as a group operation. Return only changed
+    /// identities so extension observers receive one event per changed tab.
+    @discardableResult public mutating func setPinned(_ id:UUID,_ pinned:Bool)->[UUID] {
+        guard tabs.contains(where:{$0.id==id}) else{return []}
+        let group=splitGroups.first(where:{$0.tabIDs.contains(id)})
+        let members=group?.tabIDs ?? [id]
+        let workspace=group?.workspaceID ?? tabs.first{$0.id==id}!.workspaceID
+        let kind:TabKind=pinned ? .pinned : .regular
+        let changed=members.filter {id in tabs.contains{$0.id==id && $0.kind != kind}}
+        for member in changed {changeKind(member,kind,in:workspace)}
+        return changed
+    }
+
     /// Explicitly dissolve one group without activating it or touching others.
     @discardableResult public mutating func removeSplitGroup(containing id:UUID)->Bool {
         if splitTabIDs.contains(id) {clearSplit();return true}

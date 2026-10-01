@@ -86,6 +86,17 @@ import SereinCore
         session.select(ids[2]);session.state.setSplitTabs(Array(ids.suffix(2)));session.select(ids[0])
         session.state.clearSplit();session.select(ids[2]);await settle()
         check("split-groups-unsplit-preserves-other-group",session.state.splitTabIDs==Array(ids.suffix(2)) && session.state.splitGroups.count==1)
+        let active=Array(ids.suffix(2)),inactive=Array(ids.prefix(2))
+        session.state.setSplitFraction(0.58,at:0)
+        session.setPinned(active[1],true);await settle()
+        check("split-groups-pin-active-preserves-panes",session.state.splitTabIDs==active && active.allSatisfy{id in session.state.tabs.first{$0.id==id}?.kind == .pinned && session.runtimes[id]?.loadedWebView?.window === session.window})
+        await capture("80-pinned-split-group")
+        session.setPinned(active[0],false);await settle()
+        check("split-groups-unpin-preserves-divider",session.state.splitTabIDs==active && active.allSatisfy{id in session.state.tabs.first{$0.id==id}?.kind == .regular} && abs(session.state.splitFraction(at:0)-0.58)<0.001)
+        session.select(inactive[0]);session.state.setSplitTabs(inactive);session.select(active[0])
+        session.setPinned(inactive[1],true)
+        check("split-groups-pin-inactive-preserves-selection",session.state.selectedTabID==active[0] && session.state.splitTabIDs==active && session.state.splitGroups.count==2 && inactive.allSatisfy{id in session.state.tabs.first{$0.id==id}?.kind == .pinned})
+        session.setPinned(inactive[0],false)
         return results
     }
 }
