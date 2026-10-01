@@ -304,3 +304,21 @@ The next `5e43906` build passes, but runtime preflight stops before app launch: 
 All **19 folder checks** pass, including actual AX collapse, context-menu capture, creation/nesting/persistence, guarded deletion, unpacking and live folder-to-workspace conversion. All **11 Safari Web Extension bundle checks** pass: native installation/cancellation, unchanged signed manifest, options, MV3 worker messaging, persistent storage/identity after reload, tamper rejection and removal. [Inspected screenshots and pinned Zen comparisons](evidence/2026-09-30/folders-and-safari/README.md) show improved essential width and folder geometry, but still blank WebKit content.
 
 The 17 browser failures comprise the 13 retained fullscreen/extension failures below plus four native-host picker/scenario failures. The inspected picker capture remains in its Go-to-file popup. No native-host lifecycle success is inferred from this run; earlier isolated evidence is retained below.
+
+
+## Latest verified source
+
+`4140bae6f0b76349ae57a132948d783fa2768ad1`: [run 36791168442](https://github.com/super-original/serein-browser/actions/runs/36791168442) passes **112 unit tests, 457/473 browser checks, 9/9 quit, 12/12 download restart, 12/12 isolated bridge and 8/12 fresh fullscreen checks**. Environment remains macOS 27.0 26A428, Xcode 27.1 27A9269, SDK/minimum 27.0, ARM64.
+
+[Download development app](https://github.com/super-original/serein-browser/actions/runs/36791168442/artifacts/11132128075) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36791168442/artifacts/11131769594). Ad-hoc signed/hardened; not Developer ID signed or notarized.
+
+All 14 added MV2/MV3 opener/creation checks pass, including final pinned/index/event metadata, opener creation/duplication/update, self rejection and cross-window rejection. All 19 folder and 11 Safari bundle checks continue to pass. Native-host checks pass **43/44**: three picker interactions succeed, while MV3 cancellation remains in Go-to-file. That failure is retained separately; controlled fixture URL review exercises the same production validation and native consent, then all lifecycle checks pass. Actual consent and failed-picker screenshots were retrieved and inspected.
+
+The 16 browser failures comprise 13 retained fullscreen/extension failures, one picker failure, find focus after programmatic close, and initial signed-update options readiness. Native keyboard Escape/page-key delivery and later signed-update restoration still pass. The follow-up waits for body/load completion (the old readiness check waited only for title) and adds a guarded responder restoration request after AppKit window updates.
+
+[Earlier inspected folder/Safari screenshots and pinned Zen comparisons](evidence/2026-09-30/folders-and-safari/README.md) retain the blank WebKit content limitation. No rendering pass or universal extension compatibility is claimed.
+
+
+### Divider verification failures before f8800b0
+
+`db4aa2e` ([run 36791874134](https://github.com/super-original/serein-browser/actions/runs/36791874134)) fails compilation because the split verification helper collides with a local Boolean name. The following revision renames the helper. `b844659` ([run 36792234519](https://github.com/super-original/serein-browser/actions/runs/36792234519)) passes 114 unit tests and compilation, but the runtime shell exits at its first divider coordinate read because the file lacks a trailing newline. No final browser result is claimed. Independent quit/download/bridge checks pass 9/9, 12/12 and 12/12; fresh fullscreen remains 8/12. The following revision writes a newline and retains input-helper errors as failed checks rather than aborting the supervisor. The macOS 27 typed split resize API compiles; actual pointer-drag/runtime semantics remain pending.

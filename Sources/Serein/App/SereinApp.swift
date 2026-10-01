@@ -28,6 +28,10 @@ import SwiftUI
         manager.menu.install()
         manager.restore()
         NSApp.activate(ignoringOtherApps:true)
+        if args.contains("--crash-recovery-test"),testRoot != nil {
+            Task {await CrashRecoveryVerification.run(manager:manager,root:root)}
+            return
+        }
         if args.contains("--quit-consent-test"),testRoot != nil {
             if args.contains("--native-host-quit-test") {
                 Task {

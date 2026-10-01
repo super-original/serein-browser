@@ -16,17 +16,20 @@ import SereinCore
                 let installed=InstalledExtension(id:id,name:prefix,version:"1.0",enabled:true,permissions:[],hosts:["http://127.0.0.1/*"])
                 host.records.append(installed)
                 try await host.load(installed)
-                func result(_ property:String) async -> [String:Any]? {
+                func result(_ property:String,at expectedURL:String) async -> [String:Any]? {
                     for _ in 0..<100 {
-                        if let text=try? await session.current?.webView.evaluateJavaScript("document.documentElement.dataset.\(property) || null") as? String,
-                           let data=text.data(using:.utf8),let value=try? JSONSerialization.jsonObject(with:data) as? [String:Any] {return value}
+                        guard let runtime=session.current,let view=runtime.loadedWebView,
+                              view.url?.absoluteString==expectedURL,!view.isLoading else{try? await Task.sleep(for:.milliseconds(50));continue}
+                        let document=runtime.documentID
+                        if let text=try? await view.evaluateJavaScript("document.documentElement.dataset.\(property) || null") as? String,
+                           let data=text.data(using:.utf8),let value=try? JSONSerialization.jsonObject(with:data) as? [String:Any],runtime.documentID==document,view.url?.absoluteString==expectedURL {return value}
                         try? await Task.sleep(for:.milliseconds(50))
                     }
                     return nil
                 }
                 let url="http://127.0.0.1:8765/index.html?port-lifecycle=\(version)-normal"
                 session.navigate(url,ask:false)
-                let value=await result("portResult")
+                let value=await result("portResult",at:url)
                 let echoes=value?["echoes"] as? [[String:Any]],record=value?["record"] as? [String:Any]
                 check("ordered-bidirectional-messages",echoes?.compactMap{$0["sequence"] as? Int}==[0,1,2] && record?["received"] as? [Int]==[0,1,2],String(describing:value))
                 check("structured-message-payload",echoes?.allSatisfy{echo in
@@ -35,8 +38,9 @@ import SereinCore
                 }==true)
                 check("sender-main-frame",record?["senderURL"] as? String==url && record?["frameId"] as? Int==0)
                 check("explicit-disconnect-delivered",record?["disconnected"] as? Bool==true)
-                session.navigate("http://127.0.0.1:8765/index.html?port-lifecycle=\(version)-disable",ask:false)
-                let live=await result("portEchoes")
+                let disableURL="http://127.0.0.1:8765/index.html?port-lifecycle=\(version)-disable"
+                session.navigate(disableURL,ask:false)
+                let live=await result("portEchoes",at:disableURL)
                 check("live-port-before-disable",(live?["echoes"] as? [Any])?.count==3)
                 await host.setEnabled(id,false)
                 var disconnected=false

@@ -61,13 +61,17 @@ import SereinCore
             for child in view.subviews {if let found=findGrid(in:child){return found}}
             return nil
         }
-        func drag(_ split:BrowserGridSplitView,to fraction:Double) async -> Bool {
+        func drag(_ split:BrowserGridSplitView,to fraction:Double,name:String) async -> Bool {
+            // Let the prior window resize commit before converting pointer coordinates.
+            try? await Task.sleep(for:.milliseconds(250))
+            split.window?.contentView?.layoutSubtreeIfNeeded()
             guard let window=split.window,let screen=NSScreen.screens.first,let first=split.subviews.first else{return false}
             let length=(split.isVertical ? split.bounds.width : split.bounds.height)-split.dividerThickness
             let start=split.isVertical ? NSPoint(x:first.frame.maxX+4,y:split.bounds.midY) : NSPoint(x:split.bounds.midX,y:first.frame.maxY+4)
             let end=split.isVertical ? NSPoint(x:length*fraction+4,y:start.y) : NSPoint(x:start.x,y:length*fraction+4)
             let from=window.convertPoint(toScreen:split.convert(start,to:nil)),to=window.convertPoint(toScreen:split.convert(end,to:nil))
             let points="\(from.x) \(screen.frame.maxY-from.y) \(to.x) \(screen.frame.maxY-to.y)"
+            try? ("bounds=\(NSStringFromRect(split.bounds)) first=\(NSStringFromRect(first.frame)) points=\(points)\n").write(to:root.appendingPathComponent("split-"+name+"-geometry.txt"),atomically:true,encoding:.utf8)
             try? (points+"\n").write(to:root.appendingPathComponent("split-drag-points"),atomically:true,encoding:.utf8)
             let done=root.appendingPathComponent("split-divider-drag.keyboard-finished")
             let failed=root.appendingPathComponent("split-divider-drag.keyboard-failed")
@@ -78,7 +82,7 @@ import SereinCore
             return FileManager.default.fileExists(atPath:done.path) && !FileManager.default.fileExists(atPath:failed.path)
         }
         if let split=findGrid(in:session.window?.contentView),let left=split.subviews.first as? BrowserGridSplitView {
-            let horizontal=await drag(split,to:0.35),vertical=await drag(left,to:0.65)
+            let horizontal=await drag(split,to:0.35,name:"columns"),vertical=await drag(left,to:0.65,name:"left-rows")
             check("actual-divider-drag-persists-both-axes",horizontal && vertical && abs(session.state.splitFraction(at:0)-0.35)<0.02 && abs(session.state.splitFraction(at:1)-0.65)<0.02,"\(session.state.splitFractions ?? [])")
             let before=session.state.splitFractions
             if let window=session.window {
