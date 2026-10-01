@@ -2,7 +2,7 @@ name: Pinned Gecko extension semantics reference
 on:
   workflow_dispatch:
   push:
-    paths: ['.github/workflows/extension-reference.yml', 'script/extension_reference.sh', 'script/extension_reference.py']
+    paths: ['.github/workflows/extension-reference.yml', 'script/extension_reference.sh', 'script/extension_reference.py', 'script/download_reference.py', 'Fixtures/DownloadAPI/**']
 permissions:
   contents: read
 concurrency:
@@ -24,6 +24,6 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
-          name: zen-extension-port-reference
+          name: zen-extension-semantics-reference
           path: evidence/extension-reference
           retention-days: 7

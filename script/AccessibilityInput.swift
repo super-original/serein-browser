@@ -20,14 +20,16 @@ func focused()->AXUIElement? {
     guard let result=value(application,kAXFocusedUIElementAttribute),CFGetTypeID(result)==AXUIElementGetTypeID() else{return nil}
     return unsafeBitCast(result,to:AXUIElement.self)
 }
-func controls()->[AXUIElement] {
+func controls(includeLists:Bool=false)->[AXUIElement] {
     var queue=elements(application,kAXWindowsAttribute),found:[AXUIElement]=[],seen=Set<CFHashCode>()
     while !queue.isEmpty,found.count<500,ProcessInfo.processInfo.systemUptime<deadline {
         let item=queue.removeFirst()
         guard seen.insert(CFHash(item)).inserted else{continue}
         found.append(item)
-        // File rows and web documents cannot contain the native controls sought.
-        if !["AXWebArea","AXOutline","AXTable","AXList","AXBrowser"].contains(text(item,kAXRoleAttribute)) {
+        // Save/other controls do not need file rows. Extension management
+        // explicitly traverses native lists; web documents are always excluded.
+        let excluded=includeLists ? ["AXWebArea","AXBrowser"] : ["AXWebArea","AXOutline","AXTable","AXList","AXBrowser"]
+        if !excluded.contains(text(item,kAXRoleAttribute)) {
             queue += elements(item,kAXChildrenAttribute)
         }
     }
@@ -75,7 +77,7 @@ if mode=="press" {
     let allowed=["glance-close":"Close Preview","glance-expand":"Expand Preview","glance-split":"Split Preview","folder-icon-star.fill":"Star","folder-icon-default":"Default Folder"]
     let extensionAccess=identifier.hasPrefix("extension-access-") && UUID(uuidString:String(identifier.dropFirst("extension-access-".count))) != nil
     guard let label=allowed[identifier] ?? (extensionAccess ? "Requested Access…" : nil) else{fail("Unknown fixture action")}
-    let items=controls()
+    let items=controls(includeLists:extensionAccess)
     let exact=items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && text($0,kAXIdentifierAttribute)==identifier}
     let matching=exact.isEmpty ? items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && [text($0,kAXTitleAttribute),text($0,kAXDescriptionAttribute)].contains(label)} : exact
     guard matching.count==1 else{fail("Expected exactly one \(identifier) control\n"+describe(items))}

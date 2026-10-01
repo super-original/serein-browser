@@ -4,11 +4,11 @@
 
 ## Latest completed source
 
-`9d8d8c18b71f381ea757dd88ef224b07e2268c23`: [run 36841920013](https://github.com/super-original/serein-browser/actions/runs/36841920013) passes **149 Swift unit tests, three process-attribution tests and 736/766 browser checks**. The native save-entry repair passes exact name/directory, output destination and PNG checks. Both original save-panel captures and the exported page PNG were retrieved and inspected: names are complete and correct; the internal page image contains fixture text. Desktop website content remains blank.
+`d79339949e387a58cae1baa8f056475538471952`: [run 36843232599](https://github.com/super-original/serein-browser/actions/runs/36843232599) passes **152 Swift unit tests, three process-attribution tests and 738/769 browser checks**. All three new capability-ledger core tests and actual install/update persistence checks pass. The native Requested Access check fails because the helper skipped list rows; its traversal repair is pending. Management and final extension-error screenshots were retrieved and inspected and show the new button; the opened sheet is not yet verified. Experimental Firefox-origin uBO options also timed out in its separate run.
 
-[Development app](https://github.com/super-original/serein-browser/actions/runs/36841920013/artifacts/11151668767) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36841920013/artifacts/11151778100). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36843232599/artifacts/11152338495) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36843232599/artifacts/11152713063). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
 
-The 30 retained structural failures and desktop-rendering gate still fail. At `4d98576`, all three split-sidebar checks pass: actual horizontal control geometry, native selection preserving all live panes, and Command-W closing the selected pane. Retrieved four-pane and three-pane screenshots were inspected. Four labels are heavily truncated at the pinned sidebar width; three remain more readable.
+The 30 retained structural failures and desktop-rendering gate still fail. At `9d8d8c1`, native save-entry repair passes exact name/directory, destination and PNG checks; both save panels and the exported PNG were inspected. Internal snapshot text is visible, while desktop website content stays blank. All three joined split-sidebar checks pass; inspected four-pane labels are heavily truncated at the pinned width.
 
 At `89aa2493`, all eight folder-placement checks pass, including actual before/after pointer drags, tree/icon/live-page preservation, atomic rejection and session order. Its retrieved `70-folder-reordered.png` was inspected; the collapsed folder retains its selected page and custom symbol in the expected order.
 
@@ -38,7 +38,7 @@ The **actual desktop rendering gate fails**, with zero fixture glyph pixels. Pla
 
 Fresh baseline and WebGPU-first fullscreen each fail four checks in af67df3. WebGL-first passes four native/DOM entry/exit checks, but its inspected desktop captures remain black/blank; earlier WebGPU passes were intermittent. No production GPU warmup is introduced. [Pinned Gecko reference](https://github.com/super-original/serein-browser/actions/runs/36799509123) renders, removes a disabled extension's DOM listener, and also lacks the expected disconnect marker; neither engine observation proves universal lifecycle behavior.
 
-The next extension-host change preserves an original capability ledger across install/update, provides a native Requested Access review and reports original versus recognized required/optional APIs for real packages. Three core tests and five native/persistence checks are pending. The first engine experiment stopped at its supervisor output-capture test before building; a deterministic final-pipe-byte regression and fix are prepared.
+The original capability ledger now passes core and install/update checks; native access-review automation remains under repair. The corrected supervisor passes five macOS tests. The first actual engine attempt reached Xcode but failed because the selected scheme omitted WTF and other dependencies. The upstream complete framework/dependency scheme is selected for the next bounded attempt. [Measurements and exact failure](WEBKIT_FEASIBILITY.md).
 
 ## Evidence-backed backlog
 

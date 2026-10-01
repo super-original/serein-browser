@@ -8,6 +8,7 @@ import time
 import urllib.error
 import urllib.request
 import zipfile
+from download_reference import run_download_reference
 
 out = pathlib.Path('evidence/extension-reference')
 results = []
@@ -40,11 +41,14 @@ for _ in range(60):
         time.sleep(0.2)
 else:
     raise RuntimeError('Owned geckodriver did not become ready')
+download_directory=tempfile.TemporaryDirectory(prefix='serein-reference-downloads-')
 try:
     session = request('/session', {'capabilities': {'alwaysMatch': {'browserName': 'firefox', 'moz:firefoxOptions': {
         'binary': '/tmp/SereinPortReference.app/Contents/MacOS/zen',
         'prefs': {'zen.welcome-screen.seen': True, 'browser.shell.checkDefaultBrowser': False,
-                  'browser.startup.homepage_override.mstone': 'ignore'}}}}})
+                  'browser.startup.homepage_override.mstone': 'ignore',
+                  'browser.download.folderList':2,'browser.download.useDownloadDir':True,
+                  'browser.download.dir':download_directory.name}}}}})
     prefix = '/session/' + session['sessionId']
     (out / 'capabilities.json').write_text(json.dumps(session['capabilities'], indent=2))
     request(prefix + '/timeouts', {'script': 15000, 'pageLoad': 15000})
@@ -115,7 +119,13 @@ try:
                 except Exception as error:
                     entry['cleanupError'] = str(error)
                 (out / 'results.json').write_text(json.dumps(results, indent=2))
+        download_results=[run_download_reference(request,script,prefix,out,temporary,version) for version in [2,3]]
     assert all(item['scenarioExecuted'] for item in results), results
+    assert all(item['scenarioExecuted'] for item in download_results), download_results
+    assert all(item['result'].get('checks') and all(item['result']['checks'].values()) for item in download_results), download_results
 finally:
-    if prefix:
-        request(prefix, method='DELETE')
+    try:
+        if prefix:
+            request(prefix, method='DELETE')
+    finally:
+        download_directory.cleanup()

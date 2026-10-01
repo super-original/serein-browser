@@ -228,21 +228,21 @@ import SereinCore
                 let accessSheet=session.dialogWindow?.attachedSheet
                 let opened=accessSheet != nil && accessSheet !== previousSheet && !FileManager.default.fileExists(atPath:root.appendingPathComponent("extension-access.keyboard-failed").path)
                 check("crx3-native-requested-access-review",opened)
+                let capture=opened ? "71-extension-requested-access" : "71-extension-requested-access-missing"
+                try capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                for _ in 0..<100 {
+                    if FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path){break}
+                    try await Task.sleep(for:.milliseconds(100))
+                }
+                check("crx3-requested-access-capture",opened && FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".png").path))
                 if opened {
-                    let capture="71-extension-requested-access"
-                    try capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
-                    for _ in 0..<100 {
-                        if FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path){break}
-                        try await Task.sleep(for:.milliseconds(100))
-                    }
-                    check("crx3-requested-access-capture",FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".png").path))
                     try "extension-access-close".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
                     for _ in 0..<100 {
                         if session.dialogWindow?.attachedSheet==nil {break}
                         try await Task.sleep(for:.milliseconds(100))
                     }
-                    check("crx3-requested-access-keyboard-close",session.dialogWindow?.attachedSheet==nil)
                 }
+                check("crx3-requested-access-keyboard-close",opened && session.dialogWindow?.attachedSheet==nil)
                 session.libraryPanel=nil
                 session.navigate("http://127.0.0.1:8765/index.html?extension=crx-identity")
                 var runtimeID: String?

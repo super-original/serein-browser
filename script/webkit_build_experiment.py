@@ -54,7 +54,7 @@ def main():
     assert actual==COMMIT
     (evidence/'checkout-size.txt').write_text(output(['du','-sk',str(root)])+'\n')
     (evidence/'source-status.txt').write_text(subprocess.check_output(['git','status','--porcelain'],cwd=source,text=True))
-    command=['Tools/Scripts/build-webkit','--release','--only-webkit','--xcode','-jobs','2',
+    command=['Tools/Scripts/build-webkit','--release','--only=Everything up to WebKit','--xcode','-jobs','2',
              '-sdk','macosx','ARCHS=arm64','ONLY_ACTIVE_ARCH=YES','MACOSX_DEPLOYMENT_TARGET=27.0']
     succeeded=stage('build',command,4500)
     (evidence/'final-size.txt').write_text(output(['du','-sk',str(root)])+'\n')
