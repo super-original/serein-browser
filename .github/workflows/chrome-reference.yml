@@ -2,7 +2,7 @@ name: Pinned Chrome real-extension reference
 on:
   workflow_dispatch:
   push:
-    paths: ['.github/workflows/chrome-reference.yml', 'script/chrome_formatter_reference.py', 'script/chrome_download_reference.py', 'script/build_json_formatter_fixture.py', 'Fixtures/formatter.json', 'Fixtures/DownloadAPI/**']
+    paths: ['.github/workflows/chrome-reference.yml', 'script/chrome_formatter_reference.py', 'script/chrome_distribution.py', 'script/test_chrome_distribution.py', 'script/chrome_download_reference.py', 'script/build_json_formatter_fixture.py', 'Fixtures/formatter.json', 'Fixtures/DownloadAPI/**']
 permissions:
   contents: read
 concurrency:
@@ -14,6 +14,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 script/test_chrome_distribution.py
       - run: python3 script/chrome_formatter_reference.py
       - name: Index reference evidence
         if: always()

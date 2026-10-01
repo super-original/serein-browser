@@ -16,6 +16,7 @@ import time
 import urllib.error
 import urllib.request
 from chrome_download_reference import prepare_download_reference, run_download_reference
+from chrome_distribution import DRIVER_SHA256, verify_distribution
 
 VERSION = '154.0.8037.57'
 OUT = pathlib.Path('evidence/chrome-formatter-reference')
@@ -58,6 +59,8 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
         report['os'] = platform.mac_ver()[0]
         info = plistlib.loads((APP / 'Contents/Info.plist').read_bytes())
         report['bundleVersion'] = info['CFBundleShortVersionString']
+        report['driverSHA256'] = digest(DRIVER)
+        assert report['driverSHA256'] == DRIVER_SHA256, 'Driver differs from pinned official distribution'
         report['driverVersion'] = subprocess.check_output([str(DRIVER), '--version'], text=True, timeout=10).strip()
         assert report['bundleVersion'] == VERSION, 'Runner browser changed; review and repin'
         assert report['driverVersion'].split()[1] == VERSION, 'Runner driver changed; review and repin'
@@ -65,7 +68,9 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
         report['driverSHA256'] = digest(DRIVER)
         signature = subprocess.run(['codesign', '--verify', '--deep', '--strict', str(APP)], capture_output=True, text=True, timeout=30)
         report['signatureVerification'] = {'exitCode': signature.returncode, 'diagnostic': signature.stderr}
-        assert signature.returncode == 0
+        report['distribution'] = verify_distribution(APP, temporary, OUT)
+        if signature.returncode != 0:
+            assert signature.returncode == 1 and signature.stderr.strip() == str(APP) + ': code has no resources but signature indicates they must be present', 'Unexpected signature failure'
         build = pathlib.Path(temporary) / 'formatter'
         subprocess.run([sys.executable, 'script/build_json_formatter_fixture.py', str(build),
                         str(OUT / 'formatter-build.json')], check=True, timeout=240)

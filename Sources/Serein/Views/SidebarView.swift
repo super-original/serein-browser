@@ -170,6 +170,7 @@ private struct TabRow: View {
                 session.contentFocusRequest=session.state.selectedTabID
                 DispatchQueue.main.async {session.completeContentFocusRequest()}
             }
+            .contextMenu {tabContextMenu}
             if session.state.glance(for:tab.id) != nil {
                 Button {session.select(tab.id)} label:{Image(systemName:"rectangle.on.rectangle").font(.system(size:12)).frame(width:24,height:24)}.buttonStyle(.plain).accessibilityLabel("Show Link Preview").help("Show Link Preview")
             }
@@ -178,7 +179,8 @@ private struct TabRow: View {
         .padding(.horizontal,joined ? 4 : 10).frame(maxWidth:.infinity).frame(height:tab.kind == .essential ? 44 : joined ? 28 : 36)
         .background(session.state.sidebarSelectedTabID==tab.id ? Color.primary.opacity(0.09) : session.tabSelection.ids.contains(tab.id) ? Color.accentColor.opacity(0.16) : hovering ? Color.primary.opacity(0.045) : tab.kind == .essential ? Color.primary.opacity(0.045) : Color.clear,in:.rect(cornerRadius:8))
         .onHover{hovering=$0}.help(tab.title+"\n"+tab.url)
-        .contextMenu {
+    }
+    @ViewBuilder private var tabContextMenu:some View {
             if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {
                 Button("Pin Selected Tabs"){session.setHighlightedKind(.pinned)}
                 Button("Unpin Selected Tabs"){session.setHighlightedKind(.regular)}
@@ -213,6 +215,5 @@ private struct TabRow: View {
             Divider()
             if session.tabSelection.ids.contains(tab.id),session.tabSelection.ids.count>1 {Button("Close \(session.tabSelection.ids.count) Selected Tabs"){session.closeHighlighted()}}
             Button("Close Tab"){session.close(tab.id)}
-        }
     }
 }
