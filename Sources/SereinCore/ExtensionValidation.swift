@@ -11,6 +11,7 @@ public struct ExtensionManifest: Sendable {
     public let manifestVersion: Int
     public let permissions: [String]
     public let hosts: [String]
+    public let declaredAPIPermissions:Set<String>
     public init(data: Data) throws {
         guard data.count<2_000_000,let manifest=try JSONSerialization.jsonObject(with:data) as? [String:Any],
               let name=manifest["name"] as? String,!name.isEmpty,let version=manifest["version"] as? String,!version.isEmpty,
@@ -23,6 +24,7 @@ public struct ExtensionManifest: Sendable {
         }
         permissions=manifest["permissions"] as? [String] ?? []
         hosts=manifest["host_permissions"] as? [String] ?? []
+        declaredAPIPermissions=Set((permissions+(manifest["optional_permissions"] as? [String] ?? [])).filter{!$0.contains("://") && $0 != "<all_urls>"})
         if manifest["externally_connectable"] != nil {throw ExtensionValidationError.invalid("External messaging semantics are not verified. Installation is blocked for this manifest.")}
         if manifest["devtools_page"] != nil {throw ExtensionValidationError.invalid("Developer-tools extensions are not hosted yet.")}
     }

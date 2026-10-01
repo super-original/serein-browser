@@ -129,3 +129,12 @@ The desktop rendering gate still fails; no successful website rendering is claim
 [Development app](https://github.com/super-original/serein-browser/actions/runs/36865518399/artifacts/11164031972)
 · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36865518399/artifacts/11164486774),
 ZIP SHA-256 `82bdd4b8383e63f087ebd9ec8c441d3645ae64463a6bf092107c6fd306a4a4fc`.
+
+### Download clearing atomicity follow-up (pending)
+
+`Clear All Finished` previously removed visible download records before the atomic history
+write, so a write failure could make cleared entries reappear after restart. It now persists
+the candidate history before publishing removal or retiring recovery state. Failed writes
+retain the visible records. Removing download history does not delete downloaded files and
+does not reset the numeric-ID high-water mark. Native fault-injection and retry/relaunch
+checks cover those behaviors; results await the next exact-head macOS run.

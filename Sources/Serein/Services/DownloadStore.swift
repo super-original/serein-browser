@@ -144,23 +144,25 @@ import SereinCore
             }
         } catch {historyAvailable=false;self.error="Could not restore downloads. The original history file has been preserved: \(error.localizedDescription)"}
     }
-    @discardableResult func save()->Bool {
+    @discardableResult func save()->Bool {persist(items)}
+    /// Publish IDs only after the same candidate history becomes durable.
+    private func persist(_ proposed:[DownloadItem])->Bool {
         guard historyAvailable else{return false}
         do {
             var candidate=history
-            var records=items.map(\.record)
+            var records=proposed.map(\.record)
             for index in records.indices where records[index].privateWindowID==nil && records[index].browserIdentifier==nil {
                 records[index].browserIdentifier=try candidate.allocate()
             }
             let encoded=try candidate.encoded(records:records)
-            for item in items where !item.privateMode {
+            for item in proposed where !item.privateMode {
                 if let data=item.resumeData {
                     try PrivateFileStore.write(data,to:resumeFile(item.id))
                 } else {try discardResume(item.id)}
             }
             try PrivateFileStore.write(encoded,to:file)
             history=candidate;history.records=[]
-            for (item,record) in zip(items,records) {item.record.browserIdentifier=record.browserIdentifier}
+            for (item,record) in zip(proposed,records) {item.record.browserIdentifier=record.browserIdentifier}
             if error?.hasPrefix("Could not save downloads:")==true {error=nil}
             return true
         }
@@ -199,12 +201,18 @@ import SereinCore
             .filter{filter.includes($0.record) && $0.record.matchesSearch(query)}
     }
     func clearFinished(in session:BrowserSession) {
-        let ids=Set(visible(in:session).filter(\.finished).map(\.id))
+        let removed=visible(in:session).filter(\.finished),ids=Set(removed.map(\.id))
+        guard !ids.isEmpty else{return}
+        let proposed=items.filter{!ids.contains($0.id)}
+        // Failed writes retain visible records and their recovery data. Private
+        // removal is memory-only and cannot touch another window's records.
+        guard session.state.isPrivate || persist(proposed) else{return}
+        items=proposed
+        for item in removed {item.retire()}
         if !session.state.isPrivate {
             do {for id in ids {try discardResume(id)}}
-            catch {self.error="Could not remove download recovery data: \(error.localizedDescription)";return}
+            catch {self.error="Download history was cleared, but some recovery data could not be removed: \(error.localizedDescription)"}
         }
-        items.removeAll{ids.contains($0.id)};if !session.state.isPrivate {save()}
     }
     func closePrivateWindow(_ id:UUID) {
         for item in items where item.record.privateWindowID==id {item.retire()}

@@ -116,6 +116,11 @@ import SereinCore
                 check("registration-persisted-owner-only",persisted.contains{$0.id==registration.id && $0.publicKeySHA256==identity.publicKeySHA256} && mode==0o600)
                 if version==3 {await capture("43-native-host-registered")}
                 session.libraryPanel=nil;await wait{session.window?.attachedSheet==nil}
+                let originalDeclarations=host.manifestAPIPermissions[id]
+                host.manifestAPIPermissions[id]=["storage"]
+                let undeclared=try? await call("try{await browser.runtime.sendNativeMessage('org.serein.fixture',{text:'undeclared'});return false;}catch(error){return true;}") as? Bool
+                host.manifestAPIPermissions[id]=originalDeclarations
+                check("original-declaration-required-despite-grant",undeclared==true && context.hasPermission(WKWebExtension.Permission(rawValue:"nativeMessaging")) && host.nativeMessaging.activeConnectionCount(for:id)==0)
                 let response=try await call("return await browser.runtime.sendNativeMessage('org.serein.fixture',{text:'雪',items:[null,true,7]});") as? [String:Any]
                 let echo=response?["echo"] as? [String:Any]
                 check("one-shot-actual-process",echo?["text"] as? String=="雪" && (response?["pid"] as? Int ?? 0)>0 && response?["origin"] as? String=="chrome-extension://"+identity.extensionID+"/",String(describing:response))

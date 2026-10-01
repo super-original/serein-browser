@@ -71,3 +71,17 @@ Evidence: [Chrome artifact 11163960666](https://github.com/super-original/serein
 (SHA-256 `417c1a896edaf82a09c03dc302c8e5274eaf8ae39bbab81a66e240291c9b7ba1`),
 [Gecko artifact 11163416403](https://github.com/super-original/serein-browser/actions/runs/36865511502/artifacts/11163416403)
 (SHA-256 `746a9d00cd9f8a739b8257361dc9cfaddde07b1c3955d437d24ae3848a46763d`).
+
+At `1de9b3a`, [run 36867377515](https://github.com/super-original/serein-browser/actions/runs/36867377515)
+records the exact query results: positive `alpha` returns IDs `[3,1]`; negative-only `-two`
+and combined `alpha,-two` both return `[3]` (the `alpha-two.txt` item). The pinned
+[Chromium MatchesQuery implementation](https://github.com/chromium/chromium/blob/73c14f6228d7cd537c855007e8f88678969cc0eb/chrome/browser/download/download_query.cc#L265)
+searches each literal term, explaining the observed dash behavior. This conflicts with the
+current documentation's negative-term description. Keep the failed assertion and distinguish
+observed Chrome-version behavior, Gecko behavior and documented behavior when implementing
+an adapter; do not silently change browser-native search to match this version-specific result.
+The first Formatter desktop capture in this run shows only the activated app's menu bar and
+desktop; the later downloads capture visibly renders the page. Both were inspected. The prior
+`10e984e` Formatter capture remains the visible Formatter evidence. Three document checks
+still pass and downloads remains 15/16. [Artifact](https://github.com/super-original/serein-browser/actions/runs/36867377515/artifacts/11164233434),
+SHA-256 `034be49cc383837293c0c3d20420508553bb93cb8be0faaef731099b399ce12f`.

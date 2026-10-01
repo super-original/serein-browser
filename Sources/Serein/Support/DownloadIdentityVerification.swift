@@ -34,6 +34,21 @@ import SereinCore
             try FileManager.default.removeItem(at:failureStore.file)
             check("retry-publishes-durable-identifier",failureStore.save() && pending.record.browserIdentifier==1 && DownloadStore(root:failureDirectory).items.first?.record.browserIdentifier==1)
 
+            let savedFile=failureDirectory.appendingPathComponent("saved-download.txt")
+            try Data("Keep the downloaded file".utf8).write(to:savedFile)
+            pending.record.destination=savedFile
+            _=failureStore.save()
+            let durable=try Data(contentsOf:failureStore.file)
+            try FileManager.default.removeItem(at:failureStore.file)
+            try FileManager.default.createDirectory(at:failureStore.file,withIntermediateDirectories:false)
+            failureStore.clearFinished(in:session)
+            check("failed-clear-retains-record",failureStore.items.contains{$0===pending} && failureStore.error != nil && pending.record.phase == .complete && (try? Data(contentsOf:savedFile))==Data("Keep the downloaded file".utf8))
+            try FileManager.default.removeItem(at:failureStore.file)
+            try PrivateFileStore.write(durable,to:failureStore.file)
+            failureStore.clearFinished(in:session)
+            let cleared=try DownloadHistory.decode(Data(contentsOf:failureStore.file)).history
+            check("clear-durable-without-deleting-file",failureStore.items.isEmpty && cleared.records.isEmpty && cleared.nextIdentifier==2 && DownloadStore(root:failureDirectory).items.isEmpty && FileManager.default.fileExists(atPath:savedFile.path))
+
             let damagedDirectory=directory.appendingPathComponent("unsupported-history")
             try PrivateFileStore.prepareDirectory(damagedDirectory)
             let damaged=Data("{\"version\":99,\"nextIdentifier\":1,\"records\":[]}".utf8)

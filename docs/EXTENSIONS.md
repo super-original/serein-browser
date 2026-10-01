@@ -392,3 +392,19 @@ At exact `6b49ccd`, the controlled phase probe reports `order=missing` and `endN
 At `aa116b5`, [the pinned Gecko comparison](https://github.com/super-original/serein-browser/actions/runs/36858497099) verifies `devtools.jsonview.enabled=false` and passes **all three original Formatter checks**: isolated formatting, parseable original raw innerText, and MAIN-world `window.json` with the expected project/items. The actual desktop screenshot was retrieved and inspected; formatted JSON and Raw/Parsed controls render. Only the declared Gecko ID adapts the original manifest. This establishes a real-package reference success, not Serein compatibility. The overall reference workflow still fails because both downloads metadata-freshness checks remain failed.
 
 At `28e1a30`, real Formatter passes **15/15**, including its original MAIN-world global; the controlled ordering probe also reads `ready/ready`. No phase-ordering fix was introduced. The earlier real-package and controlled failures remain evidence of intermittent behavior, so this run is not a compatibility repair. The desktop Formatter screenshot remains blank and was inspected separately. Default uBO options times out; the experimental origin scenario passes.
+
+### Original capability declarations and future browser-owned transport
+
+The production native-host boundary now requires `nativeMessaging` in the validated original
+manifest's required or optional API declarations, in addition to current context permission,
+a registered native host, an enabled matching context and verified package identity. Host
+patterns never count as API declarations. This keeps an eventual internal transport grant
+from implicitly authorizing arbitrary registered external applications. No internal grant,
+package script wrapper or downloads namespace is enabled by this change.
+
+The host caches declarations only after the original package manifest/provenance and required
+capabilities validate. Core coverage distinguishes required/optional declarations and host
+patterns. Native MV2/MV3 fixtures retain a valid context grant and registered host but remove
+only the declaration from the native test cache; the real messaging request must be denied
+without spawning a process. Restoring the declaration must allow the existing actual-process
+scenario. These additional boundary checks await macOS CI.

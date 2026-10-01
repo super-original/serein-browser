@@ -102,9 +102,10 @@ struct NativeHostRegistration:Codable,Identifiable {
     private func authorized(_ context:WKWebExtensionContext,name:String?) throws -> (InstalledExtension,NativeHostRegistration,String) {
         guard let host,let id=host.contexts.first(where:{$0.value===context})?.key,
               let record=host.records.first(where:{$0.id==id && $0.enabled}),let identity=record.packageIdentity,
+              host.manifestAPIPermissions[id]?.contains("nativeMessaging")==true,
               context.hasPermission(WKWebExtension.Permission(rawValue:"nativeMessaging")),
               let name,let registration=registrations.first(where:{$0.recordID==id && $0.manifest.name==name && $0.extensionID==identity.extensionID && $0.publicKeySHA256==identity.publicKeySHA256}) else {
-            throw ExtensionValidationError.invalid("Native messaging requires permission and a registered host for this verified extension identity.")
+            throw ExtensionValidationError.invalid("Native messaging requires an original manifest declaration, current permission and a registered host for this verified extension identity.")
         }
         return (record,registration,try registration.manifest.origin(for:identity))
     }

@@ -27,6 +27,8 @@ struct InstalledExtension: Identifiable, Codable {
     var actionRevision=0
     var contextErrors:[UUID:[String]]=[:]
     var busyIDs: Set<UUID> = []
+    // Original validated declarations, distinct from any runtime transport grant.
+    @ObservationIgnored var manifestAPIPermissions:[UUID:Set<String>]=[:]
     @ObservationIgnored var contexts: [UUID:WKWebExtensionContext] = [:]
     @ObservationIgnored weak var manager: BrowserManager?
     let root: URL
@@ -105,7 +107,7 @@ struct InstalledExtension: Identifiable, Codable {
         for permission in ext.requestedPermissions where record.permissions.contains(permission.rawValue) {context.setPermissionStatus(.grantedExplicitly,for:permission)}
         for pattern in ext.requestedPermissionMatchPatterns where record.hosts.contains(pattern.string) {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
         if let state=record.permissionState {try state.apply(to:context)}
-        try controller.load(context);contexts[record.id]=context;contextErrors[record.id]=context.errors.map(\.localizedDescription);actionRevision += 1
+        try controller.load(context);contexts[record.id]=context;manifestAPIPermissions[record.id]=manifest.declaredAPIPermissions;contextErrors[record.id]=context.errors.map(\.localizedDescription);actionRevision += 1
         if let index = records.firstIndex(where: { $0.id == record.id }), records[index].resourceBaseURL == nil {
             records[index].resourceBaseURL = context.baseURL; save()
         }
@@ -246,7 +248,7 @@ struct InstalledExtension: Identifiable, Codable {
             guard removalErrors.isEmpty else {
                 throw ExtensionValidationError.invalid("Extension data could not be removed: " + removalErrors.map(\.localizedDescription).joined(separator:"; "))
             }
-            try FileManager.default.removeItem(at:record.directory(in: root));nativeMessaging.removeRegistrations(for:id);records.removeAll{$0.id==id};save()
+            try FileManager.default.removeItem(at:record.directory(in: root));nativeMessaging.removeRegistrations(for:id);manifestAPIPermissions[id]=nil;records.removeAll{$0.id==id};save()
         } catch {self.error=error.localizedDescription}
     }
     func hasAction(_ id:UUID)->Bool {

@@ -1,6 +1,14 @@
 import XCTest
 @testable import SereinCore
 final class ExtensionValidationTests: XCTestCase {
+    func testOriginalAPIDeclarationsIncludeOptionalButNeverHostPatterns() throws {
+        let data=Data(#"{"name":"Boundary","version":"1","manifest_version":3,"permissions":["storage","http://example.com/*"],"optional_permissions":["nativeMessaging","<all_urls>"],"host_permissions":["https://example.com/*"]}"#.utf8)
+        let manifest=try ExtensionManifest(data:data)
+        XCTAssertEqual(manifest.declaredAPIPermissions,["storage","nativeMessaging"])
+        XCTAssertFalse(manifest.permissions.contains("nativeMessaging"))
+        let plain=try ExtensionManifest(data:Data(#"{"name":"Plain","version":"1","manifest_version":3}"#.utf8))
+        XCTAssertTrue(plain.declaredAPIPermissions.isEmpty)
+    }
     func testNativeMessagingRequiresVerifiedPackageIdentity() throws {
         let manifest=try ExtensionManifest(data:Data("{\"manifest_version\":3,\"name\":\"A\",\"version\":\"1\",\"permissions\":[\"nativeMessaging\"]}".utf8))
         XCTAssertThrowsError(try manifest.validateNativeMessagingIdentity(nil))
