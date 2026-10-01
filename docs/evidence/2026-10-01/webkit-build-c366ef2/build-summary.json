@@ -1,0 +1,23 @@
+{
+  "command": [
+    "Tools/Scripts/build-webkit",
+    "--release",
+    "--only=Everything up to WebKit",
+    "--xcode",
+    "-jobs",
+    "2",
+    "-sdk",
+    "macosx",
+    "ARCHS=arm64",
+    "ONLY_ACTIVE_ARCH=YES",
+    "MACOSX_DEPLOYMENT_TARGET=27.0"
+  ],
+  "returncode": -15,
+  "stop_reason": "elapsed-time-limit",
+  "elapsed_seconds": 4501.265472333,
+  "samples": 2092,
+  "sampled_peak_descendant_rss_bytes": 3824664576,
+  "minimum_sampled_disk_free_bytes": 12913004544,
+  "retained_initial_log_bytes": 20971520,
+  "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+}

@@ -39,12 +39,12 @@ def run_formatter_reference(request, script, prefix, out, temporary):
         value = {}
         for _ in range(100):
             value = script('''const page=window.wrappedJSObject || window;
-                const pre=document.querySelector('#jsonFormatterRaw pre');let parsed=false,error=null;
-                try {parsed=JSON.parse(pre?.innerText).project==='Serein'} catch(e){error=String(e)}
+                const pre=document.querySelector('#jsonFormatterRaw pre');let parsed=false,rawParseError=null;
+                try {parsed=JSON.parse(pre?.innerText).project==='Serein'} catch(e){rawParseError=String(e)}
                 return {formatted:!!document.querySelector('#jsonFormatterParsed .entry'),
                     project:page.json?.project || null,items:page.json?.nested?.items?.length ?? null,
                     globalType:typeof page.json,rawPresent:!!pre,innerTextLength:pre?.innerText.length ?? null,
-                    textContentLength:pre?.textContent.length ?? null,parsed,error};''')
+                    textContentLength:pre?.textContent.length ?? null,parsed,rawParseError};''')
             if value.get('formatted') and value.get('project') == 'Serein':
                 break
             time.sleep(.1)

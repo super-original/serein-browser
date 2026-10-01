@@ -24,7 +24,8 @@ def main():
                xcode=output(['xcodebuild','-version']),sdk=output(['xcrun','--sdk','macosx','--show-sdk-version']),
                swift=output(['xcrun','swift','--version']),memory_bytes=int(output(['sysctl','-n','hw.memsize'])),
                source_commit=COMMIT,repository=REPOSITORY,minimum_macos='27.0',compiler_jobs=2,
-               per_stage_minutes=dict(metal_toolchain=10,fetch=10,checkout=15,build=75),
+               per_stage_minutes=dict(metal_toolchain=10,fetch=10,checkout=15,build=180),
+               debug_symbol_generation=False,module_debugging=False,debug_information_format='dwarf',
                disk_reserve_bytes=8*GIB,descendant_rss_limit_bytes=5*GIB,minimum_system_free_memory_percent=8)
     (evidence/'toolchain.json').write_text(json.dumps(facts,indent=2)+'\n')
     assert output(['sw_vers','-productVersion']).split('.')[0]=='27'
@@ -58,9 +59,12 @@ def main():
     assert actual==COMMIT
     (evidence/'checkout-size.txt').write_text(output(['du','-sk',str(root)])+'\n')
     (evidence/'source-status.txt').write_text(subprocess.check_output(['git','status','--porcelain'],cwd=source,text=True))
+    # Reduce release object/dSYM storage, not runtime features or security.
+    # This feasibility product cannot provide full source-level symbolication.
     command=['Tools/Scripts/build-webkit','--release','--only=Everything up to WebKit','--xcode','-jobs','2',
-             '-sdk','macosx','ARCHS=arm64','ONLY_ACTIVE_ARCH=YES','MACOSX_DEPLOYMENT_TARGET=27.0']
-    succeeded=stage('build',command,4500)
+             '-sdk','macosx','ARCHS=arm64','ONLY_ACTIVE_ARCH=YES','MACOSX_DEPLOYMENT_TARGET=27.0',
+             'GCC_GENERATE_DEBUGGING_SYMBOLS=NO','CLANG_ENABLE_MODULE_DEBUGGING=NO','DEBUG_INFORMATION_FORMAT=dwarf']
+    succeeded=stage('build',command,10800)
     (evidence/'final-size.txt').write_text(output(['du','-sk',str(root)])+'\n')
     products=root/'products'
     frameworks=sorted({p.resolve() for p in products.rglob('WebKit.framework') if p.is_dir()}) if products.exists() else []

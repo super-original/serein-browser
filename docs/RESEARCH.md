@@ -1,17 +1,21 @@
 # macOS 27 research and feasibility
 
-Research date: 2026-09-17. Availability is checked against Apple's current documentation, WWDC26 material, compiler diagnostics and public SDK headers/Swift interfaces exported by the platform workflow. The SDK files are evidence artifacts, not copied implementation code.
+Initial research: 2026-09-17; continued with source and runtime evidence through 2026-10-01. Availability is checked against Apple's current documentation, WWDC26 material, compiler diagnostics and public SDK headers/Swift interfaces exported by the platform workflow. The SDK files are evidence artifacts, not copied implementation code.
 
 ## Platform actually observed
 
+The October 1 [exact-source run at dcbcb09](https://github.com/super-original/serein-browser/actions/runs/36853136282) records **macOS 27.0 26A428**, ARM64, **Xcode 27.1 27A9269**, Swift 6.4 `swiftlang-6.4.0.34.1`, and SDK/minimum 27.0. `/Applications/Xcode_27.1.app` resolves to `Xcode_27.1_beta.app`; the version label is not treated as proof of a shipping toolchain. The runtime's release classification is not inferred merely from its version number. The actual app runs, native UI is captured and inspected, and internal WebKit document checks succeed, but the independent desktop content gate still fails. A separate public-source engine experiment remains unadopted and has not produced a complete framework; its measured timeout and next resource experiment are in [WEBKIT_FEASIBILITY.md](WEBKIT_FEASIBILITY.md).
+
+Historical September 17 observations (not the current runner identity):
+
 - Standard GitHub `xcode-27` runner, arm64, macOS 27.0 **26A5406e**. Native NSWindow launch and desktop capture succeeded in [platform run 35239435980](https://github.com/super-original/serein-browser/actions/runs/35239435980).
 - Observed images supplied both Xcode 27 beta 6 **27A5252f**, Swift 6.4 `swiftlang-6.4.0.33.1`, and release candidate **27A266a**, `swiftlang-6.4.0.34.1`, under `/Applications/Xcode_27.0.app`. SDK 27.0 in both. The latter's alias resolves to `/Applications/Xcode_27_Release_Candidate.app`.
-- The runtime is a prerelease build; this is **not** a verification claim for the final shipping macOS 27 release. Preview-image drift is a reproducibility limitation. CI records the actual inventory instead of treating the alias as an immutable toolchain.
+- That early runtime was a prerelease build; it was **not** a verification claim for the final shipping macOS 27 release. Preview-image drift is a reproducibility limitation. CI records the actual inventory instead of treating the alias as an immutable toolchain.
 - Runner-reported RAM: 7,516,192,768 bytes. One observed clean image had 36 GiB free on its 135 GiB volume. GitHub documents the standard arm64 runner as 3 CPUs, 7 GB RAM and 14 GB SSD; observed free capacity must not be treated as an allocation guarantee.
 
 Sources: [GitHub runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners), [xcode-27 image manifest](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md), [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions), [usage limits](https://docs.github.com/en/actions/reference/limits).
 
-Standard hosted Actions usage is free for public repositories. No larger runner, paid storage purchase, self-hosted Mac, remote paid Mac, or local SDK is configured. Workflows use short timeouts and cancel superseded jobs. Artifacts have bounded retention. The app is tiny compared with an engine build and uses the system WebKit security-update path.
+Standard hosted Actions usage is free for public repositories. No larger runner, paid storage purchase, self-hosted Mac, remote paid Mac, or local SDK is configured. Browser workflows use short timeouts and cancel superseded jobs; the separate bounded engine experiment records its longer compile budget and resource guards. Artifacts have bounded retention. The app is tiny compared with an engine build and uses the system WebKit security-update path.
 
 ## 26 → 27 API and behavior decisions
 

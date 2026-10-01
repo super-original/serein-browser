@@ -1,0 +1,74 @@
+[
+  {
+    "command": [
+      "xcodebuild",
+      "-downloadComponent",
+      "MetalToolchain"
+    ],
+    "returncode": 0,
+    "stop_reason": null,
+    "elapsed_seconds": 18.606447291999984,
+    "samples": 8,
+    "sampled_peak_descendant_rss_bytes": 127221760,
+    "minimum_sampled_disk_free_bytes": 40911794176,
+    "retained_initial_log_bytes": 579,
+    "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+  },
+  {
+    "command": [
+      "git",
+      "fetch",
+      "--depth=1",
+      "--filter=blob:none",
+      "origin",
+      "131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7"
+    ],
+    "returncode": 0,
+    "stop_reason": null,
+    "elapsed_seconds": 2.2009901250000894,
+    "samples": 1,
+    "sampled_peak_descendant_rss_bytes": 6651904,
+    "minimum_sampled_disk_free_bytes": 40911433728,
+    "retained_initial_log_bytes": 116,
+    "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+  },
+  {
+    "command": [
+      "git",
+      "checkout",
+      "--detach",
+      "131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7"
+    ],
+    "returncode": 0,
+    "stop_reason": null,
+    "elapsed_seconds": 79.45512808399997,
+    "samples": 37,
+    "sampled_peak_descendant_rss_bytes": 729104384,
+    "minimum_sampled_disk_free_bytes": 38880493568,
+    "retained_initial_log_bytes": 139,
+    "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+  },
+  {
+    "command": [
+      "Tools/Scripts/build-webkit",
+      "--release",
+      "--only=Everything up to WebKit",
+      "--xcode",
+      "-jobs",
+      "2",
+      "-sdk",
+      "macosx",
+      "ARCHS=arm64",
+      "ONLY_ACTIVE_ARCH=YES",
+      "MACOSX_DEPLOYMENT_TARGET=27.0"
+    ],
+    "returncode": -15,
+    "stop_reason": "elapsed-time-limit",
+    "elapsed_seconds": 4501.265472333,
+    "samples": 2092,
+    "sampled_peak_descendant_rss_bytes": 3824664576,
+    "minimum_sampled_disk_free_bytes": 12913004544,
+    "retained_initial_log_bytes": 20971520,
+    "memory_scope": "Sampled process descendants only; XPC services and transient peaks may be omitted. RSS may double-count shared memory. System memory pressure is a separate global guard."
+  }
+]
