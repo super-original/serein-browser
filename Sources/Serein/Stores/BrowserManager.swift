@@ -11,6 +11,7 @@ import SereinCore
     let extensions: ExtensionHost
     @ObservationIgnored private var saveTask: Task<Void,Never>?
     @ObservationIgnored lazy var menu=BrowserMenu(manager:self)
+    @ObservationIgnored lazy var tabSuspension=TabSuspensionController(manager:self)
     let sidebarDragToken=UUID()
     let root: URL
     init(root: URL) {

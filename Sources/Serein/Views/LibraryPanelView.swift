@@ -7,6 +7,7 @@ struct LibraryPanelView: View {
     @State private var query=""
     @AppStorage("searchProvider") private var searchProvider=SearchProvider.duckDuckGo
     @AppStorage("appearance") private var appearance="system"
+    @AppStorage("idleTabUnloadMinutes") private var idleTabUnloadMinutes=0
     @AppStorage("previewExternalPinnedLinks") private var previewExternalPinnedLinks=true
     var body: some View {
         VStack(alignment:.leading,spacing:16) {
@@ -39,6 +40,10 @@ struct LibraryPanelView: View {
                         Picker("Search engine",selection:$searchProvider){ForEach(SearchProvider.allCases,id:\.self){provider in Text(provider.title).tag(provider)}}
                         Picker("Appearance",selection:$appearance){Text("System").tag("system");Text("Light").tag("light");Text("Dark").tag("dark")}
                         Picker("Sidebar",selection:$session.state.sidebar){Text("Expanded").tag(SidebarMode.expanded);Text("Collapsed").tag(SidebarMode.collapsed);Text("Compact").tag(SidebarMode.compact)}
+                        Picker("Unload idle regular tabs",selection:$idleTabUnloadMinutes) {
+                            Text("Off").tag(0);Text("After 15 minutes").tag(15);Text("After 30 minutes").tag(30);Text("After 1 hour").tag(60)
+                        }
+                        Text("Unloaded pages reload when selected. Edited, media, pinned, preview, extension and private tabs stay loaded; active downloads pause unloading. Some page state may be lost.").font(.caption).foregroundStyle(.secondary)
                         Toggle("Preview external links opened by pinned and essential tabs",isOn:$previewExternalPinnedLinks)
                         Text("Tabs restore when you reopen Serein. Private windows use a separate, nonpersistent website data store and are excluded from saved sessions.").font(.callout).foregroundStyle(.secondary)
                         Button("Clear Website Data…") {

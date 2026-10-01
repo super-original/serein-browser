@@ -27,6 +27,7 @@ import SwiftUI
         manager=BrowserManager(root:root)
         manager.menu.install()
         manager.restore()
+        manager.tabSuspension.start()
         NSApp.activate(ignoringOtherApps:true)
         if args.contains("--crash-recovery-test"),testRoot != nil {
             Task {await CrashRecoveryVerification.run(manager:manager,root:root)}

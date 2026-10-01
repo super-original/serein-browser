@@ -321,6 +321,8 @@ import SereinCore
         results += await FullscreenVerification.run(manager:manager,root:root)
         checkpoint("TabSuspensionVerification")
         results += await TabSuspensionVerification.run(manager:manager)
+        checkpoint("IdleSuspensionVerification")
+        results += await IdleSuspensionVerification.run(root:root)
         checkpoint("WindowPlacementVerification")
         results += await WindowPlacementVerification.run(manager:manager,root:root)
         checkpoint("WindowConsentVerification")

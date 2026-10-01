@@ -4,9 +4,13 @@ import WebKit
 /// Exercise the sender boundary used by real extensions to trust options messages.
 @MainActor enum ExtensionSenderVerification {
     static func resourcePage(session:BrowserSession,context:WKWebExtensionContext,name:String) async->[RuntimeVerification.Result] {
-        let owner=session.state.selectedTabID,url=context.baseURL.appendingPathComponent("popup.html")
-        let tab=session.newTab(url:url.absoluteString),view=session.runtime(tab).webView
-        defer{session.close(tab,ask:false);if let owner{session.select(owner)}}
+        guard let manager=session.manager else{return [.init(name:name+"-resource-sender-setup",passed:false,detail:"No browser manager")]}
+        // Closing a selected resource tab in the main fixture can activate its
+        // deliberately sleeping neighbor. Keep sender diagnostics in a window
+        // that cannot change the tabs-query fixture's lazy-loading preconditions.
+        let probe=manager.newWindow(),url=context.baseURL.appendingPathComponent("popup.html")
+        let tab=probe.newTab(url:url.absoluteString),view=probe.runtime(tab).webView
+        defer{probe.window?.close();session.window?.makeKeyAndOrderFront(nil)}
         for _ in 0..<100 {if view.url==url && !view.isLoading{break};try? await Task.sleep(for:.milliseconds(50))}
         return await run(view:view,context:context,name:name)
     }

@@ -15,6 +15,8 @@ import SereinCore
     private var provisionalURL: URL?
     private(set) var failedURL: URL?
     var hasUserEdits=false
+    @ObservationIgnored private(set) var lastActivity=Date()
+    func noteActivity(at date:Date=Date()){lastActivity=date}
     var crashed=false
     private(set) var documentID=UUID()
     @ObservationIgnored weak var session: BrowserSession?
@@ -135,6 +137,7 @@ import SereinCore
         view.load(url)
     }
     func load(_ url: URL) {
+        noteActivity()
         extensionHistoryAfterPreload=nil
         let view=view(for:url)
         documentID=UUID();provisionalURL=url;failedURL=nil;failure=nil;crashed=false;view.load(url)
@@ -151,6 +154,7 @@ import SereinCore
     func goBack(){traverse(-1)}
     func goForward(){traverse(1)}
     private func traverse(_ offset:Int) {
+        noteActivity()
         if awaitingExtensionReload,let url=session?.state.tabs.first(where:{$0.id==id}).flatMap({URL(string:$0.url)}) {_=view(for:url)}
         guard let item=webView.backForwardList.item(at:offset) else{return}
         provisionalURL=item.url
@@ -213,7 +217,7 @@ import SereinCore
     }
 }
 extension TabRuntime: WKNavigationDelegate {
-    func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {guard webView === storedView else{return};documentID=UUID();failedURL=nil;failure=nil;crashed=false;synchronize()}
+    func webView(_ webView: WKWebView,didStartProvisionalNavigation navigation: WKNavigation!) {guard webView === storedView else{return};noteActivity();documentID=UUID();failedURL=nil;failure=nil;crashed=false;synchronize()}
     func webView(_ webView: WKWebView,didCommit navigation: WKNavigation!) {guard webView === storedView else{return};provisionalURL=nil;failedURL=nil;hasUserEdits=false;synchronize()}
     func webView(_ webView: WKWebView,didFinish navigation: WKNavigation!) {
         guard webView === storedView else{return}

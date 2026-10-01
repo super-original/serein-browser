@@ -4,7 +4,13 @@ import Observation
 import SereinCore
 
 @MainActor @Observable final class BrowserSession {
-    var state: BrowserWindowState { didSet {manager?.scheduleSave()} }
+    var state: BrowserWindowState { didSet {
+        if state.selectedTabID != oldValue.selectedTabID || state.splitTabIDs != oldValue.splitTabIDs {
+            let changed=Set(oldValue.splitTabIDs+state.splitTabIDs+[oldValue.selectedTabID,state.selectedTabID].compactMap{$0})
+            for id in changed {runtimes[id]?.noteActivity()}
+        }
+        manager?.scheduleSave()
+    } }
     var tabSelection=TabSelection()
     var address = ""
     var addressFocused=false
