@@ -118,10 +118,12 @@ APPLESCRIPT
         read -r GLANCE_X GLANCE_Y < "$ROOT/glance-click-point"
         /tmp/serein-pointer "$GLANCE_X" "$GLANCE_Y" plain > "$ROOT/glance-external-pointer-input.log" 2>&1
         ;;
-      sidebar-cross-window-drag)
+      sidebar-cross-window-drag|sidebar-reorder-after)
         SOURCE_IDENTIFIER=$(sed -n '1p' "$ROOT/sidebar-drag-identifiers")
         TARGET_IDENTIFIER=$(sed -n '2p' "$ROOT/sidebar-drag-identifiers")
-        native_input drag "$SOURCE_IDENTIFIER" "$TARGET_IDENTIFIER" > "$ROOT/sidebar-cross-window-drag-input.log" 2>&1 || touch "$ROOT/sidebar-cross-window-drag.keyboard-failed"
+        DROP_PLACEMENT=before
+        if test "$KEYBOARD_NAME" = sidebar-reorder-after; then DROP_PLACEMENT=after; fi
+        native_input drag "$SOURCE_IDENTIFIER" "$TARGET_IDENTIFIER" "$DROP_PLACEMENT" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
         ;;
       folder-name)
         native_input fill folder-name "Research notes" > "$ROOT/folder-name-input.log" 2>&1 || touch "$ROOT/folder-name.keyboard-failed"

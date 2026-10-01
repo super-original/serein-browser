@@ -120,14 +120,16 @@ public struct BrowserWindowState: Identifiable, Codable, Equatable, Sendable {
         for child in tabs.indices where tabs[child].glanceParentID==id {tabs[child].workspaceID=activeWorkspaceID}
         tabs[i].homeURL=kind == .regular ? nil : tabs[i].url
     }
-    public mutating func move(_ id: UUID, before target: UUID) {
+    public mutating func move(_ id: UUID, before target: UUID) {move(id,relativeTo:target,after:false)}
+    public mutating func move(_ id: UUID, after target: UUID) {move(id,relativeTo:target,after:true)}
+    private mutating func move(_ id:UUID,relativeTo target:UUID,after:Bool) {
         guard id != target, let a=tabs.firstIndex(where:{$0.id==id}),let b=tabs.firstIndex(where:{$0.id==target}),tabs[a].kind==tabs[b].kind else{return}
         if tabs[a].kind == .pinned {
             guard tabs[a].workspaceID==tabs[b].workspaceID else{return}
-            reorderPinnedTab(id,before:target)
+            reorderPinnedTab(id,before:target,insertAfter:after)
         }
         let tab=tabs.remove(at:a)
-        if let insertion=tabs.firstIndex(where:{$0.id==target}) {tabs.insert(tab,at:insertion)}
+        if let insertion=tabs.firstIndex(where:{$0.id==target}) {tabs.insert(tab,at:insertion+(after ? 1 : 0))}
     }
     public mutating func moveToWorkspace(_ id: UUID, _ space: UUID) {
         guard workspaces.contains(where:{$0.id==space}),let i=tabs.firstIndex(where:{$0.id==id}) else{return}

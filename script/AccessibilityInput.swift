@@ -81,18 +81,18 @@ if mode=="press" {
     guard AXUIElementPerformAction(matching[0],kAXPressAction as CFString) == .success else{fail("AXPress failed")}
     print("Pressed \(identifier) through \(exact.isEmpty ? "unique native label" : "identifier")")
 } else if mode=="drag" {
-    guard arguments.count==5 else{fail("Expected source and destination identifiers")}
+    guard arguments.count==6,["before","after"].contains(arguments[5]) else{fail("Expected source, destination and before/after placement")}
     let items=controls()
-    func center(_ identifier:String)->CGPoint? {
+    func center(_ identifier:String,fraction:CGFloat=0.5)->CGPoint? {
         let matches=items.filter{text($0,kAXIdentifierAttribute)==identifier && text($0,kAXRoleAttribute)==kAXButtonRole}
         guard matches.count==1,let position=value(matches[0],kAXPositionAttribute),let size=value(matches[0],kAXSizeAttribute),
               CFGetTypeID(position)==AXValueGetTypeID(),CFGetTypeID(size)==AXValueGetTypeID() else{return nil}
         var point=CGPoint.zero,dimensions=CGSize.zero
         guard AXValueGetValue(unsafeBitCast(position,to:AXValue.self),.cgPoint,&point),
               AXValueGetValue(unsafeBitCast(size,to:AXValue.self),.cgSize,&dimensions),dimensions.width>0,dimensions.height>0 else{return nil}
-        return CGPoint(x:point.x+dimensions.width/2,y:point.y+dimensions.height/2)
+        return CGPoint(x:point.x+dimensions.width/2,y:point.y+dimensions.height*fraction)
     }
-    guard let start=center(arguments[3]),let end=center(arguments[4]) else{fail("Native drag controls not uniquely located\n"+describe(items))}
+    guard let start=center(arguments[3]),let end=center(arguments[4],fraction:arguments[5]=="after" ? 0.75 : 0.25) else{fail("Native drag controls not uniquely located\n"+describe(items))}
     print("Native drag from \(start) to \(end)")
     for step in 0...32 {
         let progress=Double(max(0,min(30,step-1)))/30

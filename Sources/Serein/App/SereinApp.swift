@@ -58,6 +58,16 @@ import SwiftUI
             }
             return
         }
+        if let index=args.firstIndex(of:"--extension-origin-probe"),args.indices.contains(index+1),testRoot != nil {
+            Task {
+                let results:[RuntimeVerification.Result]
+                if args[index+1]=="real" {results=await RealContentBlockerVerification.run(firefoxOrigin:true)}
+                else {results=await ExtensionOriginVerification.run(manager:manager,root:root)}
+                try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)
+                NSApp.terminate(nil)
+            }
+            return
+        }
         Task {await manager.extensions.restore()}
         if args.contains("--integration-test"),testRoot != nil {Task {await RuntimeVerification.run(manager:manager,root:root)}}
     }

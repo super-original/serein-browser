@@ -135,7 +135,7 @@ struct InstalledExtension: Identifiable, Codable {
                 throw ExtensionValidationError.invalid("This CRX3 developer identity was installed while consent was pending.")
             }
             let final=root.appendingPathComponent(id.uuidString);try FileManager.default.moveItem(at:destination,to:final)
-            var record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID,resourceBaseURL:ExtensionResourceOrigin.initialURL(sourceExtension:source.pathExtension,id:id))
+            var record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID)
             do {try await load(record);record.resourceBaseURL = contexts[id]?.baseURL;records.append(record);save()}
             catch {try? FileManager.default.removeItem(at:final);throw error}
         } catch {try? FileManager.default.removeItem(at:destination);self.error=error.localizedDescription}

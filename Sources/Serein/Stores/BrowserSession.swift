@@ -192,9 +192,14 @@ import SereinCore
         // Snapshot selection before the first move changes the active tab.
         changeWorkspace {state in for id in targets {state.moveToWorkspace(id,workspace)}}
     }
-    func move(_ id: UUID, before other: UUID) {
+    func move(_ id:UUID,before other:UUID) {move(id,relativeTo:other,after:false)}
+    func move(_ id:UUID,after other:UUID) {move(id,relativeTo:other,after:true)}
+    private func move(_ id:UUID,relativeTo other:UUID,after:Bool) {
         guard let old=state.tabs.firstIndex(where:{$0.id==id}) else{return}
-        state.move(id,before:other);extensions?.controller.didMoveTab(bridge(id),from:old,in:extensionWindow)
+        if after {state.move(id,after:other)} else {state.move(id,before:other)}
+        if state.tabs.firstIndex(where:{$0.id==id}) != old {
+            extensions?.controller.didMoveTab(bridge(id),from:old,in:extensionWindow)
+        }
     }
     func changeWorkspace(_ change:(inout BrowserWindowState)->Void) {
         let previous=state.selectedTabID,highlighted=tabSelection.ids

@@ -5,7 +5,7 @@ import SereinCore
 @MainActor enum ExtensionVerification {
     static func run(manager:BrowserManager,session:BrowserSession,root:URL) async -> [RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
-        func check(_ name:String,_ passed:Bool,_ detail:String="") {results.append(.init(name:name,passed:passed,detail:detail))}
+        func check(_ name:String,_ passed:Bool,_ detail:String="") {results.append(.init(name:name,passed:passed,detail:detail));print("EXT_VERIFY \(name): \(passed)");fflush(stdout)}
         for generation in [2,3] {
             let host=manager.extensions,id=UUID(),name="mv\(generation)"
             let source=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/Extensions/"+name)
@@ -14,7 +14,7 @@ import SereinCore
             do {
                 try host.prepare(source,at:target)
                 let manifest=try ExtensionManifest(data:Data(contentsOf:target.appendingPathComponent("manifest.json")))
-                let record=InstalledExtension(id:id,name:name,version:manifest.version,enabled:true,permissions:["storage","tabs"],hosts:[],resourceBaseURL:ExtensionResourceOrigin.initialURL(sourceExtension:generation==2 ? "xpi" : "zip",id:id))
+                let record=InstalledExtension(id:id,name:name,version:manifest.version,enabled:true,permissions:["storage","tabs"],hosts:[])
                 try await host.load(record)
                 host.records.append(record)
                 let sleeping=session.newTab(url:"http://127.0.0.1:8765/index.html?sleeping",select:false)
@@ -23,7 +23,7 @@ import SereinCore
                 let before=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 check("\(name)-host-permission-denied",before is NSNull)
                 guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("No extension context")}
-                check("\(name)-resource-origin-scheme",context.baseURL.scheme==(generation==2 ? "moz-extension" : "webkit-extension"),"Original controlled fixtures exercise Firefox-style MV2 and default MV3 origins")
+                check("\(name)-resource-origin-scheme",context.baseURL.scheme=="webkit-extension","Default resource origins; custom Firefox origin is isolated in a separate process")
                 results += await ExtensionWindowCloseVerification.run(manager:manager,context:context,name:name)
                 for pattern in context.webExtension.requestedPermissionMatchPatterns {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
                 session.current!.webView.reload()

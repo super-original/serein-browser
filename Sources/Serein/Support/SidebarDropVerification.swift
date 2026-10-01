@@ -41,6 +41,14 @@ import SereinCore
         let sentinel=try? await view.evaluateJavaScript("window.sereinDragSentinel") as? String
         check("preserves-edits-history-and-zoom",runtime.hasUserEdits && sentinel=="live" && view.backForwardList.backList.map(\.url)==history && abs(view.pageZoom-1.4)<0.001)
         check("inserts-before-target",destination.state.visibleTabs.map(\.id)==[moving,before] && source.state.visibleTabs.count==1)
+        let afterName="sidebar-reorder-after",afterDone=root.appendingPathComponent(afterName+".keyboard-finished")
+        destination.window?.makeKeyAndOrderFront(nil)
+        try? "tab-\(moving)\ntab-\(before)\n".write(to:root.appendingPathComponent("sidebar-drag-identifiers"),atomically:true,encoding:.utf8)
+        try? afterName.write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+        await wait{FileManager.default.fileExists(atPath:afterDone.path)}
+        await wait{destination.state.visibleTabs.last?.id==moving}
+        check("actual-drop-after-last-row",FileManager.default.fileExists(atPath:afterDone.path) && !FileManager.default.fileExists(atPath:root.appendingPathComponent(afterName+".keyboard-failed").path) && destination.state.visibleTabs.map(\.id)==[before,moving])
+        check("after-drop-keeps-live-document",destination.runtimes[moving] === runtime && runtime.loadedWebView === view && runtime.hasUserEdits && view.backForwardList.backList.map(\.url)==history)
         check("stale-source-rejected",!destination.acceptSidebarDrop([payload],at:.beforeTab(before)))
         let current=destination.sidebarDrag(moving,kind:.tab)
         let forged=SidebarDragItem(token:UUID(),window:current.window,item:current.item,kind:.tab)

@@ -6,7 +6,7 @@ import SereinCore
 /// Unmodified upstream uBO Lite package. A shipped EasyList rule is exercised on
 /// loopback with positive controls; this is not universal blocker compatibility.
 @MainActor enum RealContentBlockerVerification {
-    static func run() async->[RuntimeVerification.Result] {
+    static func run(firefoxOrigin:Bool=false) async->[RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
         func check(_ name:String,_ pass:Bool,_ detail:String=""){results.append(.init(name:"real-ubol-"+name,passed:pass,detail:detail))}
         func wait(_ condition:@MainActor ()->Bool) async {for _ in 0..<120{if condition(){return};try? await Task.sleep(for:.milliseconds(50))}}
@@ -50,10 +50,10 @@ import SereinCore
             let target=host.root.appendingPathComponent(id.uuidString)
             try host.prepare(source,at:target)
             let ext=try await ExtensionPackageLoader.load(target)
-            let record=InstalledExtension(id:id,name:"uBO Lite real-package scenario",version:"2026.930.1227",enabled:true,permissions:ext.requestedPermissions.map(\.rawValue),hosts:[],resourceBaseURL:ExtensionResourceOrigin.initialURL(sourceExtension:"xpi",id:id))
+            let record=InstalledExtension(id:id,name:"uBO Lite real-package scenario",version:"2026.930.1227",enabled:true,permissions:ext.requestedPermissions.map(\.rawValue),hosts:[],resourceBaseURL:firefoxOrigin ? ExtensionResourceOrigin.initialURL(sourceExtension:"xpi",id:id) : nil)
             host.records.append(record);try await host.load(record)
             guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("No live real-package context")}
-            check("firefox-resource-origin",context.baseURL.scheme=="moz-extension" && context.uniqueIdentifier==id.uuidString,"Generated resource UUID; no publisher/native identity claim")
+            check("resource-origin",context.baseURL.scheme==(firefoxOrigin ? "moz-extension" : "webkit-extension") && context.uniqueIdentifier==id.uuidString,"Generated resource UUID; no publisher/native identity claim")
             let loopback=try WKWebExtension.MatchPattern(string:"http://127.0.0.1/*")
             context.setPermissionStatus(.grantedExplicitly,for:loopback)
             check("loaded-required-apis",true,"Named permissions validated by production loader; only loopback site access granted")

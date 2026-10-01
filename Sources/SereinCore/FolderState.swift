@@ -117,10 +117,10 @@ extension BrowserWindowState {
         guard let index=order.firstIndex(of:id),order.indices.contains(index+offset) else{return false}
         order.swapAt(index,index+offset);setPinnedOrder(order,in:parent,workspaceID:workspace);return true
     }
-    public mutating func reorderPinnedTab(_ id:UUID,before target:UUID) {
+    public mutating func reorderPinnedTab(_ id:UUID,before target:UUID,insertAfter:Bool=false) {
         guard let destination=tabs.first(where:{$0.id==target}),destination.kind == .pinned,moveTabToFolder(id,destination.folderID) else{return}
         var order=pinnedItemIDs(in:destination.folderID,workspaceID:destination.workspaceID)
-        order.removeAll{$0==id};if let position=order.firstIndex(of:target){order.insert(id,at:position)}
+        order.removeAll{$0==id};if let position=order.firstIndex(of:target){order.insert(id,at:position+(insertAfter ? 1 : 0))}
         setPinnedOrder(order,in:destination.folderID,workspaceID:destination.workspaceID)
     }
     private mutating func setPinnedOrder(_ order:[UUID],in parent:UUID?,workspaceID:UUID?=nil) {

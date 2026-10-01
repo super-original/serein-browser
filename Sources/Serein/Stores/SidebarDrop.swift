@@ -14,7 +14,7 @@ struct SidebarDragItem:Codable,Transferable,Sendable {
     }
 }
 
-enum SidebarDropTarget {case beforeTab(UUID),folder(UUID)}
+enum SidebarDropTarget {case beforeTab(UUID),afterTab(UUID),folder(UUID)}
 extension BrowserSession {
     func sidebarDrag(_ id:UUID,kind:SidebarDragItem.Kind)->SidebarDragItem {
         SidebarDragItem(token:manager?.sidebarDragToken ?? UUID(),window:state.id,item:id,kind:kind)
@@ -34,7 +34,7 @@ extension BrowserSession {
         }
         guard let tab=source.state.visibleTabs.first(where:{$0.id==item.item}) else{return false}
         switch target {
-        case .beforeTab(let id):
+        case .beforeTab(let id),.afterTab(let id):
             guard id != tab.id,let destination=state.visibleTabs.first(where:{$0.id==id}),
                   tab.kind==destination.kind else{return false}
         case .folder(let id):
@@ -46,6 +46,7 @@ extension BrowserSession {
         }
         switch target {
         case .beforeTab(let id):move(item.item,before:id)
+        case .afterTab(let id):move(item.item,after:id)
         case .folder(let id):guard moveTabIntoFolder(item.item,id) else{return false}
         }
         if source !== self {window?.makeKeyAndOrderFront(nil)}
