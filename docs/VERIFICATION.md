@@ -92,3 +92,40 @@ The CI sampler now records exact application PID/start-time/executable identity 
 ## Navigation persistence verification
 
 Opt-in same-build HTTP(S) Back/Forward restoration stores bounded, checksummed state atomically with the normal session. It excludes private/currently edited pages, validates initial and committed URLs, and falls back to the current URL for malformed, disabled or engine-mismatched state. Six core tests first passed at `d4ebe44`; five independent production launches now pass 24 checks, including unloaded background tabs, disabled payload removal, a live private WKWebView excluded from disk, real input-event edit suppression and reload retention. Current evidence is linked above. File/extension history persistence and complete detection of unsaved application state remain gaps.
+
+### 41707ef: native menu association and reference provenance
+
+[Run 36864209415](https://github.com/super-original/serein-browser/actions/runs/36864209415)
+builds/tests/packages and completes **796/828 browser checks**. The direct Button context-menu
+association still reports `AXShowMenu` unavailable; the original native test fails and
+screenshot 79 visibly retains both groups. That image and the final extension-runtime error
+screen (53) were retrieved and inspected. The next helper attempts an actual right click at
+the uniquely identified tab's AX bounds, logs the unsupported AX action, and still selects
+the real native menu item. No model mutation is used to satisfy the menu test.
+
+Formatter's original MAIN-world JSON-global assertion fails again (14/15), while the
+controlled end/idle-order scenario passes. Prior all-pass runs do not establish a timing fix.
+The original thirty structural failures and desktop blank-content gate remain.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36864209415/artifacts/11163690376)
+· [Evidence](https://github.com/super-original/serein-browser/actions/runs/36864209415/artifacts/11163440946),
+ZIP SHA-256 `a462ce8ce2be0a52839d56a934588dadcd006ba16dd798e18533b6ae49f7d6ad`.
+The separate Chrome reference now verifies upstream file provenance and actual extension
+execution; subsequent visible captures and cross-browser download differences are recorded
+in [CHROME_REFERENCE.md](CHROME_REFERENCE.md).
+
+### 10e984e: group pinning and actual extension events verified
+
+[Run 36865518399](https://github.com/super-original/serein-browser/actions/runs/36865518399)
+passes **169 Swift tests, three process-attribution tests, and 812/844 browser checks**.
+All four new group-pin core cases pass. The native pin/unpin/divider/inactive-selection
+checks pass, and screenshot 80 visibly shows the joined pair in the pinned section.
+Both MV2 and MV3 pass all six real extension checks: both members pin/unpin, each receives
+one event per transition, repeated pin is silent, and native selection/divider state remains.
+Screenshot 80 and final error screen 53 were retrieved and inspected.
+
+The context-menu AX action still fails. The thirty structural failures persist, and the
+controlled end/idle ordering check fails again while the original Formatter passes 15/15.
+The desktop rendering gate still fails; no successful website rendering is claimed.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36865518399/artifacts/11164031972)
+· [Evidence](https://github.com/super-original/serein-browser/actions/runs/36865518399/artifacts/11164486774),
+ZIP SHA-256 `82bdd4b8383e63f087ebd9ec8c441d3645ae64463a6bf092107c6fd306a4a4fc`.

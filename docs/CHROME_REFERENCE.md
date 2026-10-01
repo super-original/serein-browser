@@ -42,3 +42,32 @@ The four-second existence-refresh observation remains unchanged and is not a doc
 Chrome deadline. Original failed results remain in
 [artifact 11163312075](https://github.com/super-original/serein-browser/actions/runs/36864204084/artifacts/11163312075),
 ZIP SHA-256 `c7b0bba114828e5855cd71020f50c7b4612ac9fe20c3c6519c4933755a029e78`.
+
+## Visible Chrome and complete download scenario (10e984e)
+
+[Run 36865511517](https://github.com/super-original/serein-browser/actions/runs/36865511517)
+again passes all three original Formatter checks. Both desktop captures were retrieved
+and inspected: the original JSON tree/Raw/Parsed controls and the Field Notes test page
+are visibly rendered. The optional Python local-network request was denied normally.
+No engine substitution in Serein follows from this separate reference browser.
+
+Chrome downloads completes **15/16** checks. Physical removal, existence refresh, ordered
+created/completed events, erase events, and ascending/descending time sorts pass. The
+positive/negative query assertion fails. The original failure remains; follow-up diagnostics
+record each returned ID set, because a boolean alone cannot distinguish empty, extra or
+misordered matches. Chrome's [query contract](https://developer.chrome.com/docs/extensions/reference/api/downloads#type-DownloadQuery)
+documents negative terms, so this result must not be relabeled as a known unsupported feature.
+
+The same fixture in [Gecko run 36865511502](https://github.com/super-original/serein-browser/actions/runs/36865511502)
+passes **15/16** in each manifest generation, with only four-second existence refresh
+failing; the file is actually deleted. Gecko accepts ID sorting, includes the exact
+`startedAfter` boundary, matches differently cased `filename`, and returns the completed
+items for the epoch `endedBefore` query (their `endTime` is null). Chrome rejects ID sorting,
+excludes the exact start boundary, returns no differently cased filename matches, and
+returns no completed items for `endedBefore` epoch. These are bounded observed semantics,
+not universal conformance results. Serein's extension downloads namespace remains absent.
+
+Evidence: [Chrome artifact 11163960666](https://github.com/super-original/serein-browser/actions/runs/36865511517/artifacts/11163960666)
+(SHA-256 `417c1a896edaf82a09c03dc302c8e5274eaf8ae39bbab81a66e240291c9b7ba1`),
+[Gecko artifact 11163416403](https://github.com/super-original/serein-browser/actions/runs/36865511502/artifacts/11163416403)
+(SHA-256 `746a9d00cd9f8a739b8257361dc9cfaddde07b1c3955d437d24ae3848a46763d`).

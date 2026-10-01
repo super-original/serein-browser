@@ -89,7 +89,25 @@ if mode=="press" {
     guard identifier.hasPrefix("tab-"),UUID(uuidString:String(identifier.dropFirst(4))) != nil else{fail("Expected fixture tab identifier")}
     let items=controls(),matches=items.filter{text($0,kAXIdentifierAttribute)==identifier && text($0,kAXRoleAttribute)==kAXButtonRole}
     guard matches.count==1 else{fail("Expected one native tab control\n"+describe(items))}
-    guard AXUIElementPerformAction(matches[0],kAXShowMenuAction as CFString) == .success else{key(53);fail("Native tab context-menu action unavailable")}
+    let menuAction=AXUIElementPerformAction(matches[0],kAXShowMenuAction as CFString)
+    if menuAction != .success {
+        // SwiftUI does not advertise AXShowMenu for this Button on the pinned
+        // runtime. Exercise an actual right click on its measured native bounds.
+        // The original AX failure remains in the evidence; no model action runs.
+        print("AXShowMenu unavailable (\(menuAction.rawValue)); trying native right click")
+        guard let position=value(matches[0],kAXPositionAttribute),let size=value(matches[0],kAXSizeAttribute),
+              CFGetTypeID(position)==AXValueGetTypeID(),CFGetTypeID(size)==AXValueGetTypeID() else{fail("Missing tab bounds for context click")}
+        var point=CGPoint.zero,dimensions=CGSize.zero
+        guard AXValueGetValue(unsafeBitCast(position,to:AXValue.self),.cgPoint,&point),
+              AXValueGetValue(unsafeBitCast(size,to:AXValue.self),.cgSize,&dimensions),
+              point.x.isFinite,point.y.isFinite,dimensions.width>10,dimensions.height>10 else{fail("Invalid tab context-click bounds")}
+        let center=CGPoint(x:point.x+dimensions.width/2,y:point.y+dimensions.height/2)
+        for type in [CGEventType.mouseMoved,.rightMouseDown,.rightMouseUp] {
+            guard NSWorkspace.shared.frontmostApplication?.processIdentifier==pid,
+                  let event=CGEvent(mouseEventSource:nil,mouseType:type,mouseCursorPosition:center,mouseButton:.right) else{fail("Fixture lost foreground before context click")}
+            event.post(tap:.cghidEventTap);Thread.sleep(forTimeInterval:0.06)
+        }
+    }
     Thread.sleep(forTimeInterval:0.2)
     var queue=elements(application,kAXChildrenAttribute)+elements(application,kAXWindowsAttribute),seen=Set<CFHashCode>(),menus:[AXUIElement]=[]
     while !queue.isEmpty,seen.count<500,ProcessInfo.processInfo.systemUptime<deadline {

@@ -79,3 +79,30 @@ The next bounded experiment allows 180 minutes of compilation and a 225-minute w
 The original build log contains upstream engineering-build and lower-format-reader-signing flags. They are not production security approval: no compiled engine is loaded by Serein, and adoption still requires a separate hardening/helper/entitlement audit. The current production browser continues to use system WebKit.
 
 The subsequent exact `719f0cf` run reproduces the controlled phase-order failure: MAIN execution and global visibility succeed, but its idle-time read reports the end marker missing. Earlier runs read it successfully. This strengthens the case for investigating collapsed end/idle injection phases; it does not prove that a particular engine patch fixes the real extension. A final end-marker readback is added next.
+
+### Complete framework achieved; signing and production configuration remain blocked
+
+The exact `6b49ccd` [run 36856490466](https://github.com/super-original/serein-browser/actions/runs/36856490466)
+completed in 85.32 minutes with an arm64 / minos 27.0 / SDK 27.0 framework. Peak sampled
+descendant RSS was 4.509 GiB and minimum free disk 19.720 GiB. The owned tree occupied
+approximately 6.530 GiB. [Retrieved measurements, metadata and inspected chart](evidence/2026-10-01/webkit-build-6b49ccd/README.md).
+This resolves the narrow clean-build capacity question for this pinned source and symbol
+configuration on the free runner; it does not establish production readiness.
+
+The framework's deep/strict signature check failed on a sealed resource. The source audit
+also confirms that upstream Release uses engineering/development configuration and disables
+library validation. No resulting binary was loaded, re-signed or adopted. A follow-up bounded
+build collects read-only verbose signatures, entitlements, dependency paths, hashes and
+minimum-OS metadata for nested framework/helper products, retaining failures explicitly.
+Its audit has local regression coverage for failed signatures, escaping symlinks and timeouts.
+
+Before a custom engine could ship, all of these gates remain necessary: explain and repair
+the seal failure in the build/package process; establish supported hardened helper launch
+and sandbox/library-validation policies without private entitlements or bypasses; preserve
+public API boundaries; run the same actual desktop and extension-boundary suite; audit all
+redistributed licenses and symbols; package/sign/notarize the complete dependency tree; and
+establish a repeatable security-update process. A clean 85-minute build makes one candidate
+plus native verification plausible within a six-hour job, but future security patches need
+fresh measurements. Pin revisions, review upstream security fixes and produce a new exact-head
+artifact for every update; never silently keep an unsupported engine revision after known
+security fixes. No production update SLA or owner approval is claimed here.

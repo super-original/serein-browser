@@ -229,3 +229,10 @@ The follow-up also exercises real `browser.tabs.update` promises from an extensi
 page in both manifest generations, queries both group members, and counts `tabs.onUpdated`
 pin/unpin events. Repeated pin must not deliver duplicates. These twelve checks remain
 pending; native event-dispatch calls alone are not counted as successful event delivery.
+
+At `10e984e`, all four group-pin core tests, three native behavior checks, the pinned screenshot
+and twelve real extension promise/event checks pass. Screenshot 80 was retrieved and inspected:
+the pair is joined above the pinned divider. Group-wide pin/unpin is now verified for these
+cases; mixed-category/cross-folder presentation, group-wide movement/closing and the context
+menu AX action remain incomplete. [Inspected original group comparisons](evidence/2026-10-01/persistent-split-groups/README.md)
+preserve the prior equal-split reference states and disclose unmatched conditions.

@@ -32,7 +32,10 @@ api.runtime.onMessage.addListener((message, sender, reply) => {
       const all = own(await api.downloads.search({orderBy:['startTime']}));
       checks.completed = all.length === 3 && all.every(item => item.state === 'complete');
       checks.distinctNumericIDs = new Set(ids).size === 3 && ids.every(Number.isSafeInteger);
-      checks.positiveAndNegative = JSON.stringify(own(await api.downloads.search({query:['alpha','-two']})).map(item => item.id)) === JSON.stringify([ids[0]]);
+      observations.positiveAndNegativeIDs = own(await api.downloads.search({query:['alpha','-two']})).map(item => item.id);
+      observations.positiveOnlyIDs = own(await api.downloads.search({query:['alpha']})).map(item => item.id);
+      observations.negativeOnlyIDs = own(await api.downloads.search({query:['-two']})).map(item => item.id);
+      checks.positiveAndNegative = JSON.stringify(observations.positiveAndNegativeIDs) === JSON.stringify([ids[0]]);
       checks.caseInsensitiveTerms = own(await api.downloads.search({query:['ALPHA']})).length === 2;
       checks.descendingOrder = JSON.stringify(own(await api.downloads.search({orderBy:['-startTime']})).map(item => item.id)) === JSON.stringify([...ids].reverse());
       checks.limitOne = (await api.downloads.search({query:['reference='],limit:1})).length === 1;

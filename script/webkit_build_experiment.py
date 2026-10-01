@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 from bounded_build import GIB, run_bounded
+from audit_webkit_products import audit_products
 
 COMMIT='131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7'
 REPOSITORY='https://github.com/WebKit/WebKit.git'
@@ -80,6 +81,8 @@ def main():
         signature=subprocess.run(['codesign','--verify','--deep','--strict',str(framework)],capture_output=True,text=True,timeout=30)
         audits.append(dict(path=str(framework.relative_to(root)),valid=valid,architectures=archs,build_metadata=build,
                            signature_verification_returncode=signature.returncode,signature_detail=signature.stderr[-4000:]))
+    if succeeded:
+        audit_products(products,root,evidence,environment)
     (evidence/'products.json').write_text(json.dumps(dict(build_command_succeeded=succeeded,framework_audits=audits,
         scope='Compile feasibility only. No engine adoption, patch, packaging, hardened runtime validation or conformance pass follows from this experiment.'),indent=2)+'\n')
     return 0 if succeeded and audits and all(a['valid'] for a in audits) else 1

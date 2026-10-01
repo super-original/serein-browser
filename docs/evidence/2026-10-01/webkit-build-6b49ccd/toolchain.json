@@ -1,0 +1,24 @@
+{
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0\nBuildVersion:\t\t26A428",
+  "architecture": "arm64",
+  "xcode": "Xcode 27.1\nBuild version 27A9269",
+  "sdk": "27.0",
+  "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "memory_bytes": 7516192768,
+  "source_commit": "131cc0a7111b3a8c4038989d7bd5cee49c1ad7f7",
+  "repository": "https://github.com/WebKit/WebKit.git",
+  "minimum_macos": "27.0",
+  "compiler_jobs": 2,
+  "per_stage_minutes": {
+    "metal_toolchain": 10,
+    "fetch": 10,
+    "checkout": 15,
+    "build": 180
+  },
+  "debug_symbol_generation": false,
+  "module_debugging": false,
+  "debug_information_format": "dwarf",
+  "disk_reserve_bytes": 8589934592,
+  "descendant_rss_limit_bytes": 5368709120,
+  "minimum_system_free_memory_percent": 8
+}
