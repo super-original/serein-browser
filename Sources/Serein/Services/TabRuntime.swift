@@ -283,7 +283,12 @@ extension TabRuntime: WKNavigationDelegate {
         }
         if destinationContext != nil {if action.targetFrame?.isMainFrame==true {provisionalURL=url};decisionHandler(.allow);return}
         if ExtensionResourceOrigin.isExtensionScheme(url.scheme) {
-            decisionHandler(.cancel);session?.error="This extension page is unavailable in this window.";return
+            decisionHandler(.cancel)
+            if action.targetFrame?.isMainFrame==true {
+                provisionalURL=nil;failedURL=url;failure="This extension page is unavailable. Re-enable the extension to reload it."
+                synchronize()
+            }
+            return
         }
         if ["http","https","about","blob","data"].contains(url.scheme?.lowercased() ?? "") {
             if !action.shouldPerformDownload,action.targetFrame?.isMainFrame==true {provisionalURL=url}

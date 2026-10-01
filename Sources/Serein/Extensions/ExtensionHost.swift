@@ -86,7 +86,17 @@ struct InstalledExtension: Identifiable, Codable {
             guard ExtensionResourceOrigin.isValidBaseURL(base) else {
                 throw ExtensionValidationError.invalid("The saved extension resource origin is invalid.")
             }
-            context.baseURL = base
+            guard var origin=URLComponents(url:base,resolvingAgainstBaseURL:false),let scheme=origin.scheme else {
+                throw ExtensionValidationError.invalid("The saved extension resource origin cannot be parsed.")
+            }
+            origin.scheme=scheme.lowercased()
+            guard let normalizedOrigin=origin.url else {
+                throw ExtensionValidationError.invalid("The saved extension resource origin cannot be normalized.")
+            }
+            if origin.scheme=="moz-extension" {
+                WKWebExtension.MatchPattern.registerCustomURLScheme("moz-extension")
+            }
+            context.baseURL = normalizedOrigin
         }
         context.hasAccessToPrivateData=false
         for permission in ext.requestedPermissions where record.permissions.contains(permission.rawValue) {context.setPermissionStatus(.grantedExplicitly,for:permission)}
@@ -261,9 +271,19 @@ struct InstalledExtension: Identifiable, Codable {
               isCurrentPermissionPrompt(context:context,session:session,tab:session.bridge(tab)) else{return}
         context.userGesturePerformed(in:session.bridge(tab));context.performAction(for:session.bridge(tab))
     }
-    func setCurrentSite(_ id: UUID,in session: BrowserSession,allow: Bool) {
-        guard let context=contexts[id],let url=session.current?.webView.url else{return}
+    @discardableResult func setCurrentSite(_ id:UUID,in session:BrowserSession,allow:Bool)->Bool {
+        guard !session.state.isPrivate,manager?.windows.contains(where:{$0.session===session})==true,
+              let context=contexts[id],let url=session.current?.webView.url,
+              ["http","https"].contains(url.scheme?.lowercased() ?? "") else{return false}
         context.setPermissionStatus(allow ? .grantedExplicitly : .deniedExplicitly,for:url)
         rememberPermissions(context)
+        return true
+    }
+    /// Current WebKit background fetches can outlive a site denial. Make the
+    /// conservative UI action explicit; raw policy semantics remain tested apart.
+    @discardableResult func denyCurrentSiteAndDisable(_ id:UUID,in session:BrowserSession) async->Bool {
+        guard !busyIDs.contains(id),setCurrentSite(id,in:session,allow:false) else{return false}
+        await setEnabled(id,false)
+        return contexts[id]==nil && records.first(where:{$0.id==id})?.enabled==false
     }
 }

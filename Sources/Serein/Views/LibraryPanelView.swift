@@ -64,7 +64,7 @@ private struct ExtensionListView: View {
     var body: some View {
         VStack(alignment:.leading,spacing:12) {
             Text("WebExtensions · Compatibility varies by API and manifest. Native Safari App Extensions, legacy Safari formats, and CRX2 are not supported. CRX3 signatures verify archive integrity, not store approval.").font(.callout).foregroundStyle(.secondary)
-            Text("Site access choices are saved. Background requests may retain access after a site is denied in this build; disable the extension to stop its background activity.").font(.caption).foregroundStyle(.secondary)
+            Text("Per-site background access is not fully enforced in this build. Denying a site also disables the extension. Re-enabling it may restore background access to denied sites.").font(.caption).foregroundStyle(.secondary)
             List(host.records) {record in
                 VStack(alignment:.leading,spacing:8) {
                     HStack {Text(record.name).bold();Text(record.version).foregroundStyle(.secondary);Spacer();Toggle("Enabled",isOn:Binding(get:{record.enabled},set:{enabled in Task{await host.setEnabled(record.id,enabled)}})).toggleStyle(.switch).fixedSize()}
@@ -87,7 +87,7 @@ private struct ExtensionListView: View {
                                 }
                             }
                         }
-                        Menu("Current Site") {Button("Allow on This Site"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny on This Site"){host.setCurrentSite(record.id,in:session,allow:false)}}.disabled(!record.enabled || host.contexts[record.id] == nil || !["http","https"].contains(session.current?.webView.url?.scheme?.lowercased() ?? ""))
+                        Menu("Current Site") {Button("Allow on This Site"){host.setCurrentSite(record.id,in:session,allow:true)};Button("Deny Site and Disable Extension"){Task{await host.denyCurrentSiteAndDisable(record.id,in:session)}}}.disabled(!record.enabled || host.contexts[record.id] == nil || !["http","https"].contains(session.current?.webView.url?.scheme?.lowercased() ?? ""))
                         Spacer()
                         if record.packageIdentity != nil { Button("Update Signed Package…") { host.chooseUpdate(record.id, in: session) } }
                         Button("Remove…"){host.confirmRemoval(record,in:session)}

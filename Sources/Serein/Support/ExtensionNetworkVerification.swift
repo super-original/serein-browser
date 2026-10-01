@@ -11,7 +11,11 @@ import SereinCore
         for generation in [2,3] {
             let id=UUID(),host=manager.extensions,prefix="mv\(generation)-network-"
             let name="serein_network_"+id.uuidString.replacingOccurrences(of:"-",with:"_")
-            func check(_ suffix:String,_ passed:Bool,_ detail:String=""){results.append(.init(name:prefix+suffix,passed:passed,detail:detail))}
+            func check(_ suffix:String,_ passed:Bool,_ detail:String="") {
+                results.append(.init(name:prefix+suffix,passed:passed,detail:detail))
+                print("NETWORK_VERIFY \(prefix+suffix): \(passed)");fflush(stdout)
+                try? JSONEncoder().encode(results).write(to:manager.root.appendingPathComponent("network-partial-results.json"),options:.atomic)
+            }
             do {
                 let source=Bundle.main.resourceURL!.appendingPathComponent("Fixtures/ExtensionNetwork/mv\(generation)")
                 try host.prepare(source,at:host.root.appendingPathComponent(id.uuidString))
@@ -99,6 +103,19 @@ import SereinCore
                 await wait{view.title=="Network permission fixture" && !view.isLoading}
                 let recreated=await request("fetch","revoked-recreated")
                 check("recreated-context-enforces-revocation",recreated?["ok"] as? Bool==false && recreated?["error"] is String,"Public disable/re-enable with persisted denial: \(String(describing:recreated))")
+                let policyURL=URL(string:"http://localhost:8765/index.html?site-denial-action")!
+                let siteTab=session.newTab(url:policyURL.absoluteString),siteView=session.runtime(siteTab).webView
+                await wait{siteView.url==policyURL && !siteView.isLoading}
+                privateSession.navigate(policyURL.absoluteString,ask:false)
+                let privateView=privateSession.current!.webView
+                await wait{privateView.url==policyURL && !privateView.isLoading}
+                let priorPolicy=context.permissionStatus(for:policyURL)
+                check("private-site-policy-action-rejected",!host.setCurrentSite(id,in:privateSession,allow:true) && host.contexts[id] === context && context.permissionStatus(for:policyURL)==priorPolicy)
+                let disabled=await host.denyCurrentSiteAndDisable(id,in:session)
+                check("site-denial-action-disables-context",disabled && host.contexts[id]==nil && host.records.first{$0.id==id}?.enabled==false)
+                let saved=try JSONDecoder().decode([InstalledExtension].self,from:Data(contentsOf:host.root.appendingPathComponent("extensions.json")))
+                check("site-denial-action-persists-disabled-policy",saved.first{$0.id==id}?.enabled==false && !(saved.first{$0.id==id}?.permissionState?.deniedHosts.isEmpty ?? true))
+                session.close(siteTab,ask:false)
                 session.close(tab,ask:false)
             } catch{check("setup",false,error.localizedDescription)}
             // Remove only this fixture's cookie even if an earlier API assertion failed.

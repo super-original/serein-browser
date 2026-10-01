@@ -234,8 +234,9 @@ import SereinCore
         if libraryPanel != nil || folderEditor != nil,let sheet=window?.attachedSheet {return sheet}
         return window
     }
-    func confirm(_ title: String, detail: String, yes: String = "Continue", completion: @escaping @MainActor (Bool)->Void) {
+    func confirm(_ title: String, detail: String, yes: String = "Continue", identifier:String?=nil, completion: @escaping @MainActor (Bool)->Void) {
         let alert=NSAlert();alert.messageText=title;alert.informativeText=detail;alert.addButton(withTitle:yes);alert.addButton(withTitle:"Cancel")
+        if let identifier {alert.window.identifier=NSUserInterfaceItemIdentifier(identifier)}
         if let window=dialogWindow {alert.beginSheetModal(for:window){r in completion(r == .alertFirstButtonReturn)}}
         else {completion(false)}
     }

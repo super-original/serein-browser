@@ -36,7 +36,7 @@ extension ExtensionHost {
             let added = Set(permissions).subtracting(original.permissions).sorted() + Set(hosts).subtracting(original.hosts).sorted()
             let detail = "Version \(original.version) → \(manifest.version)\n\nNew requests:\n\(added.isEmpty ? "None" : added.joined(separator: "\n"))\n\nAll requested permissions and sites:\n\((permissions + hosts).joined(separator: "\n"))\n\nThe original archive is signed by the same developer key. Explicit denials are retained. Revoked permissions that were already required stay revoked. Newly required permissions are reviewed above; optional access may need approval again when scopes change. Extension data and identity are preserved. Open extension pages will reload. Empty reserved command descriptions may be normalized in the installed copy; the original archive stays unchanged. Private access stays disabled."
             let allowed = await withCheckedContinuation { continuation in
-                session.confirm("Update \(original.name)?", detail: detail, yes: "Update") { continuation.resume(returning: $0) }
+                session.confirm("Update \(original.name)?", detail: detail, yes: "Update", identifier:"extension-update-\(id)") { continuation.resume(returning: $0) }
             }
             guard allowed else { return false }
             guard let index = records.firstIndex(where: { $0.id == id }),

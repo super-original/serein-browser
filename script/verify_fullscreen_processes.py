@@ -38,6 +38,7 @@ with (root / 'server.log').open('w') as server_log:
         else:
             raise AssertionError('Fixture server not ready')
         for mode in ['none', 'webgpu', 'webgl']:
+            subprocess.run(['python3', 'script/collect_fixture_crashes.py'], check=True)
             directory = root / mode
             directory.mkdir(exist_ok=True)
             with (directory / 'application.log').open('w') as stdout, (directory / 'application-error.log').open('w') as stderr:

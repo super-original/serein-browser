@@ -5,15 +5,22 @@ import SereinCore
 @MainActor enum ExtensionUpdateVerification {
     static func run(id: UUID, host: ExtensionHost, session: BrowserSession, root: URL) async -> [RuntimeVerification.Result] {
         var results: [RuntimeVerification.Result] = []
-        func check(_ name: String, _ passed: Bool, _ detail: String = "") { results.append(.init(name: "signed-update-" + name, passed: passed, detail: detail)) }
+        func check(_ name:String,_ passed:Bool,_ detail:String="") {
+            results.append(.init(name:"signed-update-"+name,passed:passed,detail:detail))
+            print("UPDATE_VERIFY \(name): \(passed)");fflush(stdout)
+            try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("update-partial-results.json"),options:.atomic)
+        }
         let fixtures = Bundle.main.resourceURL!.appendingPathComponent("Fixtures/Packages")
         func apply(_ name: String, accept: Bool, capture: String? = nil) async throws -> Bool {
+            let previousSheet=session.dialogWindow?.attachedSheet
             let task = Task { await host.update(id, from: fixtures.appendingPathComponent(name), in: session) }
             for _ in 0..<100 {
-                if session.dialogWindow?.attachedSheet != nil { break }
+                if let sheet=session.dialogWindow?.attachedSheet,sheet !== previousSheet,sheet.identifier?.rawValue=="extension-update-\(id)" { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
-            let owner = session.dialogWindow, sheet = owner?.attachedSheet
+            let owner = session.dialogWindow
+            let candidate=owner?.attachedSheet
+            let sheet=candidate !== previousSheet && candidate?.identifier?.rawValue=="extension-update-\(id)" ? candidate : nil
             check("consent-" + name + (accept ? "-accept" : "-cancel"), sheet != nil)
             if let sheet {
                 if let capture {
@@ -159,7 +166,20 @@ import SereinCore
             let restoredOptionsTab=session.newTab(url:options.absoluteString,select:false)
             let restoredOptionsRuntime=session.runtime(restoredOptionsTab)
             _=restoredOptionsRuntime.webView
-            try await Task.sleep(for:.milliseconds(200))
+            for _ in 0..<50 {
+                if restoredOptionsRuntime.failure != nil {break}
+                try await Task.sleep(for:.milliseconds(50))
+            }
+            check("unavailable-options-error-stays-in-tab",restoredOptionsRuntime.failure != nil && session.error==nil && session.window?.attachedSheet==nil)
+            let selectionBeforeError=session.state.selectedTabID
+            session.select(restoredOptionsTab)
+            try "55-disabled-extension-page".write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+            for _ in 0..<100 {
+                if FileManager.default.fileExists(atPath:root.appendingPathComponent("55-disabled-extension-page.capture-finished").path){break}
+                try await Task.sleep(for:.milliseconds(100))
+            }
+            check("disabled-options-native-error-captured",FileManager.default.fileExists(atPath:root.appendingPathComponent("55-disabled-extension-page.png").path))
+            if let selectionBeforeError {session.select(selectionBeforeError)}
             let disabledUpdate = try await apply("signed-update-disabled.crx", accept: true)
             check("disabled-state-preserved", disabledUpdate && host.records.first(where: { $0.id == id })?.enabled == false && host.contexts[id] == nil)
             let saved = try JSONDecoder().decode([InstalledExtension].self, from: Data(contentsOf: host.root.appendingPathComponent("extensions.json")))
