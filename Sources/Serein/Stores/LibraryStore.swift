@@ -16,19 +16,28 @@ enum BookmarkEditError:LocalizedError {
     var bookmarks: [PageRecord] = []
     var history: [PageRecord] = []
     var error: String?
+    private(set) var preservationNotice:String?
     let root: URL
+    @ObservationIgnored private var bookmarksAvailable=true
+    @ObservationIgnored private var historyAvailable=true
     init(root: URL) {
         self.root=root
-        do {
-            try PrivateFileStore.prepareDirectory(root)
-            bookmarks=try read("bookmarks.json") ?? []
-            history=try read("history.json") ?? []
-            let oldBookmarks = bookmarks, oldHistory = history
-            bookmarks = bookmarks.compactMap { Self.sanitized($0, history: false) }
-            history = history.compactMap { Self.sanitized($0, history: true) }
-            if bookmarks != oldBookmarks { write(bookmarks, name: "bookmarks.json") }
-            if history != oldHistory { write(history, name: "history.json") }
-        } catch {self.error="Could not restore browsing library: \(error.localizedDescription)"}
+        do {try PrivateFileStore.prepareDirectory(root)}
+        catch {bookmarksAvailable=false;historyAvailable=false;self.error="Could not open browsing library: \(error.localizedDescription)";preservationNotice=self.error;return}
+        var failures:[String]=[]
+        for isHistory in [false,true] {
+            let name=isHistory ? "history.json" : "bookmarks.json"
+            do {
+                let original:[PageRecord]=try read(name) ?? []
+                let safe=original.compactMap{Self.sanitized($0,history:isHistory)}
+                if safe != original {try commit(safe,name:name)}
+                if isHistory {history=safe} else {bookmarks=safe}
+            } catch {
+                if isHistory {historyAvailable=false} else {bookmarksAvailable=false}
+                failures.append("Could not restore \(name). The original file is preserved and edits are disabled: \(error.localizedDescription)")
+            }
+        }
+        if !failures.isEmpty {error=failures.joined(separator:"\n");preservationNotice=error}
     }
     private static func sanitized(_ record: PageRecord, history: Bool) -> PageRecord? {
         guard let safeURL = history ? StoredPageURL.webHistoryURL(record.url) : StoredPageURL.removingCredentials(record.url) else { return nil }
@@ -39,16 +48,29 @@ enum BookmarkEditError:LocalizedError {
     func read<T: Decodable>(_ name: String) throws -> T? {
         let url=root.appendingPathComponent(name)
         guard FileManager.default.fileExists(atPath:url.path) else{return nil}
-        return try JSONDecoder().decode(T.self,from:Data(contentsOf:url))
+        let values=try url.resourceValues(forKeys:[.fileSizeKey,.isRegularFileKey,.isSymbolicLinkKey])
+        guard values.isRegularFile==true,values.isSymbolicLink != true,values.fileSize.map({$0<=16*1024*1024})==true else {
+            throw BookmarkEditError.invalid("Library storage must be a regular file no larger than 16 MiB.")
+        }
+        let handle=try FileHandle(forReadingFrom:url);defer{try? handle.close()}
+        let data=try handle.read(upToCount:16*1024*1024+1) ?? Data()
+        guard data.count<=16*1024*1024 else{throw BookmarkEditError.invalid("Library file exceeds the 16 MiB limit.")}
+        return try JSONDecoder().decode(T.self,from:data)
     }
-    func write<T: Encodable>(_ object: T, name: String) {
-        do {try PrivateFileStore.write(JSONEncoder().encode(object),to:root.appendingPathComponent(name))}
-        catch {self.error="Could not save \(name): \(error.localizedDescription)"}
+    private func commit(_ records:[PageRecord],name:String) throws {
+        let data=try JSONEncoder().encode(records)
+        guard data.count<=16*1024*1024 else{throw BookmarkEditError.invalid("The library update exceeds the 16 MiB limit.")}
+        try PrivateFileStore.write(data,to:root.appendingPathComponent(name))
     }
     func visit(title: String, url: String, isPrivate: Bool) {
-        guard !isPrivate, let safeURL = StoredPageURL.webHistoryURL(url) else { return }
-        history.removeAll{$0.url==safeURL};history.insert(PageRecord(title:title == url ? safeURL : title,url:safeURL),at:0)
-        history=Array(history.prefix(3000));write(history,name:"history.json")
+        guard !isPrivate,historyAvailable,let safeURL=StoredPageURL.webHistoryURL(url) else{return}
+        var record=history.first{$0.url==safeURL} ?? PageRecord(title:"",url:safeURL)
+        record.title=title==url ? safeURL : title;record.date=Date()
+        let proposed=Array(([record]+history.filter{$0.url != safeURL}).prefix(3000))
+        do {
+            try commit(proposed,name:"history.json")
+            history=proposed
+        } catch {self.error="Could not save browsing history: \(error.localizedDescription)"}
     }
     func bookmark(title: String, url: String) {
         guard let safeURL=StoredPageURL.removingCredentials(url),!bookmarks.contains(where:{$0.url==safeURL}) else{return}
@@ -58,6 +80,7 @@ enum BookmarkEditError:LocalizedError {
     /// Commit to disk before publishing the new list. An editor must still own
     /// the exact record it opened; another window's edit/removal wins conflicts.
     func saveBookmark(original:PageRecord?,title:String,url:String) throws {
+        guard bookmarksAvailable else{throw BookmarkEditError.invalid("Bookmarks could not be restored. The original file is preserved; repair or back it up before editing.")}
         let entered=url.trimmingCharacters(in:.whitespacesAndNewlines)
         guard let safeURL=StoredPageURL.removingCredentials(entered),let parsed=URL(string:safeURL),
               !["http","https"].contains(parsed.scheme?.lowercased() ?? "") || parsed.host?.isEmpty==false else {
@@ -78,17 +101,19 @@ enum BookmarkEditError:LocalizedError {
         var record=original ?? PageRecord(title:"",url:safeURL)
         record.title=name.isEmpty || name==entered ? safeURL : name;record.url=safeURL
         if let index {proposed[index]=record} else {proposed.append(record)}
-        try PrivateFileStore.write(JSONEncoder().encode(proposed),to:root.appendingPathComponent("bookmarks.json"))
+        try commit(proposed,name:"bookmarks.json")
         bookmarks=proposed
     }
     func removeBookmark(_ id: UUID) {
+        guard bookmarksAvailable else{return}
         let proposed=bookmarks.filter{$0.id != id}
-        do {try PrivateFileStore.write(JSONEncoder().encode(proposed),to:root.appendingPathComponent("bookmarks.json"));bookmarks=proposed}
+        do {try commit(proposed,name:"bookmarks.json");bookmarks=proposed}
         catch {self.error="Could not remove bookmark: \(error.localizedDescription)"}
     }
     func clearHistory() {
+        guard historyAvailable else{return}
         do {
-            try PrivateFileStore.write(JSONEncoder().encode([PageRecord]()),to:root.appendingPathComponent("history.json"))
+            try commit([],name:"history.json")
             history=[];error=nil
         } catch {self.error="Could not clear browsing history: \(error.localizedDescription)"}
     }

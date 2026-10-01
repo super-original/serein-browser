@@ -3,7 +3,6 @@ import hashlib
 import json
 import pathlib
 import shutil
-import subprocess
 import time
 
 
@@ -24,7 +23,7 @@ def prepare_download_reference(temporary, out):
     return extension
 
 
-def run_download_reference(request, script, prefix, out, download_directory):
+def run_download_reference(request, script, prefix, out, download_directory, capture_desktop):
     report = {'browser': 'Chrome for Testing 154.0.8037.57', 'variant': 'mv3',
               'scope': 'Original controlled downloads fixture; not Serein API support. Four-second exists freshness is an observation window, not a documented Chrome deadline.',
               'scenarioExecuted': False}
@@ -48,7 +47,7 @@ def run_download_reference(request, script, prefix, out, download_directory):
         checks = report['result'].get('checks', {})
         report['passingChecks'] = sum(value is True for value in checks.values())
         report['totalChecks'] = len(checks)
-        subprocess.run(['screencapture', '-x', str(out / 'downloads-reference.png')], check=True, timeout=10)
+        report['captureWindow'] = capture_desktop('downloads-reference')
     except Exception as error:
         report['error'] = str(error)
     finally:

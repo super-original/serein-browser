@@ -57,6 +57,7 @@ struct LibraryPanelView: View {
                         Text("Serein 0.1 — development build\nRequires macOS 27.0. Extension compatibility is incomplete. This build is not notarized.").font(.caption).foregroundStyle(.secondary)
                     }.formStyle(.grouped)
                 }
+                if let notice=manager.library.preservationNotice,notice != manager.library.error {Text(notice).foregroundStyle(.red).textSelection(.enabled)}
                 if let error=manager.library.error ?? manager.restorationError {Text(error).foregroundStyle(.red).textSelection(.enabled)}
             }
         }.padding(24).frame(width:600,height:480)

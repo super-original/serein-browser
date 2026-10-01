@@ -20,9 +20,10 @@ import SereinCore
             check("library-legacy-credentials-sanitized", store.bookmarks.first?.url == safe && store.history.first?.url == safe && store.history.first?.title == safe)
             let disk = try ["bookmarks.json", "history.json"].map { try String(contentsOf: directory.appendingPathComponent($0), encoding: .utf8) }.joined()
             check("library-legacy-files-rewritten", !disk.contains("fixture-user") && !disk.contains("fixture-password"), store.error ?? "")
+            let historyIdentity=store.history[0].id
             store.visit(title: "Updated title", url: raw, isPrivate: false)
             store.bookmark(title: "Duplicate", url: raw)
-            check("library-credential-free-deduplication", store.history.count == 1 && store.bookmarks.count == 1 && store.history[0].url == safe)
+            check("library-credential-free-deduplication", store.history.count == 1 && store.bookmarks.count == 1 && store.history[0].url == safe && store.history[0].id==historyIdentity)
             store.visit(title: "Private", url: "https://example.test/private", isPrivate: true)
             store.visit(title: "Non-web", url: "http-unrelated://example.test/", isPrivate: false)
             check("library-private-and-nonweb-excluded", store.history.count == 1)
@@ -53,11 +54,29 @@ import SereinCore
             let historyFile=directory.appendingPathComponent("history.json"),savedHistory=try Data(contentsOf:historyFile),visibleHistory=store.history
             try FileManager.default.removeItem(at:historyFile)
             try FileManager.default.createDirectory(at:historyFile,withIntermediateDirectories:false)
+            store.visit(title:"Uncommitted",url:"https://example.test/uncommitted",isPrivate:false)
+            check("history-failed-visit-keeps-visible-records",store.history==visibleHistory && store.error?.contains("Could not save browsing history")==true)
             store.clearHistory()
             check("history-failed-clear-keeps-visible-records",!visibleHistory.isEmpty && store.history==visibleHistory && store.error?.contains("Could not clear browsing history")==true)
             try FileManager.default.removeItem(at:historyFile);try savedHistory.write(to:historyFile,options:.atomic)
             store.clearHistory()
             check("history-clear-commits-before-publishing",store.history.isEmpty && store.error==nil && LibraryStore(root:directory).history.isEmpty)
+
+            for damagedHistory in [true,false] {
+                let isolated=directory.appendingPathComponent(damagedHistory ? "damaged-history" : "damaged-bookmarks")
+                try PrivateFileStore.prepareDirectory(isolated)
+                let name=damagedHistory ? "history.json" : "bookmarks.json",file=isolated.appendingPathComponent(name)
+                let corrupt=Data("{preserve this damaged library".utf8)
+                try corrupt.write(to:file)
+                let blocked=LibraryStore(root:isolated)
+                blocked.visit(title:"Healthy visit",url:safe,isPrivate:false)
+                blocked.bookmark(title:"Healthy bookmark",url:safe)
+                blocked.removeBookmark(UUID());blocked.clearHistory()
+                // Refill only the healthy history after its ordinary clear.
+                blocked.visit(title:"Healthy visit",url:safe,isPrivate:false)
+                let healthy=damagedHistory ? blocked.bookmarks.count==1 : blocked.history.count==1
+                check("library-\(damagedHistory ? "history" : "bookmarks")-corruption-preserved",healthy && blocked.preservationNotice != nil && (try? Data(contentsOf:file))==corrupt)
+            }
 
         } catch { check("library-persistence-probe", false, error.localizedDescription) }
         return results

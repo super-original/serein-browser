@@ -128,9 +128,19 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
         consent = subprocess.run(['osascript', '-e', 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1'], capture_output=True, text=True, timeout=8)
         (OUT / 'local-network-denial.txt').write_text(str(consent.returncode) + '\n' + consent.stdout + consent.stderr)
         subprocess.run(['osascript', '-e', 'tell application "Google Chrome for Testing" to activate'], check=True, timeout=8)
-        time.sleep(0.5)
-        subprocess.run(['screencapture', '-x', str(OUT / 'formatter-reference.png')], check=True, timeout=10)
-        report['downloads'] = run_download_reference(request, script, prefix, OUT, download_directory)
+        window_probe = pathlib.Path(temporary) / 'wait-for-browser-window'
+        subprocess.run(['xcrun', 'swiftc', 'script/WaitForBrowserWindow.swift', '-o', str(window_probe)], check=True, timeout=60)
+        def capture_desktop(name):
+            ready = subprocess.run([str(window_probe), str(report['capabilities']['goog:processID']),
+                                    str(BINARY), '1000', '677'], capture_output=True, text=True, timeout=15)
+            (OUT / (name + '-window.txt')).write_text(ready.stdout + ready.stderr)
+            # Preserve the actual desktop even when visibility validation fails.
+            subprocess.run(['screencapture', '-x', str(OUT / (name + '.png'))], check=True, timeout=10)
+            if ready.returncode:
+                raise RuntimeError('Reference desktop window was not visibly ready: ' + name)
+            return json.loads(ready.stdout)
+        report['captureWindow'] = capture_desktop('formatter-reference')
+        report['downloads'] = run_download_reference(request, script, prefix, OUT, download_directory, capture_desktop)
     except Exception as error:
         report['error'] = str(error)
     finally:
@@ -161,3 +171,6 @@ with tempfile.TemporaryDirectory(prefix='serein-chrome-reference-') as temporary
 
 assert report['scenarioExecuted'] and len(report['checks']) == 3 and all(report['checks'].values()), 'Chrome reference failed; diagnostics retained'
 assert report.get('downloads', {}).get('scenarioExecuted') and report['downloads']['passingChecks'] == report['downloads']['totalChecks'] == 16, 'Downloads reference failures retained'
+
+assert not report.get('error') and report.get('captureWindow', {}).get('visible') is True, 'Formatter desktop readiness failed; actual capture retained'
+assert not report.get('downloads', {}).get('error') and report.get('downloads', {}).get('captureWindow', {}).get('visible') is True, 'Downloads desktop readiness failed; actual capture retained'

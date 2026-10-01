@@ -85,3 +85,7 @@ desktop; the later downloads capture visibly renders the page. Both were inspect
 `10e984e` Formatter capture remains the visible Formatter evidence. Three document checks
 still pass and downloads remains 15/16. [Artifact](https://github.com/super-original/serein-browser/actions/runs/36867377515/artifacts/11164233434),
 SHA-256 `034be49cc383837293c0c3d20420508553bb93cb8be0faaef731099b399ce12f`.
+
+### Desktop readiness follow-up
+
+The `1de9b3a` Formatter capture caught a black desktop during activation although its three document checks passed; the later downloads capture visibly rendered Field Notes. Earlier visible Formatter evidence is retained. The next reference compiles a small public AppKit/CoreGraphics probe, verifies the exact ChromeDriver-reported PID and executable, activates only that process and requires its one normal on-screen 1000×677 window to remain stable for one second (ten-second bound). It records original window metadata and still captures the actual desktop on readiness failure. This is pending native verification and does not assert that a visible window's website pixels rendered; screenshots still require inspection. No permission databases or security settings change.
