@@ -46,20 +46,45 @@ on run arguments
 with timeout of 5 seconds
  tell application "System Events"
   set targetProcess to first application process whose unix id is (item 1 of arguments as integer)
+  set diagnostics to ""
   tell targetProcess
-  set controls to entire contents of window 1
-  repeat with uiElement in controls
-   try
-    if value of attribute "AXIdentifier" of uiElement is "page-error-reload" then
-     perform action "AXPress" of uiElement
-     return "pressed"
+   set frontmost to true
+   repeat with targetWindow in windows
+    set controls to entire contents of targetWindow
+    set stoppedPage to false
+    set reloadButtons to {}
+    repeat with uiElement in controls
+     set elementRole to ""
+     set elementName to ""
+     set elementIdentifier to ""
+     try
+      set elementRole to value of attribute "AXRole" of uiElement
+     end try
+     try
+      set elementName to name of uiElement as text
+     end try
+     try
+      set elementIdentifier to value of attribute "AXIdentifier" of uiElement as text
+     end try
+     set diagnostics to diagnostics & elementRole & " name=" & elementName & " identifier=" & elementIdentifier & linefeed
+     if elementName is "Page stopped" then set stoppedPage to true
+     if elementIdentifier is "page-error-reload" then
+      perform action "AXPress" of uiElement
+      return "pressed identifier" & linefeed & diagnostics
+     end if
+     if elementRole is "AXButton" and elementName is "Reload" then set end of reloadButtons to uiElement
+    end repeat
+    -- ContentUnavailableView can expose a native action title without its
+    -- SwiftUI identifier. Require the crash heading and exactly one button.
+    if stoppedPage and (count of reloadButtons) is 1 then
+     perform action "AXPress" of item 1 of reloadButtons
+     return "pressed unique crash-screen Reload" & linefeed & diagnostics
     end if
-   end try
-  end repeat
+   end repeat
   end tell
  end tell
 end timeout
-error "Error-page Reload control was not found"
+error "Error-page Reload control was not found" & linefeed & diagnostics
 end run
 '''
 with (root / 'server.log').open('w') as log:
