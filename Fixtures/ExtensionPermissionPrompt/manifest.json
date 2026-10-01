@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Serein permission prompt fixture",
+  "description": "Original native host consent lifecycle fixture without background code.",
+  "version": "1.0",
+  "optional_permissions": ["storage"],
+  "optional_host_permissions": ["http://localhost/*"]
+}

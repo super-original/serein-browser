@@ -10,6 +10,15 @@ PAYLOAD = bytes(range(256)) * 32768
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
+        if self.path.split('?', 1)[0] in ['/ads/!rotator/probe.js', '/serein-clean-probe.js']:
+            payload = b'window.sereinBlockerLoads=(window.sereinBlockerLoads||0)+1;'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/javascript')
+            self.send_header('Content-Length', str(len(payload)))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         if self.path.split('?', 1)[0] == '/extension-network-redirect':
             self.send_response(302)
             self.send_header('Location', 'http://127.0.0.1:8765/extension-network.json?case=redirect')

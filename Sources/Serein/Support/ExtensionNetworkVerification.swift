@@ -47,17 +47,32 @@ import SereinCore
                 context.setPermissionStatus(.deniedExplicitly,for:localhost)
                 let revoked=await request("fetch","revoked")
                 check("revoked-host-cannot-read-response",revoked?["ok"] as? Bool==false && revoked?["error"] is String,String(describing:revoked))
+                var eventual=revoked
+                for attempt in 0..<20 {
+                    if eventual?["ok"] as? Bool==false && eventual?["error"] is String {break}
+                    try? await Task.sleep(for:.milliseconds(100))
+                    eventual=await request("fetch","revoked-settled-\(attempt)")
+                }
+                check("revoked-host-denied-after-propagation",eventual?["ok"] as? Bool==false && eventual?["error"] is String,"Immediate result remains separately asserted; bounded two-second propagation probe: \(String(describing:eventual))")
                 context.setPermissionStatus(.grantedExplicitly,for:localhost)
                 let set=await request("set"),cookie=set?["cookie"] as? [String:Any]
                 check("cookie-set-properties",set?["ok"] as? Bool==true && cookie?["name"] as? String==name && cookie?["value"] as? String=="fixture-value" && cookie?["sameSite"] as? String=="lax" && cookie?["path"] as? String=="/",String(describing:set))
                 let get=await request("get")
                 check("cookie-read",(get?["cookie"] as? [String:Any])?["value"] as? String=="fixture-value",String(describing:get))
+                var initialEvents:[[String:Any]]=[]
+                for _ in 0..<20 {
+                    initialEvents=(await request("events"))?["events"] as? [[String:Any]] ?? []
+                    if !initialEvents.isEmpty {break}
+                    try? await Task.sleep(for:.milliseconds(50))
+                }
+                check("cookie-insert-event-before-revocation",initialEvents.count==1 && initialEvents.first?["removed"] as? Bool==false && initialEvents.first?["cause"] as? String=="explicit",String(describing:initialEvents))
                 let normal=await session.dataStore.httpCookieStore.allCookies(),isolated=await privateSession.dataStore.httpCookieStore.allCookies()
                 check("cookie-uses-normal-browser-store",normal.contains{$0.name==name && $0.value=="fixture-value" && $0.domain=="localhost"})
                 check("cookie-excludes-private-store",!isolated.contains{$0.name==name} && !privateSession.dataStore.isPersistent)
                 context.setPermissionStatus(.deniedExplicitly,for:localhost)
                 let deniedCookie=await request("get")
                 check("cookie-host-revocation",deniedCookie?["ok"] as? Bool==false && deniedCookie?["error"] is String,String(describing:deniedCookie))
+                check("cookie-revocation-does-not-disclose-value",deniedCookie?["error"] is String || deniedCookie?["cookie"] is NSNull,"Returning null without a permission error is separately recorded as a semantic mismatch")
                 context.setPermissionStatus(.grantedExplicitly,for:localhost)
                 context.setPermissionStatus(.deniedExplicitly,for:WKWebExtension.Permission(rawValue:"cookies"))
                 let deniedAPI=await request("get")

@@ -56,7 +56,7 @@ Status: **I** implemented with some exercised paths; **P** partial; **U** unimpl
 |---|---|---|
 | Back/forward, reload/stop, URL/search | I | WKWebView; local-history/bookmark suggestions only |
 | Create/close/reopen/duplicate tabs | I | Unsaved form-input warning; broader app state detection incomplete |
-| Reorder | P | Typed same-process tab/folder payloads; cross-window normal-tab dragging and folder drops implemented; controlled transfer checks pass but actual-pointer CI still fails; category changes, cross-window folder trees and drag-to-new-window remain absent |
+| Reorder | P | Typed same-process tab/folder payloads; cross-window normal-tab dragging and folder drops implemented; actual cross-window pointer and all transfer/privacy checks pass at `21091e9`; category changes, cross-window folder trees and drag-to-new-window remain absent |
 | Pins and essentials | I | Essentials span workspaces; pins preserve reset URL |
 | Multiple workspaces | P | Create, rename, remove, switch; no containers or per-workspace cookie stores |
 | Expanded/collapsed sidebar | I | Visual inspection required across resizing and focus |
@@ -146,3 +146,5 @@ Tab rows and folder rows now share an original typed `Transferable` payload, exp
 The new runtime scenario locates two actual native tab controls and sends a real pointer drag between their visible sidebars, then checks live-object identity, script state, history, zoom, insertion order, document edits, privacy rejection, stale data, preview ownership and persisted folder membership. A direct handler fallback is separately labeled if the physical gesture fails. These additions await macOS 27 CI and inspected screenshots; no drag pass is claimed from compilation. Cross-window folder-tree transfer, multi-item drag, category-changing drops and drag-to-create-window are still missing.
 
 At `7611908`, the exact-composition native attachment guard restores preview-close keyboard delivery to its live owner. Folder text submission and all folder scenarios pass again, and the original expanded-folder screenshot was inspected. Actual cross-window drag still fails despite passing controlled state/privacy checks; frontmost-window fixture correction is pending. Website desktop rendering remains blank.
+
+At `21091e9`, all 17 cross-window drag scenarios pass, including real native pointer input; the handler fallback did not execute. The retrieved final moved-tab/preview capture was inspected. Native file selection and all 19 folder checks also pass. Category-changing/multi-item/folder-tree dragging and drag-to-new-window remain absent, and blank website rendering prevents complete visual parity.

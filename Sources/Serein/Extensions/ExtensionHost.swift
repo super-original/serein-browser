@@ -251,7 +251,8 @@ struct InstalledExtension: Identifiable, Codable {
         return false
     }
     func perform(_ id: UUID,in session: BrowserSession) {
-        guard let context=contexts[id],let tab=session.state.selectedTabID else{return}
+        guard !session.state.isPrivate,let context=contexts[id],let tab=session.state.selectedTabID,
+              isCurrentPermissionPrompt(context:context,session:session,tab:session.bridge(tab)) else{return}
         context.userGesturePerformed(in:session.bridge(tab));context.performAction(for:session.bridge(tab))
     }
     func setCurrentSite(_ id: UUID,in session: BrowserSession,allow: Bool) {

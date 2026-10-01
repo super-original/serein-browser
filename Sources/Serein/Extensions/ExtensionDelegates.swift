@@ -59,21 +59,49 @@ extension ExtensionHost: WKWebExtensionControllerDelegate {
         session.newTab(url:url.absoluteString);completionHandler(nil)
     }
     func webExtensionController(_ controller: WKWebExtensionController,presentActionPopup action: WKWebExtension.Action,for context: WKWebExtensionContext,completionHandler: @escaping ((any Error)?)->Void) {
-        guard let view=manager?.active?.window?.contentView,let popover=action.popupPopover else{completionHandler(ExtensionValidationError.invalid("No popup is available."));return}
+        guard let session=permissionPromptSession(for:context,tab:nil),let view=session.window?.contentView,
+              let popover=action.popupPopover else{completionHandler(ExtensionValidationError.invalid("No normal browsing window or live extension popup is available."));return}
         let id=contexts.first{$0.value===context}?.key
         let anchor=id.flatMap{manager?.active?.actionAnchors[$0]?.view} ?? view
         popover.behavior = .transient;popover.show(relativeTo:anchor===view ? NSRect(x:18,y:18,width:28,height:28) : anchor.bounds,of:anchor,preferredEdge:.maxX);completionHandler(nil)
     }
     func webExtensionController(_ controller: WKWebExtensionController,promptForPermissions permissions: Set<WKWebExtension.Permission>,in tab: (any WKWebExtensionTab)?,for context: WKWebExtensionContext,completionHandler: @escaping (Set<WKWebExtension.Permission>,Date?)->Void) {
-        guard let session=(tab as? ExtensionTab)?.session ?? manager?.active,!session.state.isPrivate else{completionHandler([],nil);return}
-        session.confirm("Allow extension permissions?",detail:"\(context.webExtension.displayName ?? "Extension")\n\(permissions.map(\.rawValue).sorted().joined(separator:"\n"))",yes:"Allow") {allowed in completionHandler(allowed ? permissions : [],nil)}
+        guard let session=permissionPromptSession(for:context,tab:tab) else{completionHandler([],nil);return}
+        session.confirm("Allow extension permissions?",detail:"\(context.webExtension.displayName ?? "Extension")\n\(permissions.map(\.rawValue).sorted().joined(separator:"\n"))",yes:"Allow") {[weak self,weak session] allowed in
+            guard allowed,let self,let session,self.isCurrentPermissionPrompt(context:context,session:session,tab:tab) else{completionHandler([],nil);return}
+            completionHandler(permissions,nil)
+        }
     }
     func webExtensionController(_ controller: WKWebExtensionController,promptForPermissionMatchPatterns patterns: Set<WKWebExtension.MatchPattern>,in tab: (any WKWebExtensionTab)?,for context: WKWebExtensionContext,completionHandler: @escaping (Set<WKWebExtension.MatchPattern>,Date?)->Void) {
-        guard let session=(tab as? ExtensionTab)?.session ?? manager?.active,!session.state.isPrivate else{completionHandler([],nil);return}
-        session.confirm("Allow extension website access?",detail:"\(context.webExtension.displayName ?? "Extension")\n\(patterns.map(\.string).sorted().joined(separator:"\n"))",yes:"Allow") {allowed in completionHandler(allowed ? patterns : [],nil)}
+        guard let session=permissionPromptSession(for:context,tab:tab) else{completionHandler([],nil);return}
+        session.confirm("Allow extension website access?",detail:"\(context.webExtension.displayName ?? "Extension")\n\(patterns.map(\.string).sorted().joined(separator:"\n"))",yes:"Allow") {[weak self,weak session] allowed in
+            guard allowed,let self,let session,self.isCurrentPermissionPrompt(context:context,session:session,tab:tab) else{completionHandler([],nil);return}
+            completionHandler(patterns,nil)
+        }
     }
     func webExtensionController(_ controller: WKWebExtensionController,promptForPermissionToAccess urls: Set<URL>,in tab: (any WKWebExtensionTab)?,for context: WKWebExtensionContext,completionHandler: @escaping (Set<URL>,Date?)->Void) {
-        guard let session=(tab as? ExtensionTab)?.session ?? manager?.active,!session.state.isPrivate else{completionHandler([],nil);return}
-        session.confirm("Allow extension website access?",detail:urls.map(\.absoluteString).sorted().joined(separator:"\n"),yes:"Allow") {allowed in completionHandler(allowed ? urls : [],nil)}
+        guard let session=permissionPromptSession(for:context,tab:tab) else{completionHandler([],nil);return}
+        session.confirm("Allow extension website access?",detail:urls.map(\.absoluteString).sorted().joined(separator:"\n"),yes:"Allow") {[weak self,weak session] allowed in
+            guard allowed,let self,let session,self.isCurrentPermissionPrompt(context:context,session:session,tab:tab) else{completionHandler([],nil);return}
+            completionHandler(urls,nil)
+        }
+    }
+}
+
+// Consent belongs to a live extension context and the original normal window.
+// A retained callback must not grant authority to a disabled/replaced context.
+extension ExtensionHost {
+    func permissionPromptSession(for context:WKWebExtensionContext,tab:(any WKWebExtensionTab)?)->BrowserSession? {
+        guard tab==nil || tab is ExtensionTab,
+              let session=(tab as? ExtensionTab)?.session ?? manager?.active,
+              isCurrentPermissionPrompt(context:context,session:session,tab:tab) else{return nil}
+        return session
+    }
+    func isCurrentPermissionPrompt(context:WKWebExtensionContext,session:BrowserSession,tab:(any WKWebExtensionTab)?)->Bool {
+        guard contexts.values.contains(where:{$0 === context}),!session.state.isPrivate,session.window != nil,
+              manager?.windows.contains(where:{$0.session === session}) == true else{return false}
+        guard let tab else{return true}
+        guard let tab=tab as? ExtensionTab,tab.session === session else{return false}
+        return session.state.tabs.contains{$0.id==tab.id}
     }
 }

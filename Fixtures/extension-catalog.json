@@ -61,5 +61,14 @@
     "sha256": "10ddc3bc27179cb32962fa8629e87d9d2c3897a604ba347666ebe16a1488751b",
     "bytes": 768735,
     "manifest_version": 3
+  },
+  {
+    "name": "uBOLite_2026.930.1227.firefox.signed.xpi",
+    "version": "2026.930.1227",
+    "url": "https://github.com/uBlockOrigin/uBOL-home/releases/download/2026.930.1227/uBOLite_2026.930.1227.firefox.signed.xpi",
+    "source": "https://github.com/uBlockOrigin/uBOL-home/releases/tag/2026.930.1227",
+    "sha256": "aaa62dfbaa453b75315419ad3274fc3521c2236eb2478d0ebf3d4e7a35f2b769",
+    "bytes": 9634550,
+    "manifest_version": 3
   }
 ]

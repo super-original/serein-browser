@@ -56,17 +56,20 @@ extension TabRuntime: WKUIDelegate {
             decisionHandler(.deny); return
         }
         let document=documentID
+        // Retain the same world throughout this consent transaction. A name alone
+        // must not depend on WebKit keeping an otherwise unreferenced world alive.
+        let permissionWorld=WKContentWorld.world(name:"SereinPermissionState")
         Task { [weak self,weak page] in
             guard let self,let page,page === self.loadedWebView,self.documentID==document,
                   let token=try? await page.callAsyncJavaScript("""
                   if (location.href !== expectedURL) return null;
                   if (!globalThis.sereinPermissionDocumentToken) globalThis.sereinPermissionDocumentToken = nonce;
                   return globalThis.sereinPermissionDocumentToken;
-                  """,arguments:["nonce":UUID().uuidString,"expectedURL":frame.request.url?.absoluteString ?? ""],in:frame,contentWorld:.world(name:"SereinPermissionState")) as? String,
+                  """,arguments:["nonce":UUID().uuidString,"expectedURL":frame.request.url?.absoluteString ?? ""],in:frame,contentWorld:permissionWorld) as? String,
                   page === self.loadedWebView,self.documentID==document else{decisionHandler(.deny);return}
             self.decideSitePermission(requesting:requesting,capabilities:capabilities,validation:{ [weak self,weak page] in
                 guard let self,let page,page === self.loadedWebView,self.documentID==document else{return false}
-                let current=try? await page.callAsyncJavaScript("return globalThis.sereinPermissionDocumentToken || null;",arguments:[:],in:frame,contentWorld:.world(name:"SereinPermissionState")) as? String
+                let current=try? await page.callAsyncJavaScript("return globalThis.sereinPermissionDocumentToken || null;",arguments:[:],in:frame,contentWorld:permissionWorld) as? String
                 if ProcessInfo.processInfo.arguments.contains("--integration-test") {
                     print("SITE_PERMISSION frameValidation tokenPresent=\(current != nil) tokenMatches=\(current==token) viewMatches=\(page === self.loadedWebView) documentMatches=\(self.documentID==document)")
                 }
