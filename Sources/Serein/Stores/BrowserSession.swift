@@ -170,7 +170,7 @@ import SereinCore
             return
         }
         let entered=URL(string:input.trimmingCharacters(in:.whitespacesAndNewlines))
-        if entered?.scheme?.lowercased()=="webkit-extension",entered.flatMap({extensions?.controller.extensionContext(for:$0)})==nil {
+        if ExtensionResourceOrigin.isExtensionScheme(entered?.scheme),entered.flatMap({extensions?.controller.extensionContext(for:$0)})==nil {
             error="This extension page is unavailable in this window.";return
         }
         let provider=SearchProvider(rawValue:UserDefaults.standard.string(forKey:"searchProvider") ?? "") ?? .duckDuckGo

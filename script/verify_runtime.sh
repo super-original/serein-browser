@@ -2,6 +2,11 @@
 set -euo pipefail
 ROOT="$PWD/evidence/runtime"
 mkdir -p "$ROOT"
+# Refuse stale identity/results rather than selecting an earlier fixture process.
+if test -e "$ROOT/app-pid" || test -e "$ROOT/results.json" || test -e "$ROOT/main-process-identity.json"; then
+  echo "Runtime evidence root already contains a launch; use a clean evidence directory" >&2
+  exit 1
+fi
 # AppleScript's event timeout does not bound an entire polling loop. Stop the
 # exact input child before the fixture can advance to a different document/sheet.
 osascript() {
@@ -42,12 +47,22 @@ xcrun swiftc -target arm64-apple-macos27.0 script/AccessibilityInput.swift -o /t
 system_profiler SPDisplaysDataType > "$ROOT/display.txt"
 python3 script/fixture_server.py --directory Fixtures > "$ROOT/server.log" 2>&1 &
 SERVER_PID=$!
-trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+cleanup() {
+  local status=$?
+  python3 script/stop_fixture.py stop "$ROOT" "$PWD/dist/Serein.app/Contents/MacOS/Serein" || true
+  kill "$SERVER_PID" 2>/dev/null || true
+  exit "$status"
+}
+trap cleanup EXIT
 python3 script/fetch_extension_fixtures.py /tmp/serein-extension-audit
 ps -axo pid,ppid,rss,%cpu,comm > "$ROOT/process-baseline.txt"
 open -n dist/Serein.app --stdout "$ROOT/application.log" --stderr "$ROOT/application-error.log" --args --test-root "$ROOT" --integration-test --real-extension-catalog /tmp/serein-extension-audit/catalog.json
 sleep 2
-APP_PID=$(pgrep -x Serein | head -1 || true)
+for attempt in $(seq 1 50); do
+  if test -s "$ROOT/app-pid"; then break; fi
+  sleep 0.1
+done
+APP_PID=$(python3 script/stop_fixture.py record "$ROOT" "$PWD/dist/Serein.app/Contents/MacOS/Serein")
 osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' || true
 for i in $(seq 1 2400); do
   if test -s "$ROOT/results.json"; then break; fi

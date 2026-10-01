@@ -83,8 +83,7 @@ struct InstalledExtension: Identifiable, Codable {
         guard ext.errors.isEmpty else{throw ExtensionValidationError.invalid(ext.errors.map(\.localizedDescription).joined(separator:"\n"))}
         let context=WKWebExtensionContext(for:ext);context.uniqueIdentifier=record.runtimeIdentifier
         if let base = record.resourceBaseURL ?? records.first(where: { $0.id == record.id })?.resourceBaseURL {
-            guard base.scheme == "webkit-extension", let host = base.host, !host.isEmpty,
-                  base.user == nil, base.password == nil, base.port == nil else {
+            guard ExtensionResourceOrigin.isValidBaseURL(base) else {
                 throw ExtensionValidationError.invalid("The saved extension resource origin is invalid.")
             }
             context.baseURL = base
@@ -136,7 +135,7 @@ struct InstalledExtension: Identifiable, Codable {
                 throw ExtensionValidationError.invalid("This CRX3 developer identity was installed while consent was pending.")
             }
             let final=root.appendingPathComponent(id.uuidString);try FileManager.default.moveItem(at:destination,to:final)
-            var record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID)
+            var record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID,resourceBaseURL:ExtensionResourceOrigin.initialURL(sourceExtension:source.pathExtension,id:id))
             do {try await load(record);record.resourceBaseURL = contexts[id]?.baseURL;records.append(record);save()}
             catch {try? FileManager.default.removeItem(at:final);throw error}
         } catch {try? FileManager.default.removeItem(at:destination);self.error=error.localizedDescription}

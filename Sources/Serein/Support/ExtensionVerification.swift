@@ -14,7 +14,7 @@ import SereinCore
             do {
                 try host.prepare(source,at:target)
                 let manifest=try ExtensionManifest(data:Data(contentsOf:target.appendingPathComponent("manifest.json")))
-                let record=InstalledExtension(id:id,name:name,version:manifest.version,enabled:true,permissions:["storage","tabs"],hosts:[])
+                let record=InstalledExtension(id:id,name:name,version:manifest.version,enabled:true,permissions:["storage","tabs"],hosts:[],resourceBaseURL:ExtensionResourceOrigin.initialURL(sourceExtension:generation==2 ? "xpi" : "zip",id:id))
                 try await host.load(record)
                 host.records.append(record)
                 let sleeping=session.newTab(url:"http://127.0.0.1:8765/index.html?sleeping",select:false)
@@ -23,6 +23,7 @@ import SereinCore
                 let before=try await session.current!.webView.evaluateJavaScript("document.documentElement.dataset.\(key) || null")
                 check("\(name)-host-permission-denied",before is NSNull)
                 guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("No extension context")}
+                check("\(name)-resource-origin-scheme",context.baseURL.scheme==(generation==2 ? "moz-extension" : "webkit-extension"),"Original controlled fixtures exercise Firefox-style MV2 and default MV3 origins")
                 results += await ExtensionWindowCloseVerification.run(manager:manager,context:context,name:name)
                 for pattern in context.webExtension.requestedPermissionMatchPatterns {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
                 session.current!.webView.reload()

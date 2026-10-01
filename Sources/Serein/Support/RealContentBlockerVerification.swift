@@ -50,14 +50,15 @@ import SereinCore
             let target=host.root.appendingPathComponent(id.uuidString)
             try host.prepare(source,at:target)
             let ext=try await ExtensionPackageLoader.load(target)
-            let record=InstalledExtension(id:id,name:"uBO Lite real-package scenario",version:"2026.930.1227",enabled:true,permissions:ext.requestedPermissions.map(\.rawValue),hosts:[])
+            let record=InstalledExtension(id:id,name:"uBO Lite real-package scenario",version:"2026.930.1227",enabled:true,permissions:ext.requestedPermissions.map(\.rawValue),hosts:[],resourceBaseURL:ExtensionResourceOrigin.initialURL(sourceExtension:"xpi",id:id))
             host.records.append(record);try await host.load(record)
             guard let context=host.contexts[id] else{throw ExtensionValidationError.invalid("No live real-package context")}
+            check("firefox-resource-origin",context.baseURL.scheme=="moz-extension" && context.uniqueIdentifier==id.uuidString,"Generated resource UUID; no publisher/native identity claim")
             let loopback=try WKWebExtension.MatchPattern(string:"http://127.0.0.1/*")
             context.setPermissionStatus(.grantedExplicitly,for:loopback)
             check("loaded-required-apis",true,"Named permissions validated by production loader; only loopback site access granted")
-            do {try await context.loadBackgroundContent();check("background-content-loads",true)}
-            catch {check("background-content-loads",false,error.localizedDescription)}
+            let backgroundFailure=await ExtensionBackgroundProbe.failure(for:context)
+            check("background-content-loads",backgroundFailure==nil,backgroundFailure ?? "Public background-load completion returned")
             var enabled:[String:Any]?
             for _ in 0..<20 {enabled=await probe(view,blockingPath);if blocked(enabled){break};try? await Task.sleep(for:.milliseconds(250))}
             check("shipped-rule-blocks-script",blocked(enabled),String(describing:enabled))

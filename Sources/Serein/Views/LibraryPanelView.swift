@@ -64,7 +64,7 @@ private struct ExtensionListView: View {
     var body: some View {
         VStack(alignment:.leading,spacing:12) {
             Text("WebExtensions · Compatibility varies by API and manifest. Native Safari App Extensions, legacy Safari formats, and CRX2 are not supported. CRX3 signatures verify archive integrity, not store approval.").font(.callout).foregroundStyle(.secondary)
-            Text("Site access choices are saved until you change them.").font(.caption).foregroundStyle(.secondary)
+            Text("Site access choices are saved. Background requests may retain access after a site is denied in this build; disable the extension to stop its background activity.").font(.caption).foregroundStyle(.secondary)
             List(host.records) {record in
                 VStack(alignment:.leading,spacing:8) {
                     HStack {Text(record.name).bold();Text(record.version).foregroundStyle(.secondary);Spacer();Toggle("Enabled",isOn:Binding(get:{record.enabled},set:{enabled in Task{await host.setEnabled(record.id,enabled)}})).toggleStyle(.switch).fixedSize()}

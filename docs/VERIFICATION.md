@@ -24,6 +24,14 @@ The other 15 ordinary/Glance fullscreen, absent zoom event, empty about:blank UR
 
 [23 refreshed pinned Zen captures](https://github.com/super-original/serein-browser/actions/runs/36794469990/artifacts/11133112384) retain verified file hashes and inspected light/dark/folder states. [Committed comparisons](evidence/2026-09-30/folders-and-safari/README.md) document blank WebKit content and deliberate native material differences.
 
+## Timeout follow-up and pending verification
+
+At `4a1a6ba`, [run 36806503910](https://github.com/super-original/serein-browser/actions/runs/36806503910) built and packaged but the main runtime fixture timed out without aggregate results. Its retrieved timeout screenshot shows native New Tab chrome, a blank content region and no permission prompt. Later crash/download checks also failed; the surviving main fixture may have interfered, so these are not yet isolated regressions. The completed `a16b46c` checkpoint above remains the verified download baseline.
+
+Follow-up bounds public background-load completion to five seconds, saves explicitly partial results between scenario groups, records the launched app's own PID and stops only that executable/root/start-time identity before independent scenarios. Local process tests prove refusal of a changed identity, termination of the owned child and harmless handling of its exited PID. The final runtime gate still requires complete results; partial files never count as success.
+
+Firefox XPI installation now selects a generated `moz-extension` resource origin through public `WKWebExtensionContext.baseURL`, matching format-dependent upstream code such as uBO Lite's Firefox branch. Existing saved origins remain unchanged. Unit and controlled MV2 resource/navigation checks accompany the change; real-package behavior remains pending macOS execution. The extension panel explicitly warns that background requests may retain access after site denial in this build. No compatibility or permission-enforcement success is inferred from this pending change.
+
 ## Earlier verified native messaging (`029feec`)
 
 All **40 production native-host checks** pass across signed MV2/MV3 fixtures: real native consent/cancellation; owner-only persistent registration; one-shot child execution and cleanup; MV2 background-page/MV3 worker execution; ordered persistent-port messages and caller origin; unknown-host denial; permission revoke/regrant; registration revocation; extension disable and removal. The separate quit process opens a real native port, exercises cancel/stale/fresh consent, then verifies successful app exit, saved tabs and absence of its recorded child PID.

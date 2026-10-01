@@ -258,7 +258,7 @@ extension TabRuntime: WKNavigationDelegate {
             return
         }
         let destinationContext=session?.extensions?.controller.extensionContext(for:url)
-        if ProcessInfo.processInfo.arguments.contains("--integration-test"),url.scheme=="webkit-extension" || configurationContext != nil {
+        if ProcessInfo.processInfo.arguments.contains("--integration-test"),ExtensionResourceOrigin.isExtensionScheme(url.scheme) || configurationContext != nil {
             ExtensionNavigationTrace.record("EXTENSION_NAV tab=\(id) revision=\(viewRevision) type=\(action.navigationType.rawValue) target=\(url) configured=\(String(describing:configurationContext?.baseURL)) registered=\(String(describing:destinationContext?.baseURL)) sameContext=\(configurationContext === destinationContext) source=\(action.sourceFrame.securityOrigin.protocol)://\(action.sourceFrame.securityOrigin.host)")
         }
         if action.targetFrame?.isMainFrame==true,!action.shouldPerformDownload,
@@ -282,6 +282,9 @@ extension TabRuntime: WKNavigationDelegate {
             return
         }
         if destinationContext != nil {if action.targetFrame?.isMainFrame==true {provisionalURL=url};decisionHandler(.allow);return}
+        if ExtensionResourceOrigin.isExtensionScheme(url.scheme) {
+            decisionHandler(.cancel);session?.error="This extension page is unavailable in this window.";return
+        }
         if ["http","https","about","blob","data"].contains(url.scheme?.lowercased() ?? "") {
             if !action.shouldPerformDownload,action.targetFrame?.isMainFrame==true {provisionalURL=url}
             decisionHandler(action.shouldPerformDownload ? .download : .allow);return
@@ -296,7 +299,7 @@ extension TabRuntime: WKNavigationDelegate {
     }
     func webView(_ webView: WKWebView,decidePolicyFor response: WKNavigationResponse,decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy)->Void) {
         guard webView === storedView else{decisionHandler(.cancel);return}
-        if response.response.url?.scheme=="webkit-extension" {
+        if ExtensionResourceOrigin.isExtensionScheme(response.response.url?.scheme) {
             ExtensionNavigationTrace.record("EXTENSION_RESPONSE tab=\(id) revision=\(viewRevision) url=\(String(describing:response.response.url)) mime=\(response.response.mimeType ?? "none") displayable=\(response.canShowMIMEType)")
         }
         if !response.canShowMIMEType {provisionalURL=nil;failedURL=nil;synchronize()}

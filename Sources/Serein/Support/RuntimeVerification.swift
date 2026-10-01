@@ -7,7 +7,14 @@ import SereinCore
 @MainActor enum RuntimeVerification {
     struct Result: Codable {var name:String;var passed:Bool;var detail:String}
     static func run(manager: BrowserManager,root: URL) async {
+        try? String(ProcessInfo.processInfo.processIdentifier).write(to:root.appendingPathComponent("app-pid"),atomically:true,encoding:.utf8)
         var results:[Result]=[]
+        func checkpoint(_ stage:String) {
+            try? JSONEncoder().encode(results).write(to:root.appendingPathComponent("partial-results.json"),options:.atomic)
+            let progress:[String:Any] = ["stage":stage,"completedChecks":results.count,"failedChecks":results.filter{!$0.passed}.count]
+            if let data=try? JSONSerialization.data(withJSONObject:progress,options:.sortedKeys){try? data.write(to:root.appendingPathComponent("runtime-progress.json"),options:.atomic)}
+            print("VERIFICATION_STAGE \(stage)");fflush(stdout)
+        }
         func check(_ name:String,_ passed:Bool,_ detail:String="") {results.append(Result(name:name,passed:passed,detail:detail));print("VERIFY \(name): \(passed ? "PASS" : "FAIL") \(detail)")}
         func pause(_ ms:Int=500) async {try? await Task.sleep(for:.milliseconds(ms))}
         func wait(_ condition:@MainActor ()->Bool) async -> Bool {
@@ -244,6 +251,7 @@ import SereinCore
         check("close-completion-follows-removal",closeResult==true && !session.state.tabs.contains{$0.id==closing})
         session.select(third)
         session.state.sidebar = .expanded;session.libraryPanel = .settings;await capture("11-settings");session.libraryPanel=nil
+        checkpoint("FindVerification")
         results += await FindVerification.run(session:session,root:root)
         session.findVisible=true;session.findText="Workspace";session.find();await capture("12-find");session.closeFind()
         let unavailable="http://127.0.0.1:19876/unavailable"
@@ -270,6 +278,7 @@ import SereinCore
         } catch {check("private-cookie-isolation",false,error.localizedDescription)}
         session.window?.makeKeyAndOrderFront(nil)
         results += LibraryVerification.run(root: root)
+        checkpoint("DownloadVerification")
         results += await DownloadVerification.run(manager:manager,session:session,root:root)
         // Exercise the actual permission stores used by delegate decisions and settings.
         let permissionOrigin=SiteOrigin(url:URL(string:fixture)!)!
@@ -302,26 +311,45 @@ import SereinCore
         try? Data().write(to:root.appendingPathComponent("idle-start"))
         await pause(12_000)
         try? Data().write(to:root.appendingPathComponent("idle-end"))
+        checkpoint("SplitGridVerification")
         results += await SplitGridVerification.run(manager:manager,root:root)
+        checkpoint("GlanceVerification")
         results += await GlanceVerification.run(manager:manager,root:root)
+        checkpoint("SidebarDropVerification")
         results += await SidebarDropVerification.run(manager:manager,root:root)
+        checkpoint("FullscreenVerification")
         results += await FullscreenVerification.run(manager:manager,root:root)
+        checkpoint("TabSuspensionVerification")
         results += await TabSuspensionVerification.run(manager:manager)
+        checkpoint("WindowPlacementVerification")
         results += await WindowPlacementVerification.run(manager:manager,root:root)
+        checkpoint("WindowConsentVerification")
         results += await WindowConsentVerification.run(manager:manager)
         session.window?.makeKeyAndOrderFront(nil)
+        checkpoint("SitePermissionVerification")
         results += await SitePermissionVerification.run(session:session,root:root)
+        checkpoint("SubframePermissionVerification")
         results += await SubframePermissionVerification.run(manager:manager,root:root)
+        checkpoint("ExtensionVerification")
         results += await ExtensionVerification.run(manager:manager,session:session,root:root)
+        checkpoint("PortMessagingVerification")
         results += await PortMessagingVerification.run(manager:manager)
+        checkpoint("ExtensionNetworkVerification")
         results += await ExtensionNetworkVerification.run(manager:manager)
+        checkpoint("ExtensionPromptVerification")
         results += await ExtensionPromptVerification.run(manager:manager)
+        checkpoint("ExtensionErrorVerification")
         results += await ExtensionErrorVerification.run(manager:manager,root:root)
+        checkpoint("NativeHostVerification")
         results += await NativeHostVerification.run(manager:manager,root:root)
+        checkpoint("FolderVerification")
         results += await FolderVerification.run(manager:manager,root:root)
+        checkpoint("SafariBundleVerification")
         results += await SafariBundleVerification.run(manager:manager,root:root)
         ExtensionSelectionTrace.save(to:root)
+        checkpoint("RealExtensionAudit")
         await RealExtensionAudit.run(manager:manager,root:root)
+        checkpoint("RealContentBlockerVerification")
         results += await RealContentBlockerVerification.run()
         do {try JSONEncoder().encode(results).write(to:root.appendingPathComponent("results.json"),options:.atomic)} catch {print(error)}
         manager.saveNow()
