@@ -15,5 +15,6 @@
   ],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "description": "Original loopback-only network and cookie permission conformance fixture."
 }

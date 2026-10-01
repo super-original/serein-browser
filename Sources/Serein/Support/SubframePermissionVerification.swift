@@ -44,13 +44,14 @@ import WebKit
         await wait{first.value != nil && window.attachedSheet==nil}
         check("changed-child-denies-stale-consent",sheet != nil && first.value == .deny && runtime.documentID==topDocument,"Parent document is unchanged; only the requesting child navigated")
         check("stale-child-grant-not-saved",session.sitePermissions.policy.records.isEmpty)
+        await wait{!view.isLoading}
         guard let current=frames.frames.last else{return results}
         let once=request(current)
         await wait{window.attachedSheet != nil || once.value != nil}
         let onceSheet=window.attachedSheet
         if let onceSheet{window.endSheet(onceSheet,returnCode:.alertFirstButtonReturn)}
         await wait{once.value != nil && window.attachedSheet==nil}
-        check("unchanged-child-allows-once",onceSheet != nil && once.value == .grant && session.sitePermissions.policy.records.isEmpty)
+        check("unchanged-child-allows-once",onceSheet != nil && once.value == .grant && session.sitePermissions.policy.records.isEmpty,"sheet=\(onceSheet != nil) decision=\(String(describing:once.value)) rules=\(session.sitePermissions.policy.records.count) parentUnchanged=\(runtime.documentID==topDocument) frame=\(String(describing:current.request.url))")
         let detached=request(current)
         await wait{window.attachedSheet != nil || detached.value != nil}
         let detachedSheet=window.attachedSheet

@@ -46,7 +46,7 @@ func key(_ code:CGKeyCode,flags:CGEventFlags=[]) {
     }
     Thread.sleep(forTimeInterval:0.12)
 }
-func type(_ string:String) {
+func type(_ string:String,throughSystem:Bool=false) {
     guard NSWorkspace.shared.frontmostApplication?.processIdentifier==pid else{fail("Fixture lost foreground before text input")}
     let units=Array(string.utf16)
     for start in stride(from:0,to:units.count,by:16) {
@@ -54,8 +54,11 @@ func type(_ string:String) {
         guard let event=CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:true) else{fail("Could not create text event")}
         event.flags=[]
         chunk.withUnsafeBufferPointer{event.keyboardSetUnicodeString(stringLength:$0.count,unicodeString:$0.baseAddress!)}
-        event.postToPid(pid)
-        if let up=CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:false){up.flags=[];up.postToPid(pid)}
+        if throughSystem {event.post(tap:.cghidEventTap)} else {event.postToPid(pid)}
+        if let up=CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:false){
+            up.flags=[]
+            if throughSystem {up.post(tap:.cghidEventTap)} else {up.postToPid(pid)}
+        }
         Thread.sleep(forTimeInterval:0.03)
     }
 }
@@ -106,6 +109,7 @@ if mode=="press" {
     Thread.sleep(forTimeInterval:0.1)
     key(0,flags:.maskCommand);type(arguments[4])
     Thread.sleep(forTimeInterval:0.15)
+    guard text(matches[0],kAXValueAttribute)==arguments[4] else{fail("Field did not receive exact fixture text: \(text(matches[0],kAXValueAttribute))")}
     key(36)
     print("Entered text in \(arguments[3])")
 } else if mode=="pick-file" {
@@ -114,7 +118,8 @@ if mode=="press" {
     key(5,flags:[.maskCommand,.maskShift])
     Thread.sleep(forTimeInterval:0.35)
     guard let field=focused(),editable(field) else{fail("Go to Folder did not focus a text field\n"+describe(controls()))}
-    key(0,flags:.maskCommand);type(path)
+    // The native open panel can host its editor in an AppKit service process.
+    key(0,flags:.maskCommand);type(path,throughSystem:true)
     Thread.sleep(forTimeInterval:0.25)
     guard let entered=focused(),editable(entered),text(entered,kAXValueAttribute)==path else{fail("Entered path differs from focused value: \(focused().map{text($0,kAXValueAttribute)} ?? "<no focused element>")")}
     key(36)

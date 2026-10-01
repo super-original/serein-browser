@@ -16,5 +16,6 @@
       "background.js"
     ],
     "persistent": true
-  }
+  },
+  "description": "Original loopback-only network and cookie permission conformance fixture."
 }

@@ -67,6 +67,9 @@ extension TabRuntime: WKUIDelegate {
             self.decideSitePermission(requesting:requesting,capabilities:capabilities,validation:{ [weak self,weak page] in
                 guard let self,let page,page === self.loadedWebView,self.documentID==document else{return false}
                 let current=try? await page.callAsyncJavaScript("return globalThis.sereinPermissionDocumentToken || null;",arguments:[:],in:frame,contentWorld:.world(name:"SereinPermissionState")) as? String
+                if ProcessInfo.processInfo.arguments.contains("--integration-test") {
+                    print("SITE_PERMISSION frameValidation tokenPresent=\(current != nil) tokenMatches=\(current==token) viewMatches=\(page === self.loadedWebView) documentMatches=\(self.documentID==document)")
+                }
                 return current==token && page === self.loadedWebView && self.documentID==document
             },decisionHandler:decisionHandler)
         }
@@ -83,9 +86,11 @@ extension TabRuntime: WKUIDelegate {
         switch session.sitePermissions.policy.decision(for: keys) {
         case .allow:
             if let validation {
-                Task { [weak self,weak page] in
+                Task { [weak self,weak page,weak session] in
                     let valid=await validation()
-                    guard let self,let page,valid,self.loadedWebView === page,self.documentID==document else{decisionHandler(.deny);return}
+                    guard let self,let page,let session,valid,self.session === session,
+                          session.runtimes[self.id] === self,self.loadedWebView === page,self.documentID==document,
+                          session.sitePermissions.policy.decision(for:keys) == .allow else{decisionHandler(.deny);return}
                     decisionHandler(.grant)
                 }
             } else {decisionHandler(.grant)}
@@ -104,6 +109,9 @@ extension TabRuntime: WKUIDelegate {
         alert.beginSheetModal(for: window) { [weak self, weak session] response in
             guard let self,let session,response == .alertFirstButtonReturn || response == .alertThirdButtonReturn else{decisionHandler(.deny);return}
             let finish:@MainActor (Bool)->Void = {valid in
+                if ProcessInfo.processInfo.arguments.contains("--integration-test") {
+                    print("SITE_PERMISSION consent valid=\(valid) sessionMatches=\(self.session === session) runtimeMatches=\(session.runtimes[self.id] === self) documentMatches=\(self.documentID==document) viewMatches=\(self.loadedWebView === page) originMatches=\(page.url.flatMap(SiteOrigin.init(url:))==top)")
+                }
                 guard valid,self.session === session,session.runtimes[self.id] === self,
                       self.documentID==document,self.loadedWebView === page,page.url.flatMap(SiteOrigin.init(url:))==top else{decisionHandler(.deny);return}
                 if response == .alertThirdButtonReturn {session.sitePermissions.set(.allow,for:keys)}
