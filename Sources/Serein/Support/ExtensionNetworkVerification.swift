@@ -17,12 +17,13 @@ import SereinCore
                 try host.prepare(source,at:host.root.appendingPathComponent(id.uuidString))
                 let record=InstalledExtension(id:id,name:prefix,version:"1.0",enabled:true,permissions:["cookies"],hosts:[])
                 host.records.append(record);try await host.load(record)
-                guard let context=host.contexts[id],let options=context.optionsPageURL,
+                guard var context=host.contexts[id],let options=context.optionsPageURL,
                       let localhost=context.webExtension.requestedPermissionMatchPatterns.first(where:{$0.string=="http://localhost/*"}),
                       let loopback=context.webExtension.requestedPermissionMatchPatterns.first(where:{$0.string=="http://127.0.0.1/*"}) else{throw ExtensionValidationError.invalid("Missing network fixture context or host patterns")}
                 context.setPermissionStatus(.deniedExplicitly,for:localhost)
                 context.setPermissionStatus(.deniedExplicitly,for:loopback)
-                let tab=session.newTab(url:options.absoluteString),view=session.runtime(tab).webView
+                let tab=session.newTab(url:options.absoluteString)
+                var view=session.runtime(tab).webView
                 await wait{view.title=="Network permission fixture" && !view.isLoading}
                 check("options-ready",view.title=="Network permission fixture" && !view.isLoading)
                 func request(_ operation:String,_ phase:String="") async->[String:Any]? {
@@ -45,6 +46,7 @@ import SereinCore
                 let redirectAllowed=await request("redirect","allowed-redirect")
                 check("granted-redirect-loads",redirectAllowed?["ok"] as? Bool==true && (redirectAllowed?["url"] as? String)?.hasPrefix("http://127.0.0.1:8765/")==true,String(describing:redirectAllowed))
                 context.setPermissionStatus(.deniedExplicitly,for:localhost)
+                check("native-host-policy-records-revocation",context.permissionStatus(for:localhost) == .deniedExplicitly,"granted=\(context.grantedPermissionMatchPatterns.keys.map(\.string).sorted()) denied=\(context.deniedPermissionMatchPatterns.keys.map(\.string).sorted())")
                 let revoked=await request("fetch","revoked")
                 check("revoked-host-cannot-read-response",revoked?["ok"] as? Bool==false && revoked?["error"] is String,String(describing:revoked))
                 var eventual=revoked
@@ -87,6 +89,16 @@ import SereinCore
                     try? await Task.sleep(for:.milliseconds(50))
                 }
                 check("cookie-change-event-order",events.count==2 && events.first?["removed"] as? Bool==false && events.last?["removed"] as? Bool==true && events.allSatisfy{$0["cause"] as? String=="explicit"},String(describing:events))
+                let eventDiagnostics=await request("events")
+                check("cookie-change-events-have-required-payload",eventDiagnostics?["malformed"] as? Int==0,String(describing:eventDiagnostics))
+                context.setPermissionStatus(.deniedExplicitly,for:localhost)
+                await host.setEnabled(id,false)
+                await host.setEnabled(id,true)
+                guard let reloaded=host.contexts[id] else{throw ExtensionValidationError.invalid("Permission recreation did not reload")}
+                context=reloaded;view=session.runtime(tab).webView
+                await wait{view.title=="Network permission fixture" && !view.isLoading}
+                let recreated=await request("fetch","revoked-recreated")
+                check("recreated-context-enforces-revocation",recreated?["ok"] as? Bool==false && recreated?["error"] is String,"Public disable/re-enable with persisted denial: \(String(describing:recreated))")
                 session.close(tab,ask:false)
             } catch{check("setup",false,error.localizedDescription)}
             // Remove only this fixture's cookie even if an earlier API assertion failed.

@@ -68,6 +68,10 @@ private struct ExtensionListView: View {
             List(host.records) {record in
                 VStack(alignment:.leading,spacing:8) {
                     HStack {Text(record.name).bold();Text(record.version).foregroundStyle(.secondary);Spacer();Toggle("Enabled",isOn:Binding(get:{record.enabled},set:{enabled in Task{await host.setEnabled(record.id,enabled)}})).toggleStyle(.switch).fixedSize()}
+                    if let errors=host.contextErrors[record.id],!errors.isEmpty {
+                        Text(errors.joined(separator:"\n")).font(.caption).foregroundStyle(.red)
+                            .textSelection(.enabled).accessibilityIdentifier("extension-errors-\(record.id)")
+                    }
                     if let identity = record.packageIdentity {
                         Text("Verified original \(identity.format) · \(identity.extensionID)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     }

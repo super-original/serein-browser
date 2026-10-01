@@ -316,6 +316,7 @@ import SereinCore
         results += await PortMessagingVerification.run(manager:manager)
         results += await ExtensionNetworkVerification.run(manager:manager)
         results += await ExtensionPromptVerification.run(manager:manager)
+        results += await ExtensionErrorVerification.run(manager:manager,root:root)
         results += await NativeHostVerification.run(manager:manager,root:root)
         results += await FolderVerification.run(manager:manager,root:root)
         results += await SafariBundleVerification.run(manager:manager,root:root)

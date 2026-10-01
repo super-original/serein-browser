@@ -1,5 +1,7 @@
 const cookieEvents=[];
+let malformedCookieEvents=0;
 browser.cookies.onChanged.addListener(change=>{
+  if(!change || !change.cookie || typeof change.removed!=='boolean' || typeof change.cause!=='string') {malformedCookieEvents++;return;}
   if(change.cookie.name.startsWith('serein_network_')) cookieEvents.push({name:change.cookie.name,removed:change.removed,cause:change.cause,value:change.cookie.value});
 });
 browser.runtime.onMessage.addListener(message=>{
@@ -20,7 +22,7 @@ browser.runtime.onMessage.addListener(message=>{
       if(message.operation==='set') return {ok:true,cookie:await browser.cookies.set({...details,value:'fixture-value',path:'/',sameSite:'lax',expirationDate:Math.floor(Date.now()/1000)+300})};
       if(message.operation==='get') return {ok:true,cookie:await browser.cookies.get(details)};
       if(message.operation==='remove') return {ok:true,removed:await browser.cookies.remove(details)};
-      if(message.operation==='events') return {ok:true,events:cookieEvents.filter(change=>change.name===name)};
+      if(message.operation==='events') return {ok:true,events:cookieEvents.filter(change=>change.name===name),malformed:malformedCookieEvents};
       throw new Error('Unknown fixture operation');
     } catch(error){return {ok:false,error:String(error),worker:typeof document==='undefined'};}
   })();

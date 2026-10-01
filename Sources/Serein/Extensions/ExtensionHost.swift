@@ -24,6 +24,7 @@ struct InstalledExtension: Identifiable, Codable {
     var records: [InstalledExtension] = []
     var error: String?
     var actionRevision=0
+    var contextErrors:[UUID:[String]]=[:]
     var busyIDs: Set<UUID> = []
     @ObservationIgnored var contexts: [UUID:WKWebExtensionContext] = [:]
     @ObservationIgnored weak var manager: BrowserManager?
@@ -35,6 +36,7 @@ struct InstalledExtension: Identifiable, Codable {
             let url=root.appendingPathComponent("extensions.json")
             if FileManager.default.fileExists(atPath:url.path) {records=try JSONDecoder().decode([InstalledExtension].self,from:Data(contentsOf:url))}
         } catch {self.error=error.localizedDescription}
+        NotificationCenter.default.addObserver(self,selector:#selector(contextErrorsChanged(_:)),name:WKWebExtensionContext.errorsDidUpdateNotification,object:nil)
         for name in [WKWebExtensionContext.permissionsWereGrantedNotification,
                      WKWebExtensionContext.permissionsWereDeniedNotification, WKWebExtensionContext.grantedPermissionsWereRemovedNotification,
                      WKWebExtensionContext.deniedPermissionsWereRemovedNotification, WKWebExtensionContext.permissionMatchPatternsWereGrantedNotification,
@@ -42,6 +44,11 @@ struct InstalledExtension: Identifiable, Codable {
                      WKWebExtensionContext.deniedPermissionMatchPatternsWereRemovedNotification] {
             NotificationCenter.default.addObserver(self,selector:#selector(permissionsChanged(_:)),name:name,object:nil)
         }
+    }
+    @objc private func contextErrorsChanged(_ notification:Notification) {
+        guard let context=notification.object as? WKWebExtensionContext,
+              let id=contexts.first(where:{$0.value === context})?.key else{return}
+        contextErrors[id]=context.errors.map(\.localizedDescription)
     }
     @objc private func permissionsChanged(_ notification: Notification) {
         guard let context=notification.object as? WKWebExtensionContext else{return}
@@ -86,7 +93,7 @@ struct InstalledExtension: Identifiable, Codable {
         for permission in ext.requestedPermissions where record.permissions.contains(permission.rawValue) {context.setPermissionStatus(.grantedExplicitly,for:permission)}
         for pattern in ext.requestedPermissionMatchPatterns where record.hosts.contains(pattern.string) {context.setPermissionStatus(.grantedExplicitly,for:pattern)}
         if let state=record.permissionState {try state.apply(to:context)}
-        try controller.load(context);contexts[record.id]=context;actionRevision += 1
+        try controller.load(context);contexts[record.id]=context;contextErrors[record.id]=context.errors.map(\.localizedDescription);actionRevision += 1
         if let index = records.firstIndex(where: { $0.id == record.id }), records[index].resourceBaseURL == nil {
             records[index].resourceBaseURL = context.baseURL; save()
         }
@@ -186,7 +193,7 @@ struct InstalledExtension: Identifiable, Codable {
         busyIDs.insert(id); defer { busyIDs.remove(id) }
         do {
             if enabled { try await load(record) }
-            else if let context = contexts[id] { rememberPermissions(context); try unloadPreservingPageState(context); contexts[id] = nil }
+            else if let context = contexts[id] { rememberPermissions(context); try unloadPreservingPageState(context); contexts[id] = nil;contextErrors[id]=nil }
             guard let index = records.firstIndex(where: { $0.id == id && $0.packageVersionID == record.packageVersionID }) else { return }
             records[index].enabled = enabled; save()
         } catch { self.error = error.localizedDescription }
@@ -204,7 +211,7 @@ struct InstalledExtension: Identifiable, Codable {
                 nativeMessaging.stop(context:context)
                 try controller.unload(context)
             }
-            contexts[id]=nil
+            contexts[id]=nil;contextErrors[id]=nil
             // Disabled extensions have no live context, but retain storage. Removal
             // must erase their data by the durable identity as well.
             // Session storage belongs to the unloaded context, not an on-disk

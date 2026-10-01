@@ -56,6 +56,8 @@ import SereinCore
             let loopback=try WKWebExtension.MatchPattern(string:"http://127.0.0.1/*")
             context.setPermissionStatus(.grantedExplicitly,for:loopback)
             check("loaded-required-apis",true,"Named permissions validated by production loader; only loopback site access granted")
+            do {try await context.loadBackgroundContent();check("background-content-loads",true)}
+            catch {check("background-content-loads",false,error.localizedDescription)}
             var enabled:[String:Any]?
             for _ in 0..<20 {enabled=await probe(view,blockingPath);if blocked(enabled){break};try? await Task.sleep(for:.milliseconds(250))}
             check("shipped-rule-blocks-script",blocked(enabled),String(describing:enabled))
@@ -65,7 +67,12 @@ import SereinCore
                 let optionTab=session.newTab(url:options.absoluteString),optionView=session.runtime(optionTab).webView
                 await wait{optionView.url==options && !optionView.isLoading}
                 let data=try? await optionView.callAsyncJavaScript("return await Promise.race([browser.runtime.sendMessage({what:'getOptionsPageData'}),new Promise(resolve=>setTimeout(()=>resolve(null),5000))]);",arguments:[:],in:nil,contentWorld:.page) as? [String:Any]
-                check("original-options-background-roundtrip",(data?["enabledRulesets"] as? [String])?.contains("easylist")==true,"Original dashboard and background protocol; no copied or injected extension implementation")
+                check("original-options-background-roundtrip",(data?["enabledRulesets"] as? [String])?.contains("easylist")==true,"response=\(String(describing:data)) contextErrors=\(context.errors.map(\.localizedDescription))")
+                let rules=try? await optionView.callAsyncJavaScript("return await browser.declarativeNetRequest.getEnabledRulesets();",arguments:[:],in:nil,contentWorld:.page) as? [String]
+                check("engine-enables-shipped-easylist",rules?.contains("easylist")==true,String(describing:rules))
+                let errors=context.errors.map(\.localizedDescription)
+                await wait{host.contextErrors[id] == errors}
+                check("runtime-errors-reach-management",host.contextErrors[id] == errors,errors.joined(separator:"\n"))
                 session.close(optionTab,ask:false)
             } else{check("original-options-background-roundtrip",false,"No original options page")}
             await host.setEnabled(id,false)
