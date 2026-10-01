@@ -8,6 +8,7 @@ import shutil
 import signal
 import subprocess
 import threading
+from threading import Event
 import time
 
 GIB = 1024 ** 3
@@ -74,7 +75,7 @@ def run_bounded(command, *, cwd, evidence, name, seconds, env=None, sample_fn=sn
                                stderr=subprocess.STDOUT, start_new_session=True)
     tail = collections.deque(maxlen=16)
     written = 0
-    stop_reader = threading.Event()
+    stop_reader = Event()
     reader_errors = []
     os.set_blocking(process.stdout.fileno(), False)
 
@@ -86,8 +87,11 @@ def run_bounded(command, *, cwd, evidence, name, seconds, env=None, sample_fn=sn
                     try:
                         data = os.read(process.stdout.fileno(), 65536)
                     except BlockingIOError:
-                        if stop_reader.wait(0.02):
+                        if stop_reader.is_set():
                             break
+                        # A stop can arrive while waiting after EAGAIN. Re-read
+                        # once before exiting so final child bytes are not lost.
+                        stop_reader.wait(0.02)
                         continue
                     if not data:
                         break

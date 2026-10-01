@@ -62,6 +62,7 @@ import SereinCore
 import WebKit
 
 private struct ExtensionListView: View {
+    @State private var accessRecord:InstalledExtension?
     @Bindable var host: ExtensionHost
     let session: BrowserSession
     var body: some View {
@@ -75,6 +76,7 @@ private struct ExtensionListView: View {
                         Text(errors.joined(separator:"\n")).font(.caption).foregroundStyle(.red)
                             .textSelection(.enabled).accessibilityIdentifier("extension-errors-\(record.id)")
                     }
+                    Button("Requested Access…"){accessRecord=record}.font(.caption).accessibilityIdentifier("extension-access-\(record.id)")
                     if let identity = record.packageIdentity {
                         Text("Verified original \(identity.format) · \(identity.extensionID)").font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     }
@@ -113,7 +115,7 @@ private struct ExtensionListView: View {
                     Button("Dismiss"){host.error=nil}.accessibilityLabel("Dismiss extension operation error")
                 }
             }
-        }
+        }.sheet(item:$accessRecord){ExtensionAccessDetailsView(record:$0)}
     }
 }
 

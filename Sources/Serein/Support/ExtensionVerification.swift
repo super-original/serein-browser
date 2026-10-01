@@ -208,6 +208,42 @@ import SereinCore
             let persisted = try JSONDecoder().decode([InstalledExtension].self, from: Data(contentsOf: host.root.appendingPathComponent("extensions.json")))
             check("crx3-identity-persists", installed != nil && persisted.first?.packageIdentity == installed?.packageIdentity)
             if let installed {
+                let manifestData=try Data(contentsOf:ExtensionPackageLoader.manifest(installed.directory(in:host.root)))
+                let ledger=installed.capabilityLedger
+                try ledger?.validate(installed:manifestData)
+                check("crx3-original-capabilities-persist",ledger != nil && persisted.first(where:{$0.id==installed.id})?.capabilityLedger==ledger && ledger?.requiredPermissions==["storage"])
+                session.libraryPanel = .extensions
+                try await Task.sleep(for:.milliseconds(300))
+                try "extension-access-\(installed.id)".write(to:root.appendingPathComponent("extension-access-identifier"),atomically:true,encoding:.utf8)
+                let previousSheet=session.dialogWindow?.attachedSheet
+                try "extension-access".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+                for _ in 0..<100 {
+                    if FileManager.default.fileExists(atPath:root.appendingPathComponent("extension-access.keyboard-finished").path){break}
+                    try await Task.sleep(for:.milliseconds(100))
+                }
+                for _ in 0..<50 {
+                    if let sheet=session.dialogWindow?.attachedSheet,sheet !== previousSheet {break}
+                    try await Task.sleep(for:.milliseconds(100))
+                }
+                let accessSheet=session.dialogWindow?.attachedSheet
+                let opened=accessSheet != nil && accessSheet !== previousSheet && !FileManager.default.fileExists(atPath:root.appendingPathComponent("extension-access.keyboard-failed").path)
+                check("crx3-native-requested-access-review",opened)
+                if opened {
+                    let capture="71-extension-requested-access"
+                    try capture.write(to:root.appendingPathComponent("capture-request"),atomically:true,encoding:.utf8)
+                    for _ in 0..<100 {
+                        if FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".capture-finished").path){break}
+                        try await Task.sleep(for:.milliseconds(100))
+                    }
+                    check("crx3-requested-access-capture",FileManager.default.fileExists(atPath:root.appendingPathComponent(capture+".png").path))
+                    try "extension-access-close".write(to:root.appendingPathComponent("keyboard-request"),atomically:true,encoding:.utf8)
+                    for _ in 0..<100 {
+                        if session.dialogWindow?.attachedSheet==nil {break}
+                        try await Task.sleep(for:.milliseconds(100))
+                    }
+                    check("crx3-requested-access-keyboard-close",session.dialogWindow?.attachedSheet==nil)
+                }
+                session.libraryPanel=nil
                 session.navigate("http://127.0.0.1:8765/index.html?extension=crx-identity")
                 var runtimeID: String?
                 for _ in 0..<50 {

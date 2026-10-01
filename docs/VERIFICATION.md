@@ -4,11 +4,11 @@
 
 ## Latest completed source
 
-`4d98576242c157790937e2f2c81d7cd1306d041d`: [run 36839705733](https://github.com/super-original/serein-browser/actions/runs/36839705733) passes **149 Swift unit tests, three process-attribution tests and 732/764 browser checks**. All three new split-sidebar checks pass: actual horizontal control geometry, native selection preserving all live panes, and Command-W closing the selected pane. Retrieved original four-pane and three-pane screenshots were inspected. Four labels are heavily truncated at the pinned sidebar width; three remain more readable. Website content is still blank.
+`9d8d8c18b71f381ea757dd88ef224b07e2268c23`: [run 36841920013](https://github.com/super-original/serein-browser/actions/runs/36841920013) passes **149 Swift unit tests, three process-attribution tests and 736/766 browser checks**. The native save-entry repair passes exact name/directory, output destination and PNG checks. Both original save-panel captures and the exported page PNG were retrieved and inspected: names are complete and correct; the internal page image contains fixture text. Desktop website content remains blank.
 
-[Development app](https://github.com/super-original/serein-browser/actions/runs/36839705733/artifacts/11150493392) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36839705733/artifacts/11150902510). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
+[Development app](https://github.com/super-original/serein-browser/actions/runs/36841920013/artifacts/11151668767) · [Evidence](https://github.com/super-original/serein-browser/actions/runs/36841920013/artifacts/11151778100). Ad-hoc signed, not notarized; ARM64 macOS 27 minimum.
 
-The 30 retained structural failures and desktop-rendering gate still fail. Two additional screenshot-save checks fail because native filename typing raced focus restoration: the inspected save-panel capture contains `ot.png`. The pending repair waits for stable Save As focus and verifies exact directory/name entry for both downloads and screenshots before confirmation; destination and PNG assertions remain unchanged.
+The 30 retained structural failures and desktop-rendering gate still fail. At `4d98576`, all three split-sidebar checks pass: actual horizontal control geometry, native selection preserving all live panes, and Command-W closing the selected pane. Retrieved four-pane and three-pane screenshots were inspected. Four labels are heavily truncated at the pinned sidebar width; three remain more readable.
 
 At `89aa2493`, all eight folder-placement checks pass, including actual before/after pointer drags, tree/icon/live-page preservation, atomic rejection and session order. Its retrieved `70-folder-reordered.png` was inspected; the collapsed folder retains its selected page and custom symbol in the expected order.
 
@@ -37,6 +37,8 @@ The 30 structural browser failures comprise nine ordinary/Glance fullscreen chec
 The **actual desktop rendering gate fails**, with zero fixture glyph pixels. Plain WKWebView, system Safari and Apple-signed Technology Preview 253 reproduce blank desktop content on the standard free macOS 27 runner. Their retrieved screenshots were inspected. [Independent STP run](https://github.com/super-original/serein-browser/actions/runs/36799509066) · [prepared upstream report](MACOS27_RENDERING_REPORT.md). No second supported free macOS 27 runtime has been identified. The report has not been posted. No private flags, security weakening, lowered deployment target or engine substitution is used.
 
 Fresh baseline and WebGPU-first fullscreen each fail four checks in af67df3. WebGL-first passes four native/DOM entry/exit checks, but its inspected desktop captures remain black/blank; earlier WebGPU passes were intermittent. No production GPU warmup is introduced. [Pinned Gecko reference](https://github.com/super-original/serein-browser/actions/runs/36799509123) renders, removes a disabled extension's DOM listener, and also lacks the expected disconnect marker; neither engine observation proves universal lifecycle behavior.
+
+The next extension-host change preserves an original capability ledger across install/update, provides a native Requested Access review and reports original versus recognized required/optional APIs for real packages. Three core tests and five native/persistence checks are pending. The first engine experiment stopped at its supervisor output-capture test before building; a deterministic final-pipe-byte regression and fix are prepared.
 
 ## Evidence-backed backlog
 

@@ -25,7 +25,8 @@ extension ExtensionHost {
         let candidate = root.appendingPathComponent(UUID().uuidString + ".staging")
         defer { if FileManager.default.fileExists(atPath: candidate.path) { try? FileManager.default.removeItem(at: candidate) } }
         do {
-            guard let identity = try prepare(source, at: candidate) else { throw ExtensionValidationError.invalid("Updates require a verified CRX3 package.") }
+            let prepared=try preparePackage(source,at:candidate)
+            guard let identity = prepared.identity else { throw ExtensionValidationError.invalid("Updates require a verified CRX3 package.") }
             let manifest = try ExtensionManifest(data: Data(contentsOf: candidate.appendingPathComponent("manifest.json")))
             try manifest.validateNativeMessagingIdentity(identity)
             try SignedExtensionUpdate.validate(previous: previousIdentity, version: original.version, candidate: identity, candidateVersion: manifest.version)
@@ -52,6 +53,7 @@ extension ExtensionHost {
             updated.name = ext.displayName ?? manifest.name; updated.version = manifest.version
             updated.permissions = permissions; updated.hosts = hosts; updated.packageIdentity = identity
             updated.packageVersionID = UUID()
+            updated.capabilityLedger = prepared.ledger
             updated.permissionState = try state.updating(from: previous, to: ext)
             var proposed = records; proposed[index] = updated
             let registry = try JSONEncoder().encode(proposed)

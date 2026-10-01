@@ -3,6 +3,9 @@ import pathlib
 import sys
 import tempfile
 import unittest
+from unittest import mock
+import threading
+import bounded_build
 from bounded_build import GIB, descendants, limit_reason, parse_processes, run_bounded
 
 class BoundedBuildTests(unittest.TestCase):
@@ -39,5 +42,28 @@ class BoundedBuildTests(unittest.TestCase):
             result=run_bounded([sys.executable,'-c','print("bounded output")'],cwd=root,evidence=root,name='success',seconds=10,sample_fn=sample,interval=0.01)
             self.assertEqual(result['returncode'],0);self.assertIsNone(result['stop_reason'])
             self.assertEqual(pathlib.Path(root,'success.log').read_text().strip(),'bounded output')
+
+    def test_shutdown_wakeup_drains_bytes_arriving_after_eagain(self):
+        with tempfile.TemporaryDirectory() as root:
+            real_event=threading.Event
+            class WakeupEvent:
+                def __init__(self):self.event=real_event()
+                def is_set(self):return self.event.is_set()
+                def set(self):self.event.set()
+                def wait(self,seconds):return self.event.wait(5)
+            # First read sees an empty pipe; the child exits while the reader
+            # waits. Shutdown must attempt the second read before closing it.
+            real_read=os.read
+            reads=iter([BlockingIOError(),b'late output\n',b''])
+            def read(*args):
+                if threading.current_thread() is threading.main_thread():return real_read(*args)
+                value=next(reads)
+                if isinstance(value,Exception):raise value
+                return value
+            sample=lambda directory,pid:dict(disk_free_bytes=10*GIB,descendant_rss_bytes=0,system_free_memory_percent=None)
+            with mock.patch.object(bounded_build.os,'read',side_effect=read), mock.patch.object(bounded_build,'Event',WakeupEvent):
+                result=run_bounded([sys.executable,'-c','pass'],cwd=root,evidence=root,name='late',seconds=10,sample_fn=sample,interval=0.01)
+            self.assertEqual(result['returncode'],0)
+            self.assertEqual(pathlib.Path(root,'late.log').read_bytes(),b'late output\n')
 
 if __name__=='__main__':unittest.main()

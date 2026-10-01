@@ -184,6 +184,10 @@ import SereinCore
             check("disabled-state-preserved", disabledUpdate && host.records.first(where: { $0.id == id })?.enabled == false && host.contexts[id] == nil)
             let saved = try JSONDecoder().decode([InstalledExtension].self, from: Data(contentsOf: host.root.appendingPathComponent("extensions.json")))
             check("version-pointer-persists", saved.first(where: { $0.id == id })?.packageVersionID != nil && saved.first(where: { $0.id == id })?.version == "1.2")
+            let savedLedger=saved.first(where:{$0.id==id})?.capabilityLedger
+            let installedManifest=try Data(contentsOf:ExtensionPackageLoader.manifest(host.records.first(where:{$0.id==id})!.directory(in:host.root)))
+            try savedLedger?.validate(installed:installedManifest)
+            check("original-capabilities-follow-update",savedLedger != nil && savedLedger?.requiredPermissions==["storage","tabs"] && savedLedger?.originalSHA256 != before.capabilityLedger?.originalSHA256)
             await host.setEnabled(id, true)
             guard var restored = host.contexts[id] else { throw ExtensionValidationError.invalid("Disabled update did not re-enable") }
             let refreshed=await waitForOptions("Version 1.2")

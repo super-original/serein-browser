@@ -146,6 +146,11 @@ SPLITINPUT
       folder-name)
         native_input fill folder-name "Research notes" > "$ROOT/folder-name-input.log" 2>&1 || touch "$ROOT/folder-name.keyboard-failed"
         ;;
+      extension-access-close) osascript -e 'tell application "System Events" to tell process "Serein" to key code 53' || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed" ;;
+      extension-access)
+        ACCESS_IDENTIFIER=$(cat "$ROOT/extension-access-identifier")
+        native_input press "$ACCESS_IDENTIFIER" > "$ROOT/$KEYBOARD_NAME-input.log" 2>&1 || touch "$ROOT/$KEYBOARD_NAME.keyboard-failed"
+        ;;
       folder-icon-star|folder-icon-default)
         ICON_IDENTIFIER=folder-icon-star.fill
         if test "$KEYBOARD_NAME" = folder-icon-default; then ICON_IDENTIFIER=folder-icon-default; fi

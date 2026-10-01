@@ -73,7 +73,8 @@ let mode=arguments[2]
 if mode=="press" {
     let identifier=arguments[3]
     let allowed=["glance-close":"Close Preview","glance-expand":"Expand Preview","glance-split":"Split Preview","folder-icon-star.fill":"Star","folder-icon-default":"Default Folder"]
-    guard let label=allowed[identifier] else{fail("Unknown fixture action")}
+    let extensionAccess=identifier.hasPrefix("extension-access-") && UUID(uuidString:String(identifier.dropFirst("extension-access-".count))) != nil
+    guard let label=allowed[identifier] ?? (extensionAccess ? "Requested Access…" : nil) else{fail("Unknown fixture action")}
     let items=controls()
     let exact=items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && text($0,kAXIdentifierAttribute)==identifier}
     let matching=exact.isEmpty ? items.filter{text($0,kAXRoleAttribute)==kAXButtonRole && [text($0,kAXTitleAttribute),text($0,kAXDescriptionAttribute)].contains(label)} : exact

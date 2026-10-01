@@ -15,6 +15,7 @@ struct InstalledExtension: Identifiable, Codable {
     var contextIdentifier: String? = nil
     var packageVersionID: UUID? = nil
     var resourceBaseURL: URL? = nil
+    var capabilityLedger: ExtensionCapabilityLedger? = nil
     func directory(in root: URL) -> URL { ExtensionPackageStorage.directory(root: root, recordID: id, versionID: packageVersionID) }
     var runtimeIdentifier: String { contextIdentifier ?? id.uuidString }
 }
@@ -72,7 +73,9 @@ struct InstalledExtension: Identifiable, Codable {
     func load(_ record: InstalledExtension) async throws {
         guard contexts[record.id] == nil else { return }
         let directory=record.directory(in: root)
-        let manifest=try ExtensionManifest(data:Data(contentsOf:ExtensionPackageLoader.manifest(directory)))
+        let manifestData=try Data(contentsOf:ExtensionPackageLoader.manifest(directory))
+        try record.capabilityLedger?.validate(installed:manifestData)
+        let manifest=try ExtensionManifest(data:manifestData)
         try manifest.validateNativeMessagingIdentity(record.packageIdentity)
         let ext=try await ExtensionPackageLoader.load(directory)
         if let current = records.first(where: { $0.id == record.id }), current.packageVersionID != record.packageVersionID {
@@ -126,7 +129,8 @@ struct InstalledExtension: Identifiable, Codable {
         let access=source.startAccessingSecurityScopedResource();defer{if access{source.stopAccessingSecurityScopedResource()}}
         let id=UUID(),destination=root.appendingPathComponent(UUID().uuidString+".staging")
         do {
-            let identity = try prepare(source,at:destination)
+            let prepared = try preparePackage(source,at:destination)
+            let identity = prepared.identity
             if let identity, records.contains(where: { $0.packageIdentity?.extensionID == identity.extensionID }) {
                 throw ExtensionValidationError.invalid("This CRX3 developer identity is already installed. Use Update Signed Package on its existing entry.")
             }
@@ -146,13 +150,16 @@ struct InstalledExtension: Identifiable, Codable {
                 throw ExtensionValidationError.invalid("This CRX3 developer identity was installed while consent was pending.")
             }
             let final=root.appendingPathComponent(id.uuidString);try FileManager.default.moveItem(at:destination,to:final)
-            var record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID)
+            var record=InstalledExtension(id:id,name:ext.displayName ?? "Extension",version:ext.version ?? "Unknown",enabled:true,permissions:permissions,hosts:hosts,packageIdentity:identity,contextIdentifier:identity?.extensionID,capabilityLedger:prepared.ledger)
             do {try await load(record);record.resourceBaseURL = contexts[id]?.baseURL;records.append(record);save()}
             catch {try? FileManager.default.removeItem(at:final);throw error}
         } catch {try? FileManager.default.removeItem(at:destination);self.error=error.localizedDescription}
     }
     @discardableResult
     func prepare(_ source: URL,at destination: URL) throws -> SignedExtensionIdentity? {
+        try preparePackage(source,at:destination).identity
+    }
+    func preparePackage(_ source:URL,at destination:URL) throws -> (identity:SignedExtensionIdentity?,ledger:ExtensionCapabilityLedger) {
         var identity: SignedExtensionIdentity?
         let values=try source.resourceValues(forKeys:[.isDirectoryKey,.isSymbolicLinkKey,.isRegularFileKey])
         guard values.isSymbolicLink != true else{throw ExtensionValidationError.invalid("Symbolic-link packages are not accepted.")}
@@ -192,11 +199,13 @@ struct InstalledExtension: Identifiable, Codable {
         }
         let manifestURL=try ExtensionPackageLoader.manifest(destination)
         // A Safari bundle must stay byte-for-byte intact for resource validation.
-        if try ExtensionPackageLayout.inspect(destination).isSafariBundle {return identity}
         let original=try Data(contentsOf:manifestURL)
-        let normalized=try ExtensionCommandNormalization.normalize(original)
+        let normalized:Data
+        if try ExtensionPackageLayout.inspect(destination).isSafariBundle {normalized=original}
+        else {normalized=try ExtensionCommandNormalization.normalize(original)}
+        let ledger=try ExtensionCapabilityLedger(original:original,installed:normalized)
         if normalized != original {try normalized.write(to:manifestURL,options:.atomic)}
-        return identity
+        return (identity,ledger)
     }
     func setEnabled(_ id: UUID,_ enabled: Bool) async {
         guard !busyIDs.contains(id), let record = records.first(where: { $0.id == id }) else { return }
