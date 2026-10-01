@@ -3,14 +3,17 @@ import SwiftUI
 
 @main enum SereinApp {
     @MainActor static func main() {
+        let processEntryUptime=ProcessInfo.processInfo.systemUptime
         let app=NSApplication.shared
         app.setActivationPolicy(.regular)
         let delegate=AppDelegate();app.delegate=delegate
+        delegate.processEntryUptime=processEntryUptime
         withExtendedLifetime(delegate){app.run()}
     }
 }
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     var manager: BrowserManager!
+    var processEntryUptime:TimeInterval=0
     func applicationDidFinishLaunching(_ notification: Notification) {
         let args=ProcessInfo.processInfo.arguments
         let testRoot=args.firstIndex(of:"--test-root").flatMap{args.indices.contains($0+1) ? URL(fileURLWithPath:args[$0+1]) : nil}
@@ -29,6 +32,13 @@ import SwiftUI
         manager.restore()
         manager.tabSuspension.start()
         NSApp.activate(ignoringOtherApps:true)
+        if let index=args.firstIndex(of:"--startup-benchmark"),args.indices.contains(index+1),testRoot != nil {
+            Task {
+                await manager.extensions.restore()
+                await StartupPerformanceVerification.run(manager:manager,root:root,mode:args[index+1],entry:processEntryUptime)
+            }
+            return
+        }
         if args.contains("--crash-recovery-test"),testRoot != nil {
             Task {await CrashRecoveryVerification.run(manager:manager,root:root)}
             return

@@ -31,7 +31,13 @@ import SereinCore
             check("isolated-content-formats-json",formatted)
             check("untitled-document-tab-name",session.state.tabs.first{$0.id==tab}?.title=="formatter.json")
             check("untrusted-json-remains-text",await js(view,"document.querySelector('#jsonFormatterParsed')?.textContent.includes('<img src=x onerror=alert(1)>') === true && document.images.length === 0"))
-            check("main-world-json-global",await wait{await js(view,"window.json?.project === 'Serein' && window.json.nested.items.length === 4")})
+            let globalReady=await wait{await js(view,"window.json?.project === 'Serein' && window.json.nested.items.length === 4")}
+            let globalDetail=try? await view.evaluateJavaScript("""
+            JSON.stringify((()=>{const pre=document.querySelector('#jsonFormatterRaw pre');let parsed=false,error=null;
+              try {parsed=JSON.parse(pre?.innerText).project==='Serein'} catch(e){error=String(e)}
+              return {globalType:typeof window.json,rawPresent:!!pre,innerTextLength:pre?.innerText.length,textContentLength:pre?.textContent.length,parsed,error};})())
+            """)
+            check("main-world-json-global",globalReady,String(describing:globalDetail))
             check("raw-control",await js(view,"document.querySelector('#buttonPlain')?.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));document.querySelector('#jsonFormatterParsed')?.hidden === true && document.querySelector('#jsonFormatterRaw')?.hidden === false"))
             check("parsed-control",await js(view,"document.querySelector('#buttonFormatted')?.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));document.querySelector('#jsonFormatterParsed')?.hidden === false && document.querySelector('#jsonFormatterRaw')?.hidden === true"))
             if let options=context.optionsPageURL {

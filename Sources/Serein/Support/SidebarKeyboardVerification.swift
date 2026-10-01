@@ -4,7 +4,7 @@ import SereinCore
 @MainActor enum SidebarKeyboardVerification {
     static func run(manager:BrowserManager,root:URL) async->[RuntimeVerification.Result] {
         var results:[RuntimeVerification.Result]=[]
-        func check(_ name:String,_ pass:Bool){results.append(.init(name:"sidebar-keyboard-"+name,passed:pass,detail:""))}
+        func check(_ name:String,_ pass:Bool,_ detail:String=""){results.append(.init(name:"sidebar-keyboard-"+name,passed:pass,detail:detail))}
         func wait(_ condition:@MainActor ()->Bool) async->Bool {
             for _ in 0..<100 {if condition(){return true};try? await Task.sleep(for:.milliseconds(100))};return false
         }
@@ -38,7 +38,7 @@ import SereinCore
         let escape=await keyboard("sidebar-page-focus")
         let page=session.current?.webView
         let responder=session.window?.firstResponder as? NSView
-        check("escape-restores-page-focus",escape && session.sidebarKeyboardFocus==nil && page != nil && (responder===page || responder?.isDescendant(of:page!)==true))
+        check("escape-restores-page-focus",escape && session.sidebarKeyboardFocus==nil && page != nil && (responder===page || responder?.isDescendant(of:page!)==true),"sidebarFocus=\(String(describing:session.sidebarKeyboardFocus)); responder=\(String(describing:responder.map{type(of:$0)})); pending=\(String(describing:session.contentFocusRequest))")
         check("live-views-preserved",views.count==3 && zip([a,b,c],views).allSatisfy{session.runtimes[$0.0]?.webView === $0.1})
         return results
     }

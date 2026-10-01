@@ -157,12 +157,18 @@ private struct TabRow: View {
                 focusedTab.wrappedValue=target
                 return .handled
             }
-            .onKeyPress(keys:[.return,.escape]){press in
+            .onKeyPress(keys:[.return]){press in
                 guard press.modifiers.intersection([.command,.control,.option,.shift]).isEmpty else{return .ignored}
-                if press.key == .return {session.select(tab.id)}
+                session.select(tab.id)
                 focusedTab.wrappedValue=nil;session.sidebarKeyboardFocus=nil
-                session.focusContent(ifSelected:session.state.selectedTabID)
+                session.contentFocusRequest=session.state.selectedTabID
+                DispatchQueue.main.async {session.completeContentFocusRequest()}
                 return .handled
+            }
+            .onExitCommand {
+                focusedTab.wrappedValue=nil;session.sidebarKeyboardFocus=nil
+                session.contentFocusRequest=session.state.selectedTabID
+                DispatchQueue.main.async {session.completeContentFocusRequest()}
             }
             if session.state.glance(for:tab.id) != nil {
                 Button {session.select(tab.id)} label:{Image(systemName:"rectangle.on.rectangle").font(.system(size:12)).frame(width:24,height:24)}.buttonStyle(.plain).accessibilityLabel("Show Link Preview").help("Show Link Preview")

@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/cache_budget.py', 'script/NativeHostFixture.swift', 'script/check_signed_fixtures.py', 'script/generate_signed_fixtures.py', 'script/verify_runtime.sh', 'script/run_osascript.py', 'script/stop_fixture.py', 'script/verify_extension_origins.py', 'script/collect_fixture_crashes.py', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/verify_history_restart.py', 'script/sample_owned_processes.py', 'script/summarize_performance.py', 'script/test_process_attribution.py', 'script/verify_fullscreen_processes.py', 'script/verify_crash_recovery.py', 'script/fixture_server.py', 'script/emit_evidence.py', 'script/inspect_web_processes.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', 'script/PointerInput.swift', 'script/AccessibilityInput.swift', '.github/workflows/build.yml']
+    paths: ['Sources/**', 'Tests/**', 'Package.swift', 'Resources/**', 'Fixtures/**', 'script/build.sh', 'script/cache_budget.py', 'script/NativeHostFixture.swift', 'script/check_signed_fixtures.py', 'script/generate_signed_fixtures.py', 'script/verify_runtime.sh', 'script/run_osascript.py', 'script/stop_fixture.py', 'script/verify_extension_origins.py', 'script/collect_fixture_crashes.py', 'script/verify_native_bridge.sh', 'script/verify_quit_consent.py', 'script/verify_download_restart.py', 'script/verify_history_restart.py', 'script/measure_startup.py', 'script/sample_owned_processes.py', 'script/summarize_performance.py', 'script/test_process_attribution.py', 'script/verify_fullscreen_processes.py', 'script/verify_crash_recovery.py', 'script/fixture_server.py', 'script/emit_evidence.py', 'script/inspect_web_processes.py', 'script/VisualGate.swift', 'script/ScreenCapture.swift', 'script/PointerInput.swift', 'script/AccessibilityInput.swift', '.github/workflows/build.yml']
   pull_request:
 permissions:
   contents: read
@@ -64,6 +64,9 @@ jobs:
       - name: Probe navigation history across app launches
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: python3 script/verify_history_restart.py
+      - name: Measure native startup and one-tab restoration
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: python3 script/measure_startup.py
       - name: Probe isolated extension native messaging
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: bash script/verify_native_bridge.sh
