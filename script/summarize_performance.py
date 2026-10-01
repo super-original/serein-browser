@@ -47,3 +47,31 @@ if len(idle)>=2:
     measured={'elapsed_seconds':elapsed,'common_process_count':len(common),'cpu_interval_percent':cpu/elapsed*100,'median_rss_mib':statistics.median(sum(r['rss_kib'] for r in s['processes'].values())/1024 for s in idle),'samples':idle,'limitations':['One short warm-idle interval on a virtualized runner','CPU includes only processes present at both endpoints','WebKit page rendering failure affects workload validity','RSS can double-count shared pages; no energy or physical-footprint claim']}
     (root/'idle-performance.json').write_text(json.dumps(measured,indent=2))
     print('IDLE',json.dumps({k:v for k,v in measured.items() if k!='samples'}))
+
+# Independently sampled, exact responsible PID/path evidence. Unknown ownership
+# remains separate instead of being silently counted as browser memory.
+owned_path = root / 'owned-process-samples.jsonl'
+if owned_path.exists():
+    owned = [json.loads(line) for line in owned_path.read_text().splitlines() if line.strip()]
+    measured_samples = []
+    for sample in owned:
+        totals = {kind: sum(p['rss_kib'] for p in sample['processes'] if p['ownership'] == kind)/1024
+                  for kind in ('confirmed', 'foreign', 'unresolved')}
+        measured_samples.append(dict(monotonic_seconds=sample['monotonic_seconds'], idle=sample['idle'],
+                                     rss_mib=totals, diagnostic_seconds=sample['diagnostic_seconds']))
+    from sample_owned_processes import interval_cpu
+    owned_idle = [sample for sample in owned if sample['idle']]
+    attribution = dict(samples=measured_samples, limitations=[
+        'Confirmed RSS is not total browser memory when ownership is unresolved',
+        'launchctl procinfo is a read-only CI diagnostic, not a production app API',
+        'Ownership cached at most 10 seconds per PID/start time/executable; disappeared processes become unresolved',
+        'RSS may double-count shared pages; no energy or physical-footprint measurement',
+        'Interval CPU includes only confirmed exact process identities present at both endpoints',
+        'Diagnostic subprocess overhead and virtualized blank-rendering workload affect interpretation'])
+    if len(owned_idle) >= 2:
+        attribution['idle_interval'] = interval_cpu(owned_idle[0], owned_idle[-1])
+    if measured_samples:
+        attribution['confirmed_median_rss_mib'] = statistics.median(s['rss_mib']['confirmed'] for s in measured_samples)
+        attribution['maximum_unresolved_rss_mib'] = max(s['rss_mib']['unresolved'] for s in measured_samples)
+    (root/'owned-performance.json').write_text(json.dumps(attribution, indent=2))
+    print('OWNED', json.dumps({k:v for k,v in attribution.items() if k not in ('samples','limitations')}))

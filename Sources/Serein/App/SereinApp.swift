@@ -47,6 +47,10 @@ import SwiftUI
             } else {QuitConsentVerification.run(manager:manager,root:root)}
             return
         }
+        if args.contains("--history-restart-prepare") || args.contains("--history-restart-resume"),testRoot != nil {
+            Task {await HistoryRestartVerification.run(manager:manager,root:root,prepare:args.contains("--history-restart-prepare"))}
+            return
+        }
         if args.contains("--download-restart-prepare") || args.contains("--download-restart-resume"),testRoot != nil {
             Task {await DownloadRestartVerification.run(manager:manager,root:root,prepare:args.contains("--download-restart-prepare"))}
             return

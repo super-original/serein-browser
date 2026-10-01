@@ -18,6 +18,7 @@ import SereinCore
     var pageIcon:NSImage?
     @ObservationIgnored private(set) var pageIconDocumentID:UUID?
     @ObservationIgnored private var pageIconTask:Task<Void,Never>?
+    @ObservationIgnored private let pageIconKey="__sereinIcon_"+UUID().uuidString.replacingOccurrences(of:"-",with:"")
     @ObservationIgnored private(set) var lastActivity=ContinuousClock().now
     func noteActivity(at instant:ContinuousClock.Instant=ContinuousClock().now){lastActivity=instant}
     var crashed=false
@@ -84,6 +85,7 @@ import SereinCore
         let bridge=EditBridge(runtime:self);editBridge=bridge
         config.userContentController.add(bridge,contentWorld:.world(name:"SereinPageState"),name:"edited")
         config.userContentController.addUserScript(WKUserScript(source:Self.editScriptSource,injectionTime:.atDocumentStart,forMainFrameOnly:false,in:.world(name:"SereinPageState")))
+        config.userContentController.addUserScript(PageIcon.bootstrap(key:pageIconKey))
         let view=WKWebView(frame:.zero,configuration:config);storedView=view
         view.wantsLayer=true
         view.navigationDelegate=self;view.uiDelegate=self;view.allowsBackForwardNavigationGestures=true
@@ -238,7 +240,8 @@ extension TabRuntime: WKNavigationDelegate {
         pageIconTask?.cancel()
         pageIconTask=Task { [weak self,weak webView] in
             guard !Task.isCancelled,let webView,self?.documentID==document else{return}
-            let image=await PageIcon.load(from:webView)
+            guard let key=self?.pageIconKey else{return}
+            let image=await PageIcon.load(from:webView,key:key)
             guard !Task.isCancelled,let self,self.documentID==document,self.storedView === webView else{return}
             self.pageIcon=image;self.pageIconDocumentID=document;self.pageIconTask=nil
         }

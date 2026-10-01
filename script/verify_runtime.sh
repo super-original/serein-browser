@@ -63,6 +63,8 @@ for attempt in $(seq 1 50); do
   sleep 0.1
 done
 APP_PID=$(python3 script/stop_fixture.py record "$ROOT" "$PWD/dist/Serein.app/Contents/MacOS/Serein")
+python3 script/sample_owned_processes.py "$ROOT" > "$ROOT/owned-process-sampler.log" 2>&1 &
+OWNED_SAMPLER_PID=$!
 osascript -e 'tell application "System Events" to tell process "UserNotificationCenter" to click button "Don’t Allow" of window 1' || true
 for i in $(seq 1 2400); do
   if test -s "$ROOT/results.json"; then break; fi
@@ -227,6 +229,7 @@ APPLESCRIPT
   fi
   sleep 0.1
 done
+if test -s "$ROOT/results.json"; then wait "$OWNED_SAMPLER_PID" || true; fi
 if test -n "${WEB_INSPECTOR_PID:-}"; then wait "$WEB_INSPECTOR_PID" || true; fi
 if ! test -s "$ROOT/results.json"; then
   screencapture -x "$ROOT/diagnostic-timeout.png" || true

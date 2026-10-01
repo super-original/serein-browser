@@ -46,7 +46,7 @@ Early captures were invalid: a network-consent dialog obscured them, and initial
 | Compact transitions | Hover keep duration 150 ms, toolbar hide 1,000 ms in source | Sidebar hover hide 150 ms; toolbar-only/both variants not implemented |
 | Materials | Zen's default Gecko theme | Native macOS 27 Liquid Glass; different tint/contrast is intentional, not claimed as pixel matching |
 
-Same-origin raster favicon loading is implemented but awaits runtime verification; unsupported/unloaded sites retain SF Symbol fallbacks. Cross-origin, SVG and live icon updates remain gaps. Native address field, sheets and menus deliberately follow macOS 27 treatment. Geometry discrepancies, missing Zen interactions and clipping are defects, not automatically justified as material adaptation.
+Same-origin raster favicon loading passed 16/17 checks at `7da3254` and its native screenshot was inspected; CSP enforcement is being corrected and awaits verification; unsupported/unloaded sites retain SF Symbol fallbacks. Cross-origin, SVG and live icon updates remain gaps. Native address field, sheets and menus deliberately follow macOS 27 treatment. Geometry discrepancies, missing Zen interactions and clipping are defects, not automatically justified as material adaptation.
 
 ## Parity checklist
 

@@ -2,7 +2,8 @@ import AppKit
 import WebKit
 import ImageIO
 
-/// Same-origin raster favicons fetched inside the owning WebKit data store.
+/// Same-origin raster favicons fetched with the page's original fetch function.
+/// Page-world execution preserves its enforced Content Security Policy.
 /// No native cookie copying, cross-origin request, or persistent icon cache.
 @MainActor enum PageIcon {
     @MainActor private final class Reply {
@@ -14,12 +15,12 @@ import ImageIO
             self.continuation=nil;deadline?.cancel();deadline=nil;continuation.resume(returning:value)
         }
     }
-    static func load(from view:WKWebView) async->NSImage? {
-        guard ["http","https"].contains(view.url?.scheme?.lowercased() ?? "") else{return nil}
-        let encoded:String?=await withCheckedContinuation {(continuation:CheckedContinuation<String?,Never>) in
-        let reply=Reply(continuation)
-        reply.deadline=Task {try? await Task.sleep(for:.seconds(4));if !Task.isCancelled{reply.finish(nil)}}
-        view.callAsyncJavaScript("""
+    static func bootstrap(key:String)->WKUserScript {
+        let source="""
+        (()=>{
+        const fetch=globalThis.fetch.bind(globalThis);
+        const URL=globalThis.URL,AbortController=globalThis.AbortController;
+        Object.defineProperty(globalThis,'\(key)',{value:async()=>{
         const candidate=document.querySelector('link[rel~="icon" i]')?.getAttribute('href') || '/favicon.ico';
         let url;try{url=new URL(candidate,document.baseURI);}catch{return null;}
         if(!['http:','https:'].includes(url.protocol)||url.origin!==location.origin||url.username||url.password)return null;
@@ -36,11 +37,21 @@ import ImageIO
           return btoa(binary);
         } catch{return null;}
         finally{clearTimeout(timer);controller.abort();if(reader)try{await reader.cancel();}catch{}}
-        """,arguments:[:],in:nil,in:.world(name:"SereinPageIcon")) {result in
+        },writable:false,configurable:false,enumerable:false});
+        })();
+        """
+        return WKUserScript(source:source,injectionTime:.atDocumentStart,forMainFrameOnly:true,in:.page)
+    }
+    static func load(from view:WKWebView,key:String) async->NSImage? {
+        guard ["http","https"].contains(view.url?.scheme?.lowercased() ?? "") else{return nil}
+        let encoded:String?=await withCheckedContinuation {(continuation:CheckedContinuation<String?,Never>) in
+        let reply=Reply(continuation)
+        reply.deadline=Task {try? await Task.sleep(for:.seconds(4));if !Task.isCancelled{reply.finish(nil)}}
+        view.callAsyncJavaScript("return await globalThis[key]?.();",arguments:["key":key],in:nil,in:.page) {result in
             switch result {case .success(let value):reply.finish(value as? String);case .failure:reply.finish(nil)}
         }
         }
-        guard !Task.isCancelled,let encoded,let data=Data(base64Encoded:encoded),data.count<=262_144,
+        guard !Task.isCancelled,let encoded,encoded.utf8.count<=349_528,let data=Data(base64Encoded:encoded),data.count<=262_144,
               let source=CGImageSourceCreateWithData(data as CFData,nil),
               let type=CGImageSourceGetType(source) as String?,
               ["public.png","public.jpeg","public.tiff","com.compuserve.gif","com.microsoft.ico","org.webmproject.webp"].contains(type),

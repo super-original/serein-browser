@@ -60,6 +60,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except (BrokenPipeError, ConnectionResetError):
                 pass
 
+    def end_headers(self):
+        if urllib.parse.urlsplit(self.path).path == '/icon.html' and 'headerdeny' in urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query):
+            self.send_header('Content-Security-Policy', "connect-src 'none'")
+        super().end_headers()
+
     def do_HEAD(self):
         if self.path.split('?', 1)[0] == '/serein-tone.wav':
             return self.tone()

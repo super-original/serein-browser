@@ -18,6 +18,7 @@ mkdir -p evidence/build dist
 test "$(sw_vers -productVersion | cut -d. -f1)" = 27
 test "$(xcrun --sdk macosx --show-sdk-version | cut -d. -f1)" = 27
 python3 script/check_signed_fixtures.py
+PYTHONDONTWRITEBYTECODE=1 python3 script/test_process_attribution.py
 xcrun swift test --parallel --xunit-output evidence/build/unit-tests.xml 2>&1 | tee evidence/build/tests.log
 xcrun swift build -c release --arch arm64 2>&1 | tee evidence/build/build.log
 APP=dist/Serein.app

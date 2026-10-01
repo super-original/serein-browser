@@ -18,13 +18,17 @@ import WebKit
         let loaded=await load("kind=normal",in:session)
         let image=runtime.pageIcon,bitmap=image?.tiffRepresentation.flatMap{NSBitmapImageRep(data:$0)}
         let corner=bitmap?.colorAt(x:0,y:0)?.usingColorSpace(.deviceRGB)
-        check("isolated-raster-load",loaded && image?.size==NSSize(width:16,height:16) && (corner?.greenComponent ?? 0)>0.4 && (corner?.redComponent ?? 1)<0.2,"Page-world fetch is overridden; original teal/white PNG expected")
+        check("original-fetch-raster-load",loaded && image?.size==NSSize(width:16,height:16) && (corner?.greenComponent ?? 0)>0.4 && (corner?.redComponent ?? 1)<0.2,"Page-world fetch is overridden after bootstrap; captured original fetch returns the original PNG")
         for kind in ["cross","file","redirect","large","stream","wide","invalid"] {
             let finished=await load("kind="+kind,in:session)
             check(kind+"-fallback",finished && runtime.pageIcon==nil)
         }
         let policy=await load("kind=normal&deny=1",in:session)
         check("csp-connect-policy-kept",policy && runtime.pageIcon==nil)
+        let removedPolicy=await load("kind=normal&deny=1&remove=1",in:session)
+        check("removed-meta-policy-kept",removedPolicy && runtime.pageIcon==nil)
+        let headerPolicy=await load("kind=normal&headerdeny=1",in:session)
+        check("csp-header-policy-kept",headerPolicy && runtime.pageIcon==nil)
         let normalCookie=await load("kind=cookie&value=normal&cookie=normal",in:session)
         check("owning-store-cookie",normalCookie && runtime.pageIcon != nil)
         let privateSession=manager.newWindow(isPrivate:true)
